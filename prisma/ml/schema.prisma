@@ -1,0 +1,219 @@
+// İç Hatlar — ML veritabanı
+//
+// Ana veritabanından (prisma/schema.prisma) AYRI bir SQL veritabanıdır.
+// Modelin kendi kayıtlarını tutar:
+//
+//   Model tarafı                     Çalışma tarafı
+//   ─────────────                    ──────────────
+//   ModelVersion    eğitilmiş sürüm  Inference            her "ML ile Kontrol Et"
+//   DepartmentPrior ekip istatistiği DepartmentPrediction  ekip önerileri (her ekip ayrı satır)
+//   TermWeight      kelime ağırlığı  SimilarityMatch       benzer çözülmüş kayıtlar
+//   TrainingSample  eğitim verisi    Outcome               kullanıcı ne yaptı, sonuç doğru muydu
+//
+// Neden ayrı: ML kayıtları iş verisinden farklı yaşar — hacmi büyür, ayrı
+// yedeklenir/temizlenir, başka ekipler (analiz) okuyabilir. Ana şemaya
+// yabancı anahtar YOKTUR; kayıtlar ve kullanıcılar kodla/kimlikle anılır.
+// Bu veritabanı erişilemezse uygulama çalışmaya devam eder, yalnızca ML
+// kayıtları yazılmaz (bkz. src/ml/db.ts).
+//
+// LEHÇE: ana şemayla aynı kural — enum/Json/@db.* yok. PostgreSQL'e geçişte
+// provider satırı ve ML_DATABASE_URL değişir (ör. ayrı bir `ichatlar_ml`
+// veritabanı).
+
+generator client {
+  provider = "prisma-client-js"
+  // Varsayılan istemciyle (@prisma/client) çakışmaması için ayrı klasör.
+  // node_modules/.prisma altında durur: npm nokta ile başlayan klasörü budamaz.
+  output   = "../../node_modules/.prisma/ml-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("ML_DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────── model tarafı
+
+/// Eğitilmiş departman sınıflandırıcısının bir sürümü. Aynı anda yalnızca
+/// biri `active` olur; eskiler karşılaştırma için bir süre saklanır.
+model ModelVersion {
+  id        String   @id @default(cuid())
+  /// "multinomial-nb"
+  algorithm String
+  trainedAt DateTime @default(now())
+
+  /// Eğitimde kullanılan kayıt sayısı, sözlük büyüklüğü.
+  docCount  Int
+  vocabSize Int
+
+  /// Birini-dışarıda-bırak (leave-one-out) doğruluğu, 0..1.
+  /// Model kendi eğitim kayıtlarını "ezberleyerek" iyi görünmesin diye her
+  /// kayıt, kendisi çıkarılmış bir modelle tahmin edilir.
+  accuracy  Float?
+
+  /// JSON: { alpha, titleWeight, stemLength, temperature, perDepartment }
+  params    String
+
+  /// Eğitim verisinin parmak izi. Değişmediyse yeniden eğitim yapılmaz.
+  dataFingerprint String
+
+  active Boolean @default(false)
+
+  priors     DepartmentPrior[]
+  terms      TermWeight[]
+  samples    TrainingSample[]
+  inferences Inference[]
+
+  @@index([active])
+  @@index([trainedAt])
+}
+
+/// Sürüm başına ekip istatistiği — Naive Bayes'in ön olasılığı (prior).
+model DepartmentPrior {
+  id      String       @id @default(cuid())
+  modelId String
+  model   ModelVersion @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  departmentId   String
+  departmentName String
+  /// Bu ekibe ait eğitim kaydı sayısı.
+  docCount       Int
+  /// Bu ekibin kayıtlarındaki toplam ağırlıklı kelime sayısı.
+  tokenCount     Float
+
+  @@unique([modelId, departmentId])
+}
+
+/// Modelin öğrendiği asıl bilgi: hangi kelime kökü hangi ekipte ne sıklıkta.
+/// Yalnızca sıfır olmayan (kök, ekip) çiftleri saklanır.
+model TermWeight {
+  id      String       @id @default(cuid())
+  modelId String
+  model   ModelVersion @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  /// Kelime kökü (Türkçe harfler katlanmış, ilk 5 harf). Ör. "bordr".
+  term         String
+  departmentId String
+  /// Ağırlıklı frekans — başlıktaki kelime açıklamadakinin iki katı sayılır.
+  count        Float
+
+  @@unique([modelId, term, departmentId])
+  @@index([modelId, term])
+}
+
+/// Bir sürümün hangi kayıtlardan öğrendiği — denetlenebilirlik için.
+model TrainingSample {
+  id      String       @id @default(cuid())
+  modelId String
+  model   ModelVersion @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  recordCode   String
+  departmentId String
+  /// Kayıt başka ekibe yönlendirilmişse etiket, yönlendirilen ekiptir.
+  corrected    Boolean @default(false)
+  /// Birini-dışarıda-bırak testinde bu kayıt için modelin tahmini.
+  looPredicted String?
+
+  @@index([modelId])
+  @@index([recordCode])
+}
+
+// ───────────────────────────────────────────────────────── çalışma tarafı
+
+/// Her "ML ile Kontrol Et" çağrısı. Kullanıcının o an yazdığı metin burada.
+model Inference {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// Ana veritabanındaki User.id. Kayıt anonim açılırsa silinir (Outcome'a bakın).
+  userId String?
+
+  modelId String?
+  model   ModelVersion? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+
+  title       String
+  description String
+  /// bilgi | oneri
+  type        String?
+  /// Kontrol anında formda seçili ekip (boş olabilir).
+  selectedDepartmentId String?
+
+  /// Modelin tanıdığı kök sayısı — sıfırsa tahmin yapılmaz.
+  knownTerms Int
+  durationMs Int
+
+  /// En yüksek olasılıklı ekip ve güveni.
+  predictedDepartmentId String?
+  confidence            Float?
+  /// Güven eşiğin altındaysa öneri "emin değilim" diye gösterilir.
+  lowConfidence         Boolean @default(false)
+
+  predictions DepartmentPrediction[]
+  matches     SimilarityMatch[]
+  outcome     Outcome?
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([predictedDepartmentId])
+}
+
+/// Bir çalıştırmadaki ekip önerileri — her ekip ayrı satır, sıralı.
+model DepartmentPrediction {
+  id          String    @id @default(cuid())
+  inferenceId String
+  inference   Inference @relation(fields: [inferenceId], references: [id], onDelete: Cascade)
+
+  rank           Int
+  departmentId   String
+  departmentName String
+  probability    Float
+  /// JSON: bu ekibi işaret eden kelimeler, ör. ["bordro","kesinti"]
+  terms          String
+
+  @@index([inferenceId])
+  @@index([departmentId])
+}
+
+/// Bir çalıştırmada gösterilen benzer çözülmüş kayıtlar.
+model SimilarityMatch {
+  id          String    @id @default(cuid())
+  inferenceId String
+  inference   Inference @relation(fields: [inferenceId], references: [id], onDelete: Cascade)
+
+  rank         Int
+  recordCode   String
+  recordTitle  String
+  departmentId String
+  percent      Int
+  /// JSON: eşleşmeyi tetikleyen kelimeler.
+  terms        String
+
+  @@index([inferenceId])
+  @@index([recordCode])
+}
+
+/// Çalıştırmanın sonucu: kullanıcı kaydı açtı mı, hangi ekibe, öneri doğru muydu.
+/// Outcome'u olmayan Inference = kullanıcı öneriyi görüp kayıt açmaktan vazgeçti.
+model Outcome {
+  id          String    @id @default(cuid())
+  inferenceId String    @unique
+  inference   Inference @relation(fields: [inferenceId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime @default(now())
+  recordCode String
+
+  /// Kayıt açılırken seçilen ekip.
+  finalDepartmentId String
+  /// Kullanıcı "Bu ekibi seç" düğmesiyle öneriyi uyguladı mı.
+  suggestionApplied Boolean
+  /// Seçilen ekip modelin ilk önerisiyle aynı mı.
+  matchedPrediction Boolean
+
+  /// Kayıt sonradan başka ekibe yönlendirildiyse doğru ekip budur.
+  /// Modelin gerçek isabeti: coalesce(forwardedTo, finalDepartment) == predicted.
+  forwardedToDepartmentId String?
+  forwardedAt             DateTime?
+
+  @@index([recordCode])
+  @@index([createdAt])
+}

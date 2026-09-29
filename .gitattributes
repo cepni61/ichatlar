@@ -1,0 +1,11 @@
+# Metin dosyaları depoda LF saklanır.
+* text=auto
+
+# Windows toplu işleri CRLF olmak zorunda: LF ile cmd.exe goto/call
+# etiketlerini bazen bulamaz. "Download ZIP" ile inen kopya da CRLF gelsin.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# İkili dosyalar
+*.db binary
+*.png binary

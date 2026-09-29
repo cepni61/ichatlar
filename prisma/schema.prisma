@@ -1,0 +1,271 @@
+// İç Hatlar — veri modeli
+//
+// Prototipteki (ichatlar4.html) kayıt yapısı birebir karşılanır, üzerine
+// gerçek sistemin gerektirdiği alanlar eklenir: oturum, denetim izi, dosya
+// eki, SLA kuralları ve kayıt numarası sayacı.
+//
+// LEHÇE NOTU
+// Şu an SQLite: kurulum ve yönetici yetkisi gerektirmiyor, dosya tabanlı.
+// Şema bilinçli olarak lehçeden bağımsız tutuldu:
+//   - enum yok           → sabit kümeler src/domain/enums.ts içinde, kolon String
+//   - @db.Text yok       → SQLite'ta karşılığı yok, PostgreSQL'de gerekmez
+//   - Json yok           → JSON alanlar String'e serileştirilir
+// PostgreSQL'e geçmek için tek değişiklik aşağıdaki provider satırı ve
+// DATABASE_URL. Lehçeye özgü iki davranış (harf duyarsız arama, satır kilidi)
+// src/lib/dialect.ts arkasında.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Kuruluş
+// ---------------------------------------------------------------------------
+
+model Department {
+  /// Prototipteki kısa kodlar korunur: ik, ki, idari, fin, sat, kalite
+  id    String @id
+  name  String
+  short String
+
+  /// Entra ID grup nesne kimliği. Kullanıcı girişinde departman ve ekip
+  /// üyeliği bu gruptan türetilir; boşsa atama elle yapılır.
+  entraGroupId String? @unique
+
+  active Boolean @default(true)
+  order  Int     @default(0)
+
+  users            User[]
+  primaryRecords   Record[] @relation("primaryDepartment")
+  secondaryRecords Record[] @relation("secondaryDepartment")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id String @id @default(cuid())
+
+  /// Entra ID nesne kimliği (oid claim). Kimliğin tek doğruluk kaynağı —
+  /// e-posta değişebilir, oid değişmez.
+  entraOid String  @unique
+  email    String  @unique
+  name     String
+
+  /// src/domain/enums.ts → Role
+  role   String  @default("USER")
+  active Boolean @default(true)
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdRecords  Record[]      @relation("creator")
+  assignedRecords Record[]      @relation("assignee")
+  events          RecordEvent[]
+  attachments     Attachment[]
+  sessions        Session[]
+  auditLogs       AuditLog[]
+
+  @@index([departmentId, active])
+}
+
+model Session {
+  /// Rastgele üretilen oturum kimliği; çerezde yalnızca bu değer taşınır.
+  id String @id
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Kayıtlar
+// ---------------------------------------------------------------------------
+
+model Record {
+  id String @id @default(cuid())
+
+  /// İnsan tarafından okunan numara: KAY-2026-0001
+  code String @unique
+
+  /// src/domain/enums.ts → RecordType
+  type        String
+  title       String
+  description String
+
+  /// src/domain/enums.ts → Priority
+  priority String @default("NORMAL")
+
+  /// src/domain/enums.ts → RecordStatus
+  status String @default("YENI")
+
+  /// Kayıt kişiye değil ekibe düşer.
+  departmentId String
+  department   Department @relation("primaryDepartment", fields: [departmentId], references: [id])
+
+  /// En fazla iki ekip — prototipteki "İlgili Ekip 2" kuralı.
+  department2Id String?
+  department2   Department? @relation("secondaryDepartment", fields: [department2Id], references: [id])
+
+  createdById String
+  createdBy   User   @relation("creator", fields: [createdById], references: [id])
+
+  assigneeId String?
+  assignee   User?   @relation("assignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  /// Anonim gönderim: createdById saklanır (denetim ve kötüye kullanım için)
+  /// ama ekibe sunulmaz. Gizleme src/lib/serialize.ts içinde yapılır.
+  anonymous Boolean @default(false)
+
+  resolution String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+
+  /// createdAt + öncelik saati. Kolonda tutulur ki "geciken kayıtlar"
+  /// sorgusu indeksten dönsün, her istekte yeniden hesaplanmasın.
+  slaDueAt      DateTime
+  slaBreachedAt DateTime?
+
+  events      RecordEvent[]
+  attachments Attachment[]
+
+  /// Kayıt açılırken gösterilen benzer kayıt önerileri.
+  suggestionsGiven    Suggestion[] @relation("suggestionSource")
+  suggestionsReceived Suggestion[] @relation("suggestionMatch")
+
+  @@index([status, slaDueAt])
+  @@index([departmentId, status])
+  @@index([department2Id, status])
+  @@index([assigneeId, status])
+  @@index([createdById, status])
+  @@index([createdAt])
+}
+
+model RecordEvent {
+  id String @id @default(cuid())
+
+  recordId String
+  record   Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  /// src/domain/enums.ts → EventType
+  type String
+  text String
+  at   DateTime @default(now())
+
+  /// Sistem olaylarında (SLA ihlali) boş olur.
+  byId String?
+  by   User?   @relation(fields: [byId], references: [id], onDelete: SetNull)
+
+  /// Yapısal ek bilgi, JSON metni olarak (lehçe bağımsızlığı için).
+  meta String?
+
+  @@index([recordId, at])
+}
+
+model Attachment {
+  id String @id @default(cuid())
+
+  recordId String
+  record   Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  name String
+  size Int
+  mime String
+
+  /// Depolama anahtarı. Yerel diskte göreli yol, S3/Azure Blob'a geçilirse
+  /// nesne anahtarı. Dosya içeriği asla veritabanında tutulmaz.
+  storageKey String
+
+  uploadedById String
+  uploadedBy   User   @relation(fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([recordId])
+}
+
+model Suggestion {
+  id String @id @default(cuid())
+
+  /// Yeni açılan kayıt.
+  sourceRecordId String?
+  sourceRecord   Record? @relation("suggestionSource", fields: [sourceRecordId], references: [id], onDelete: Cascade)
+
+  /// Eşleşen, geçmişte çözülmüş kayıt.
+  matchRecordId String
+  matchRecord   Record @relation("suggestionMatch", fields: [matchRecordId], references: [id], onDelete: Cascade)
+
+  score Float
+
+  /// Kullanıcı bu öneri sayesinde kayıt açmaktan vazgeçti mi. Modelin
+  /// gerçekten işe yarayıp yaramadığını ölçmenin tek yolu bu.
+  accepted Boolean?
+
+  createdAt DateTime @default(now())
+
+  @@index([matchRecordId])
+}
+
+// ---------------------------------------------------------------------------
+// Yapılandırma ve denetim
+// ---------------------------------------------------------------------------
+
+model SlaRule {
+  /// src/domain/enums.ts → Priority
+  priority String @id
+
+  /// Kapanış hedefi (saat).
+  hours Int
+
+  /// Sarı uyarı eşiği — hedefin bu oranı geçilince "yaklaşıyor".
+  warnRatio Float @default(0.7)
+
+  updatedAt DateTime @updatedAt
+}
+
+model Counter {
+  /// Kayıt numarası yıl bazlı sıfırlanır: KAY-2026-0001
+  year Int @id
+  seq  Int @default(0)
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  at      DateTime @default(now())
+  actorId String?
+  actor   User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  action   String
+  entity   String
+  entityId String
+
+  /// JSON metni olarak saklanır.
+  before String?
+  after  String?
+  ip     String?
+
+  @@index([entity, entityId, at])
+  @@index([actorId, at])
+}

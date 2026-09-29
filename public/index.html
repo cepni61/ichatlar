@@ -1,0 +1,3597 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>İç Hatlar — Bilgi ve Öneri Sistemi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&family=Fraunces:SOFT,WONK,opsz,wght@0,0,9..144,500;0,0,9..144,600;0,0,9..144,700&display=swap" rel="stylesheet">
+<!-- Temayi ilk boyamadan ONCE uygula: aksi halde aydinlik tema bir kare
+     gorunur ve koyu temaya gecerken goz alan bir sicrama olur. -->
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem('ih_theme');
+      if (t === 'dark' || t === 'softdark' || t === 'zumrut') document.documentElement.dataset.theme = t;
+    } catch (e) { /* localStorage kapali olabilir; aydinlik temada kal */ }
+  })();
+</script>
+<style>
+  /* =====================================================================
+     İÇ HATLAR — Tasarım Sistemi
+     Marka logosundaki çok renkli paletten türetildi:
+     lacivert metin, mavi ana vurgu + teal / turuncu / yeşil / mor aksanlar.
+     Tipografi: tek aile — Inter (başlık, gövde, sayı)
+     ===================================================================== */
+  :root{
+    /* — Marka renkleri (logodaki halka ikonlarıyla aynı) — */
+    --brand-navy:#12275c;
+    --brand-blue:#2563eb;   --brand-blue-2:#1d4ed8;
+    --brand-teal:#0d9c92;
+    --brand-orange:#f59e0b;
+    --brand-green:#4caf3f;
+    --brand-purple:#7c4ddb;
+
+    /* — Yüzey ve metin — */
+    --bg:#f6f8fc;
+    --panel:#ffffff;
+    --panel2:#f4f7fc;
+    --panel3:#eef2f8;   /* kanban kolonu gibi gomulu yuzeyler */
+    --text:#12275c;
+    --text-2:#3f4f75;
+    --muted:#7b89a6;
+    --line:#e6ebf5;
+    --line-2:#d6deec;
+
+    /* — Mavi skala (bilesenlerde kullanilir) — */
+    --b-900:#12275c; --b-800:#1d4ed8; --b-700:#2563eb; --b-600:#3b82f6;
+    --b-500:#60a5fa; --b-400:#93c5fd; --b-300:#bfdbfe; --b-200:#dbeafe;
+    --b-100:#e8effe; --b-50:#f2f6fe;
+
+    /* — Vurgu — */
+    --primary:var(--brand-blue);
+    --primary2:#e8effe;
+    /* --primary2 zemini uzerindeki metin. Onceden --brand-blue-2
+       kullaniliyordu ama o token ayni zamanda btn-primary:hover ZEMINI —
+       tek token iki is yapinca koyu temada biri mutlaka okunmaz oluyordu. */
+    --on-soft:#1d4ed8;
+    --primary-hover:#1d4ed8;   /* birincil butonun hover zemini */
+    /* Odak halkasi. Ad bilincli olarak --focus-ring: gezici asistan
+       (.agent.st-*) kendi --ring degiskenini tanimliyor, ayni ad kullanilsa
+       asistanin icinde yanlis degere cozulurdu. */
+    --focus-ring:rgba(37,99,235,.13);
+    --glow:rgba(37,99,235,.28);     /* birincil buton parilti */
+    --hair:rgba(37,99,235,.10);     /* ince mavi cerceve */
+    --grad:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+
+    /* — Durum renkleri — */
+    --success:#2f9e44; --successbg:#eaf7ea;
+    --warn:#e8890c;    --warnbg:#fef4e4;
+    --danger:#e03131;  --dangerbg:#fdeceb;
+    --violet:#7c4ddb;  --violetbg:#f1ebfd;
+    --slate:#5b6b8c;   --slatebg:#eef1f7;
+    --teal:#0d9c92;    --tealbg:#e4f6f4;
+
+    /* — Yarıçap skalası — */
+    --r-sm:10px; --r:14px; --r-lg:20px;
+
+    /* — Yumuşak, iki katmanlı gölgeler — */
+    --sh-1:0 1px 2px rgba(18,39,92,.05);
+    --sh-2:0 2px 8px rgba(18,39,92,.06), 0 1px 2px rgba(18,39,92,.04);
+    --sh-3:0 18px 44px rgba(18,39,92,.14), 0 4px 12px rgba(18,39,92,.07);
+
+    /* — Tipografi: tek aile, hizalı rakamlar — */
+    --f-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --f-display:var(--f-sans);
+    --f-num:var(--f-sans);
+    --ls-tight:-.022em; --ls-snug:-.011em; --ls-wide:.06em;
+
+
+    /* — CHROME KATMANI —
+       Kenar cubugu ve ust bant, icerik alanindan BAGIMSIZ temalanabilsin diye
+       ayri token kullanir. Varsayilanlar mevcut degerlere isaret ediyor, yani
+       aydinlik temada hicbir sey degismez. "Koyu sol + acik orta" duzenleri
+       (zumrut, soft dark) yalnizca bu token'lari ezer. */
+    --chrome-bg:var(--panel);
+    --chrome-blur:none;
+    --chrome-line:var(--line);
+    --chrome-brand:var(--brand-navy);
+    --chrome-brand-2:var(--muted);
+    --chrome-section:var(--muted);
+    --chrome-text:var(--text-2);
+    --chrome-text-hi:var(--text);
+    --chrome-hover:var(--panel2);
+    --chrome-active-bg:var(--primary);
+    --chrome-active-fg:#fff;
+    --chrome-active-mark:transparent;
+    --chrome-badge-bg:var(--primary2);
+    --chrome-badge-fg:var(--on-soft);
+    --chrome-card:var(--panel2);
+    --chrome-card-line:var(--line);
+    --chrome-name:var(--text);
+    --chrome-role:var(--muted);
+    --chrome-input-bg:var(--panel);
+    --chrome-input-fg:var(--text);
+    --chrome-input-line:var(--line-2);
+    --chrome-foot:var(--muted);
+    --chrome-menu-bg:var(--panel);
+    --chrome-menu-line:var(--line-2);
+
+    /* Ust bant: baslik, alt metin, arama */
+    --head-title:var(--text);
+    --head-sub:var(--muted);
+    --head-icon:var(--muted);
+    --head-input-bg:var(--panel);
+    --head-input-fg:var(--text);
+    --head-input-line:var(--line-2);
+    --head-shadow:var(--sh-1);
+
+    /* Katman kancalari — varsayilan kapali */
+    --page-layer:none;
+    --page-glow:none;
+    --main-layer:none;
+
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ==========================================================================
+     TEMALAR
+     Aydinlik tema yukaridaki :root. Koyu ve zumrut temalar ayni token'lari
+     yeniden tanimlar; bilesen CSS'i hic degismez.
+
+     Mavi skala (--b-*) iki farkli iste kullaniliyor: --b-700 metin rengi,
+     --b-50/--b-100 yumusak zemin. Bu yuzden koyu temada skala TERS cevrilir —
+     metin ucu acilir, zemin ucu koyulasir. Duz cevirme yapilsa metin
+     okunmaz hale gelirdi.
+     ========================================================================== */
+
+  /* ---------- Koyu tema ---------- */
+  html[data-theme="dark"]{
+    color-scheme:dark;
+    --chrome-menu-bg:#1e2942;
+    --chrome-menu-line:#3a4767;              /* kaydirma cubugu ve form kontrolleri */
+
+    --bg:#0d1220;
+    --panel:#151c2e;
+    --panel2:#1b2438;
+    --panel3:#111827;
+
+    --brand-navy:#c7d6f5;           /* marka yazisi: koyu zeminde acik olmali */
+
+    --text:#e8edf7;
+    --text-2:#b3bfd6;
+    --muted:#8593ad;
+    --line:#26304a;
+    --line-2:#33405e;
+
+    --b-900:#dce9ff; --b-800:#bcd3f9; --b-700:#9dbcf5; --b-600:#7ea6ea;
+    --b-500:#6b8fd4; --b-400:#4a6ba8; --b-300:#2f4a78; --b-200:#24395f;
+    --b-100:#1b2b4a; --b-50:#16233d;
+
+    --primary:#3b82f6;
+    --primary2:#1b2b4a;
+    --on-soft:#9dbcf5;
+    --primary-hover:#2563eb;
+    --focus-ring:rgba(96,165,250,.30);
+    --glow:rgba(37,99,235,.42);
+    --hair:rgba(157,188,245,.16);
+    --grad:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);
+
+    /* Durum renkleri: on plan acildi, zemin koyulastirildi. */
+    --success:#4ade80; --successbg:#12301f;
+    --warn:#fbbf24;    --warnbg:#33260c;
+    --danger:#f87171;  --dangerbg:#3a1618;
+    --violet:#a78bfa;  --violetbg:#241a3d;
+    --slate:#9aa8c0;   --slatebg:#1e2436;
+    --teal:#2dd4bf;    --tealbg:#0d2e2c;
+
+    /* Navy golge koyu zeminde gorunmez; siyah ve daha derin. */
+    --sh-1:0 1px 2px rgba(0,0,0,.34);
+    --sh-2:0 2px 10px rgba(0,0,0,.42), 0 1px 2px rgba(0,0,0,.30);
+    --sh-3:0 20px 48px rgba(0,0,0,.55), 0 6px 16px rgba(0,0,0,.40);
+  }
+
+  /* ---------- Zumrut tema ----------
+     ichatlarzumrut.html referansindan BIREBIR alindi: zumrut skalasi,
+     yuzeyler, rgba kenarliklar, uc duraklı gradyan, yarıcap skalasi
+     (12/18/26 — varsayilandan yumusak), zumrut tonlu golgeler ve display
+     fontu olarak Fraunces (serif).
+
+     Referansin duzeni "koyu sol + acik orta": sayfa genisliginde capraz
+     zumrut→beyaz gradyan, uzerinde yarı saydam koyu kenar cubugu (blur ile)
+     ve gradyanin koyu ust-sol bolgesinde durdugu icin BEYAZ ust bant metni.
+     Bu yuzden yalnizca renk token'lari degil, katman ve chrome token'lari da
+     ezilir. */
+  html[data-theme="zumrut"]{
+    /* Zumrut skalasi — referanstaki --em-* karsiliklari */
+    --em-950:#032b21; --em-900:#04372c; --em-800:#065f46; --em-700:#047857;
+    --em-600:#059669; --em-500:#10b981; --em-400:#34d399; --em-300:#6ee7b7;
+    --em-200:#a7f3d0; --em-100:#d1fae5; --em-50:#ecfdf5;
+
+    --bg:#ffffff;
+    --panel:#ffffff;
+    --panel2:#f1f7f4;
+    --panel3:#e8f3ee;
+
+    --text:#0d2620;
+    --text-2:#3f5b53;
+    --muted:#6f8880;
+    --line:rgba(6,95,70,.11);
+    --line-2:rgba(6,95,70,.20);
+
+    --brand-navy:#0d2620;
+
+    /* Mavi skalanin yerine zumrut skalasi. --b-700 metin, --b-50 zemin
+       olarak kullanildigi icin yonler korunur. */
+    --b-900:#032b21; --b-800:#04372c; --b-700:#047857; --b-600:#059669;
+    --b-500:#10b981; --b-400:#34d399; --b-300:#6ee7b7; --b-200:#a7f3d0;
+    --b-100:#d1fae5; --b-50:#ecfdf5;
+
+    --primary:#047857;
+    --primary-hover:#065f46;
+    --primary2:#dff5ec;
+    --on-soft:#065f46;
+    --grad:linear-gradient(135deg,#047857 0%,#0d9488 55%,#10b981 100%);
+    --focus-ring:rgba(4,120,87,.16);
+    --glow:rgba(4,120,87,.30);
+    --hair:rgba(6,95,70,.12);
+
+    /* Referanstaki durum renkleri — yesille uyumlu ama birbirinden ayrik */
+    --success:#15803d; --successbg:#e7f6ec;
+    --warn:#b45309;    --warnbg:#fdf2e0;
+    --danger:#b91c1c;  --dangerbg:#fbeaea;
+    --violet:#6d28d9;  --violetbg:#efe9fb;
+    --slate:#475569;   --slatebg:#eef2f1;
+    --teal:#0d9488;    --tealbg:#ddf3f0;
+
+    /* Referansin yumusak yaricap skalasi */
+    --r-sm:12px; --r:18px; --r-lg:26px;
+
+    /* Iki katmanli, zumrut tonlu golgeler */
+    --sh-1:0 1px 2px rgba(4,55,44,.05), 0 1px 1px rgba(4,55,44,.03);
+    --sh-2:0 10px 30px rgba(4,55,44,.08), 0 2px 6px rgba(4,55,44,.05);
+    --sh-3:0 24px 60px rgba(4,55,44,.14), 0 6px 16px rgba(4,55,44,.07);
+
+    /* Referansin tipografisi: display icin Fraunces (serif) */
+    --f-display:'Fraunces','Iowan Old Style',Georgia,'Times New Roman',serif;
+    --ls-tight:-.028em; --ls-snug:-.014em; --ls-wide:.08em;
+
+    /* — Sayfa katmanlari: capraz zumrut→beyaz + iki isik huzmesi — */
+    --page-layer:linear-gradient(157deg,
+      #032b21 0%, #04372c 9%, #065f46 19%, #08725a 28%, #0e8f70 37%,
+      #1fac89 46%, #4ec6a6 55%, #83dcc3 64%, #b2ebdb 73%, #d5f4ea 81%,
+      #eafaf5 89%, #f7fdfb 95%, #ffffff 100%);
+    --page-glow:
+      radial-gradient(760px 420px at 12% 4%,  rgba(255,255,255,.16), transparent 62%),
+      radial-gradient(620px 380px at 92% 30%, rgba(255,255,255,.12), transparent 60%);
+
+    /* — Chrome: yari saydam koyu kenar cubugu, beyaz ust bant — */
+    --chrome-bg:linear-gradient(178deg, rgba(3,33,26,.80), rgba(4,55,44,.62));
+    --chrome-blur:blur(20px) saturate(140%);
+    --chrome-line:rgba(255,255,255,.09);
+    --chrome-brand:#ffffff;
+    --chrome-brand-2:rgba(215,240,232,.62);
+    --chrome-section:rgba(167,243,208,.48);
+    --chrome-text:rgba(219,242,235,.80);
+    --chrome-text-hi:#ffffff;
+    --chrome-hover:rgba(255,255,255,.07);
+    --chrome-active-bg:rgba(255,255,255,.12);
+    --chrome-active-fg:#ffffff;
+    --chrome-active-shadow:none;
+    --chrome-active-mark:linear-gradient(180deg,#6ee7b7,#10b981);
+    --chrome-badge-bg:rgba(110,231,183,.20);
+    --chrome-badge-fg:#a7f3d0;
+    --chrome-badge-on-bg:rgba(110,231,183,.28);
+    --chrome-badge-on-fg:#d1fae5;
+    --chrome-card:rgba(255,255,255,.07);
+    --chrome-card-line:rgba(255,255,255,.11);
+    --chrome-name:#ffffff;
+    --chrome-role:rgba(167,243,208,.62);
+    --chrome-input-bg:rgba(3,33,26,.45);
+    --chrome-input-fg:#eafaf5;
+    --chrome-input-line:rgba(255,255,255,.14);
+    --chrome-foot:rgba(215,240,232,.45);
+    --chrome-menu-bg:rgba(3,33,26,.94);
+    --chrome-menu-line:rgba(255,255,255,.16);
+
+    --head-title:#ffffff;
+    --head-sub:rgba(232,250,244,.72);
+    --head-icon:rgba(232,250,244,.55);
+    --head-input-bg:rgba(255,255,255,.12);
+    --head-input-fg:#ffffff;
+    --head-input-line:rgba(255,255,255,.18);
+    --head-shadow:none;
+  }
+
+  /* Referanstaki baslik serif'i ve KPI ust cizgisi */
+  html[data-theme="zumrut"] h1,
+  html[data-theme="zumrut"] h2,
+  html[data-theme="zumrut"] h3,
+  html[data-theme="zumrut"] h4{font-family:var(--f-display)}
+  html[data-theme="zumrut"] .page-title h2{text-shadow:0 1px 20px rgba(3,33,26,.28)}
+  html[data-theme="zumrut"] .kpi{overflow:hidden}
+  html[data-theme="zumrut"] .kpi::after{
+    content:'';position:absolute;left:0;right:0;top:0;height:2px;
+    background:var(--grad);opacity:.9;
+  }
+  /* Ust bantta cam etkisi — referansta arama ve ikincil butonlar boyle */
+  html[data-theme="zumrut"] .topbar .btn-ghost{
+    background:rgba(255,255,255,.12);color:#fff;
+    border-color:rgba(255,255,255,.18);box-shadow:none;
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  html[data-theme="zumrut"] .topbar .btn-ghost:hover{background:rgba(255,255,255,.20)}
+  html[data-theme="zumrut"] .search input{
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+
+  /* ---------- Soft dark tema ----------
+     Kullanicinin istegi: ust ve sol taraf koyu, orta alan acik. Kenar cubugu
+     ve ust bant koyu grafit; kartlarin durdugu icerik alani aydinlik kalir.
+
+     Ustteki koyu bant .main uzerinde bir gradyan (--main-layer). Sabit
+     olmadigi icin icerikle birlikte kayar, yumusak gecis oldugu icin ust bant
+     yuksekligi degisince (mobilde sarma) sert kenar olusmaz. */
+  html[data-theme="softdark"]{
+    --bg:#eef1f6;
+    --panel:#ffffff;
+    --panel2:#f4f6fa;
+    --panel3:#e7ebf2;
+
+    --text:#141a26;
+    --text-2:#3d465a;
+    --muted:#727c91;
+    --line:#e2e6ee;
+    --line-2:#cfd5e1;
+
+    --primary:#2563eb;
+    --primary-hover:#1d4ed8;
+    --primary2:#e8effe;
+    --on-soft:#1d4ed8;
+
+    /* Ust bant koyu oldugu icin baslik ve arama beyaz */
+    --head-title:#f3f6fc;
+    --head-sub:rgba(226,232,244,.70);
+    --head-icon:rgba(226,232,244,.58);
+    --head-input-bg:rgba(255,255,255,.10);
+    --head-input-fg:#f3f6fc;
+    --head-input-line:rgba(255,255,255,.18);
+    --head-shadow:none;
+
+    --main-layer:linear-gradient(180deg,
+      #1c2434 0px, #1c2434 78px, rgba(28,36,52,0) 148px);
+
+    /* Kenar cubugu: ust bantla ayni grafit aile */
+    --chrome-bg:#161d2b;
+    --chrome-line:#27303f;
+    --chrome-brand:#f3f6fc;
+    --chrome-brand-2:rgba(200,210,228,.58);
+    --chrome-section:rgba(160,172,194,.62);
+    --chrome-text:rgba(212,220,236,.82);
+    --chrome-text-hi:#ffffff;
+    --chrome-hover:rgba(255,255,255,.07);
+    --chrome-active-bg:var(--primary);
+    --chrome-active-fg:#ffffff;
+    --chrome-active-shadow:0 6px 16px rgba(37,99,235,.34);
+    --chrome-active-mark:transparent;
+    --chrome-badge-bg:rgba(147,197,253,.20);
+    --chrome-badge-fg:#bfdbfe;
+    --chrome-card:rgba(255,255,255,.06);
+    --chrome-card-line:rgba(255,255,255,.10);
+    --chrome-name:#ffffff;
+    --chrome-role:rgba(180,192,214,.66);
+    --chrome-input-bg:rgba(9,13,22,.45);
+    --chrome-input-fg:#eaeefa;
+    --chrome-input-line:rgba(255,255,255,.14);
+    --chrome-foot:rgba(170,182,204,.52);
+    --chrome-menu-bg:#212a3c;
+    --chrome-menu-line:rgba(255,255,255,.16);
+  }
+  /* Koyu bandin uzerindeki ikincil buton da cam olur */
+  html[data-theme="softdark"] .topbar .btn-ghost{
+    background:rgba(255,255,255,.10);color:#f3f6fc;
+    border-color:rgba(255,255,255,.18);box-shadow:none;
+  }
+  html[data-theme="softdark"] .topbar .btn-ghost:hover{background:rgba(255,255,255,.18)}
+
+  /* Tema secici — kapali dururken yalnizca mevcut temayi gosterir, tiklanınca
+     acilir. Kenar cubugunda durdugu icin ICERIK degil CHROME token'larini
+     kullanir; yoksa zumrut/soft dark'ta koyu kenar cubugunun uzerinde beyaz
+     kutular olarak duruyordu. */
+  .theme-pick{margin-top:12px;position:relative}
+
+  .theme-trigger{
+    width:100%;display:flex;align-items:center;gap:9px;
+    border:1px solid var(--chrome-input-line);background:var(--chrome-input-bg);
+    color:var(--chrome-text-hi);border-radius:10px;padding:8px 10px;
+    cursor:pointer;text-align:left;font:inherit;
+    transition:background .16s var(--ease), border-color .16s var(--ease);
+  }
+  .theme-trigger:hover{background:var(--chrome-hover)}
+  .tt-txt{flex:1;min-width:0;display:block}
+  .tt-lbl{
+    display:block;font-size:9px;font-weight:700;letter-spacing:var(--ls-wide);
+    text-transform:uppercase;color:var(--chrome-role);
+  }
+  .tt-cur{
+    display:block;font-size:12px;font-weight:600;margin-top:1px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tt-chev{
+    width:14px;height:14px;flex:none;color:var(--chrome-role);
+    transition:transform .18s var(--ease);
+  }
+  .theme-trigger[aria-expanded="true"] .tt-chev{transform:rotate(180deg)}
+
+  /* Menu YUKARI acilir: profil blogu kenar cubugunun dibinde, asagi acilsa
+     gorunur alandan tasardi. */
+  .theme-menu{
+    position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:40;
+    background:var(--chrome-menu-bg);
+    backdrop-filter:var(--chrome-blur);-webkit-backdrop-filter:var(--chrome-blur);
+    border:1px solid var(--chrome-menu-line);border-radius:12px;
+    padding:6px;box-shadow:var(--sh-3);display:grid;gap:2px;
+  }
+  .theme-opt{
+    display:flex;align-items:center;gap:9px;width:100%;
+    border:0;background:transparent;border-radius:8px;padding:7px 8px;
+    cursor:pointer;color:var(--chrome-text);text-align:left;
+    font-size:12px;font-weight:500;font-family:inherit;
+    transition:background .14s var(--ease), color .14s var(--ease);
+  }
+  .theme-opt:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
+  .theme-opt[aria-checked="true"]{color:var(--chrome-text-hi);font-weight:600}
+  .theme-opt .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .theme-opt .tick{width:14px;height:14px;flex:none;opacity:0}
+  .theme-opt[aria-checked="true"] .tick{opacity:1}
+
+  /* Kenar cubugundaki butonlar (cikis) — icerik degil chrome token'lari,
+     yoksa koyu kenar cubugunda beyaz pil gibi duruyor. */
+  .chrome-btn{
+    width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+    border:1px solid var(--chrome-input-line);background:var(--chrome-input-bg);
+    color:var(--chrome-text-hi);border-radius:10px;padding:9px 12px;
+    cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;
+    transition:background .16s var(--ease);
+  }
+  .chrome-btn:hover{background:var(--chrome-hover)}
+
+  /* Kucuk onizleme: temanin zemin + vurgu rengi */
+  .theme-swatch{
+    width:18px;height:18px;border-radius:6px;flex:none;
+    border:1px solid rgba(0,0,0,.18);position:relative;overflow:hidden;
+  }
+  .theme-swatch::after{
+    content:'';position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;
+    border-radius:50%;background:var(--sw-accent);
+  }
+
+  *{box-sizing:border-box}
+  /* gizli öğeler her zaman gizli kalsın */
+  [hidden]{display:none !important}
+
+  html,body{margin:0;padding:0;min-height:100%}
+  body{
+    font-family:var(--f-sans);
+    font-size:14.5px; line-height:1.6; color:var(--text);
+    letter-spacing:var(--ls-snug);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    background:var(--bg);
+  }
+
+  /* Tema katmanlari. Varsayilan `none` oldugu icin aydinlik temada hic
+     boyanmaz; zumrut ve soft dark bunlari devreye alir. */
+  body::before{
+    content:''; position:fixed; inset:0; z-index:-2;
+    background:var(--page-layer);
+  }
+  body::after{
+    content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:var(--page-glow);
+  }
+
+  button,input,select,textarea{font-family:inherit;letter-spacing:inherit}
+  h1,h2,h3,h4{font-family:var(--f-display);font-weight:700;letter-spacing:var(--ls-tight);margin:0}
+
+  /* ikonlar */
+  .ic{width:18px;height:18px;flex-shrink:0;stroke-width:1.7}
+  .ic-sm{width:15px;height:15px}
+  .ic-lg{width:22px;height:22px}
+
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+  /* ---------- Sidebar (beyaz) ---------- */
+  .sidebar{
+    background:var(--chrome-bg);
+    backdrop-filter:var(--chrome-blur);
+    -webkit-backdrop-filter:var(--chrome-blur);
+    border-right:1px solid var(--chrome-line);
+    color:var(--chrome-text-hi);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto;
+    display:flex;flex-direction:column;
+  }
+  .brand{display:flex;gap:10px;align-items:center;margin:2px 6px 22px}
+  .logo{width:38px;height:38px;flex-shrink:0;display:grid;place-items:center}
+  .logo svg{width:100%;height:100%;display:block}
+  .brand h1{
+    font-size:19px;margin:0;line-height:1.1;color:var(--chrome-brand);
+    font-weight:800;letter-spacing:-.03em;
+  }
+  .brand span{
+    display:block;color:var(--chrome-brand-2);font-size:10.5px;margin-top:2px;
+    font-weight:500;letter-spacing:.01em;
+  }
+  .nav-section{
+    font-size:10px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
+    color:var(--chrome-section);margin:20px 0 6px 12px;
+  }
+  .nav{flex:1}
+  .nav button{
+    width:100%;border:0;background:transparent;color:var(--chrome-text);
+    position:relative;text-align:left;padding:10px 12px;border-radius:var(--r-sm);
+    display:flex;align-items:center;gap:11px;
+    font-weight:500;cursor:pointer;font-size:13.5px;margin-bottom:2px;
+    letter-spacing:var(--ls-snug);
+    transition:background .16s var(--ease), color .16s var(--ease);
+  }
+  .nav button:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
+  .nav button.active::before{
+    content:'';position:absolute;left:-14px;top:9px;bottom:9px;width:3px;
+    border-radius:0 3px 3px 0;background:var(--chrome-active-mark);
+  }
+  .nav button.active{
+    background:var(--chrome-active-bg);color:var(--chrome-active-fg);font-weight:600;
+    box-shadow:var(--chrome-active-shadow, 0 6px 16px var(--glow));
+  }
+  .nav button .lbl{flex:1}
+  .badge{
+    background:var(--chrome-badge-bg);color:var(--chrome-badge-fg);border-radius:999px;
+    padding:1px 8px;font-size:11px;font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  .nav button.active .badge{background:var(--chrome-badge-on-bg,rgba(255,255,255,.24));color:var(--chrome-badge-on-fg,#fff)}
+
+  .profile{
+    margin-top:18px;padding:13px;border-radius:var(--r);
+    background:var(--chrome-card);border:1px solid var(--chrome-card-line);
+  }
+  .profile .who{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .profile .name{font-weight:700;font-size:13px;line-height:1.25;color:var(--chrome-name)}
+  .profile .role{color:var(--chrome-role);font-size:11px;margin-top:1px}
+  .profile select{
+    width:100%;padding:8px 10px;border-radius:9px;
+    background:var(--chrome-input-bg);color:var(--chrome-input-fg);
+    border:1px solid var(--chrome-input-line);font-size:12px;font-weight:500;
+  }
+  .profile .switch-lbl{
+    font-size:10px;color:var(--muted);margin-bottom:6px;
+    font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
+  }
+  .side-foot{
+    border-top:1px solid var(--chrome-line);margin-top:14px;padding:12px 8px 2px;
+    font-size:10.5px;color:var(--chrome-foot);line-height:1.5;
+  }
+
+  /* ---------- Main ---------- */
+  /* --main-layer: soft dark temada ustteki koyu bant. Sabit degil,
+     icerikle kayar; yumusak gecis oldugu icin ust bant yuksekligi
+     degisince (mobilde sarma) sert kenar olusmaz. */
+  .main{padding:22px 26px 44px;min-width:0;
+    background:var(--main-layer);background-repeat:no-repeat}
+  .topbar{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;margin-bottom:22px;flex-wrap:wrap}
+  .page-title h2{
+    font-size:27px;margin:0 0 4px;color:var(--head-title);
+    letter-spacing:-.03em;line-height:1.15;font-weight:800;
+  }
+  .page-title p{margin:0;color:var(--head-sub);font-size:13.5px;max-width:62ch}
+  .actions{display:flex;gap:9px;align-items:center}
+
+  .search{position:relative;display:flex;align-items:center}
+  .search .ic{position:absolute;left:14px;color:var(--head-icon);pointer-events:none}
+  .search input{
+    height:42px;width:300px;border:1px solid var(--head-input-line);
+    border-radius:999px;padding:0 16px 0 42px;
+    background:var(--head-input-bg);color:var(--head-input-fg);font-size:13.5px;
+    box-shadow:var(--head-shadow);
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .search input::placeholder{color:var(--head-icon)}
+  .search input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--focus-ring)}
+
+  .btn{
+    border:1px solid transparent;border-radius:999px;
+    padding:10px 16px;font-weight:600;cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;font-size:13px;
+    letter-spacing:var(--ls-snug);
+    transition:transform .16s var(--ease), box-shadow .18s var(--ease),
+               background .18s var(--ease), border-color .18s var(--ease);
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{
+    background:var(--primary);color:#fff;
+    box-shadow:0 6px 16px var(--glow);
+  }
+  .btn-primary:hover{background:var(--primary-hover);box-shadow:0 10px 22px var(--glow)}
+  .btn-primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;transform:none}
+  .btn-ghost{background:var(--panel);color:var(--text);border-color:var(--line-2);box-shadow:var(--sh-1)}
+  .btn-ghost:hover{background:var(--panel2);border-color:var(--primary)}
+  .btn-soft{background:var(--primary2);color:var(--on-soft);border-color:transparent}
+  .btn-soft:hover{background:var(--b-200)}
+  .btn-success{background:var(--success);color:#fff;box-shadow:0 6px 16px rgba(47,158,68,.26)}
+  .btn-danger{background:var(--danger);color:#fff;box-shadow:0 6px 16px rgba(224,49,49,.24)}
+
+  /* ---------- Sayfa geçişleri ---------- */
+  .view{display:none}
+  .view.active{display:block;animation:viewIn .44s cubic-bezier(.22,1,.36,1) both}
+  @keyframes viewIn{
+    from{opacity:0;transform:translateY(16px) scale(.994);filter:blur(4px)}
+    to  {opacity:1;transform:none;filter:blur(0)}
+  }
+  /* içerik blokları sırayla belirsin — akışı yumuşatır */
+  .view.active > *{animation:blockIn .52s cubic-bezier(.22,1,.36,1) both}
+  .view.active > *:nth-child(1){animation-delay:.03s}
+  .view.active > *:nth-child(2){animation-delay:.09s}
+  .view.active > *:nth-child(3){animation-delay:.15s}
+  .view.active > *:nth-child(4){animation-delay:.21s}
+  .view.active > *:nth-child(n+5){animation-delay:.26s}
+  @keyframes blockIn{
+    from{opacity:0;transform:translateY(14px)}
+    to  {opacity:1;transform:none}
+  }
+  /* KPI kartları tek tek gelsin */
+  .kpis .kpi, .report-kpis .metric-box{animation:kpiIn .5s cubic-bezier(.22,1,.36,1) both}
+  .kpis .kpi:nth-child(1),.report-kpis .metric-box:nth-child(1){animation-delay:.06s}
+  .kpis .kpi:nth-child(2),.report-kpis .metric-box:nth-child(2){animation-delay:.12s}
+  .kpis .kpi:nth-child(3),.report-kpis .metric-box:nth-child(3){animation-delay:.18s}
+  .kpis .kpi:nth-child(4),.report-kpis .metric-box:nth-child(4){animation-delay:.24s}
+  @keyframes kpiIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+
+  /* Hareket azaltma tercihi olan kullanıcılar için animasyonları kapat */
+  @media (prefers-reduced-motion: reduce){
+    .view.active, .view.active > *, .kpis .kpi, .report-kpis .metric-box,
+    .modal, .modal-bg, .chat, .msg{animation:none !important}
+    *{transition-duration:.01ms !important}
+  }
+
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:18px}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--r);
+    box-shadow:var(--sh-2);
+  }
+  .kpi{padding:18px 18px;position:relative;display:flex;gap:14px;align-items:flex-start}
+  .kpi .ico{
+    width:46px;height:46px;border-radius:50%;flex-shrink:0;
+    display:grid;place-items:center;color:#fff;
+  }
+  .kpi .ico.c1{background:var(--brand-blue)}
+  .kpi .ico.c2{background:var(--brand-teal)}
+  .kpi .ico.c3{background:var(--brand-orange)}
+  .kpi .ico.c4{background:var(--brand-green)}
+  .kpi .ico.c5{background:var(--brand-purple)}
+  .kpi .kpi-txt{min-width:0}
+  .kpi .label{color:var(--text-2);font-size:12.5px;font-weight:600}
+  .kpi .value{
+    font-family:var(--f-num);font-size:29px;font-weight:800;
+    margin:4px 0 3px;line-height:1.1;letter-spacing:-.035em;
+    font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;
+    color:var(--text);
+  }
+  .kpi .trend{font-size:12px;font-weight:500;color:var(--muted)}
+  .up{color:var(--success)}.down{color:var(--danger)}
+
+  .dashboard-layout{grid-template-columns:1.3fr .7fr}
+  .card-head{display:flex;justify-content:space-between;align-items:center;padding:20px 22px 0;gap:12px;flex-wrap:wrap}
+  .card-head h3{margin:0;font-size:17px;letter-spacing:var(--ls-tight)}
+  .card-body{padding:20px 22px}
+
+  .bar-row{display:grid;grid-template-columns:148px 1fr 44px;gap:14px;align-items:center;margin:13px 0;font-size:13px}
+  .bar-row>span:first-child{color:var(--text-2)}
+  .bar{height:8px;background:var(--panel2);border-radius:999px;overflow:hidden}
+  .bar span{display:block;height:100%;background:var(--primary);border-radius:999px;transition:width .6s var(--ease)}
+  .bar span.g{background:var(--brand-green)}
+  .bar span.o{background:var(--brand-orange)}
+  .bar-row b{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+
+  .leader{
+    display:flex;gap:13px;align-items:center;padding:13px;
+    border:1px solid var(--line);border-radius:var(--r-sm);
+    margin-bottom:10px;background:var(--panel2);
+  }
+  .leader:last-child{margin-bottom:0}
+  .avatar{
+    width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+    background:var(--primary2);color:var(--on-soft);
+    font-weight:700;font-size:11px;flex-shrink:0;letter-spacing:.02em;
+  }
+  .avatar.sm{width:36px;height:36px;border-radius:11px;font-size:11.5px}
+  .avatar.grad{
+    background:var(--primary);color:#fff;
+    box-shadow:0 5px 14px var(--glow);
+  }
+  .leader b{display:block;font-size:13px;font-family:var(--f-sans);font-weight:600}
+  .leader span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+
+  /* ---------- Tablo ---------- */
+  .table-wrap{overflow:auto}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:14px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  .table tbody tr:last-child td{border-bottom:0}
+  .table tbody tr{transition:background .14s var(--ease)}
+  .table tbody tr:hover{background:var(--panel2)}
+  .table th{
+    color:var(--muted);font-size:10.5px;text-transform:uppercase;
+    letter-spacing:var(--ls-wide);font-weight:600;
+    border-bottom-color:var(--line-2);
+  }
+  .ticket-title{font-weight:600;font-variant-numeric:tabular-nums}
+  .small{font-size:12px;color:var(--muted)}
+  .empty{padding:48px;text-align:center;color:var(--muted);font-size:13px}
+
+  /* ---------- Pill ---------- */
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;border-radius:8px;
+    padding:4px 9px;font-size:11.5px;font-weight:600;white-space:nowrap;
+    letter-spacing:var(--ls-snug);
+  }
+  .pill .ic-sm{width:13px;height:13px}
+  .green{background:var(--successbg);color:var(--success)}
+  .yellow{background:var(--warnbg);color:var(--warn)}
+  .red{background:var(--dangerbg);color:var(--danger)}
+  .blue{background:var(--primary2);color:var(--on-soft)}
+  .purple{background:var(--violetbg);color:var(--violet)}
+  .gray{background:var(--slatebg);color:var(--slate)}
+  .teal{background:var(--tealbg);color:var(--teal)}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+  /* ---------- Form ---------- */
+  .form-layout{grid-template-columns:1fr 384px}
+  .form-card{padding:24px}
+  .form-card>h3{margin:0 0 6px;font-size:20px;letter-spacing:var(--ls-tight)}
+  .field{margin-bottom:17px}
+  .field label{
+    display:block;font-size:11px;font-weight:600;margin-bottom:8px;
+    letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2);
+  }
+  .field input,.field select,.field textarea{
+    width:100%;border:1px solid var(--line-2);border-radius:var(--r-sm);
+    background:var(--panel);padding:11px 13px;color:var(--text);font-size:14px;
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{
+    outline:none;border-color:var(--b-500);box-shadow:0 0 0 3.5px var(--focus-ring);
+  }
+  .field textarea{min-height:130px;resize:vertical;line-height:1.6}
+  .hint{font-size:12.5px;color:var(--muted);line-height:1.55}
+
+  .dropzone{
+    border:1.5px dashed var(--line-2);border-radius:var(--r-sm);
+    padding:20px;text-align:center;background:var(--panel2);
+    color:var(--muted);cursor:pointer;font-size:13px;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+    transition:border-color .18s var(--ease), color .18s var(--ease), background .18s var(--ease);
+  }
+  .dropzone:hover{border-color:var(--b-500);color:var(--b-700);background:var(--b-50)}
+  .file-item{
+    display:flex;align-items:center;gap:9px;padding:9px 12px;
+    background:var(--panel2);border:1px solid var(--line);
+    border-radius:10px;font-size:12.5px;margin-top:7px;
+  }
+  .file-item button{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;font-weight:600;font-size:14px;line-height:1}
+  .file-item button:hover{color:var(--danger)}
+
+  .toggle-row{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+  .toggle-btn.active{background:var(--successbg);color:var(--success);border-color:rgba(21,128,61,.22)}
+  .inline-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* Kayıt türü kartları */
+  .type-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .type-card{
+    border:1.5px solid var(--line-2);border-radius:var(--r);
+    padding:18px 16px;cursor:pointer;background:var(--panel2);
+    transition:border-color .2s var(--ease), background .2s var(--ease),
+               box-shadow .2s var(--ease), transform .2s var(--ease);
+    display:flex;gap:13px;align-items:flex-start;text-align:left;
+  }
+  .type-card:hover{border-color:var(--b-400);background:var(--b-50);transform:translateY(-1px)}
+  .type-card.active{
+    border-color:var(--b-600);background:var(--b-50);
+    box-shadow:0 0 0 3.5px var(--focus-ring), var(--sh-1);
+  }
+  .type-card .ic-wrap{
+    width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+    background:var(--panel);border:1px solid var(--line);color:var(--b-700);flex-shrink:0;
+    transition:background .2s var(--ease), color .2s var(--ease);
+  }
+  .type-card.active .ic-wrap{background:var(--grad);color:#fff;border-color:transparent}
+  .type-card b{
+    display:block;font-size:15px;font-family:var(--f-display);
+    font-weight:600;letter-spacing:var(--ls-tight);
+  }
+  .type-card span{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45}
+
+  /* ---------- Akıllı Çözüm Asistanı ---------- */
+  .ml-card{padding:24px;margin-bottom:18px;position:relative;overflow:hidden}
+  .ml-card::after{
+    content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(420px 200px at 100% 0%, rgba(16,185,129,.07), transparent 68%);
+  }
+  .ml-head{display:flex;gap:13px;align-items:center;margin-bottom:15px;position:relative}
+  .ml-ic{
+    width:44px;height:44px;border-radius:14px;background:var(--grad);
+    display:grid;place-items:center;flex-shrink:0;color:#fff;
+    box-shadow:0 8px 20px rgba(4,120,87,.32), inset 0 1px 0 rgba(255,255,255,.24);
+  }
+  .ml-head b{display:block;font-size:15.5px;font-family:var(--f-display);font-weight:600;letter-spacing:var(--ls-tight)}
+  .ml-head span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .ml-status{
+    padding:13px 15px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:var(--r-sm);font-size:12.5px;color:var(--text-2);line-height:1.6;
+    position:relative;
+  }
+  .ml-loading{display:flex;align-items:center;gap:10px;color:var(--b-700);font-weight:600}
+  .spin{
+    width:15px;height:15px;border:2px solid var(--b-200);
+    border-top-color:var(--b-600);border-radius:50%;animation:sp .75s linear infinite;
+  }
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .ml-match{
+    border:1px solid var(--line);border-radius:var(--r-sm);padding:15px;
+    margin-top:11px;background:var(--panel);box-shadow:var(--sh-1);position:relative;
+  }
+  .ml-match .mh{display:flex;justify-content:space-between;gap:11px;align-items:flex-start;margin-bottom:9px}
+  .ml-match .mh b{font-size:13.5px;line-height:1.4;font-weight:600;display:flex;gap:7px;align-items:flex-start}
+  .ml-match .mh b .ic-sm{margin-top:2px;color:var(--b-600)}
+  .ml-sol{
+    background:var(--b-50);border:1px solid var(--hair);
+    border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.6;color:var(--text-2);
+  }
+  .ml-sol b{color:var(--b-800)}
+  .ml-meta{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);align-items:center}
+  .kw{
+    background:var(--panel2);border:1px solid var(--line);border-radius:6px;
+    padding:2px 7px;font-size:10.5px;font-weight:500;color:var(--text-2);
+  }
+  .ml-empty{
+    padding:22px;text-align:center;font-size:12.5px;color:var(--muted);
+    background:var(--panel2);border:1.5px dashed var(--line-2);
+    border-radius:var(--r-sm);margin-top:11px;
+  }
+  .ml-confirm{
+    margin-top:15px;padding:14px 15px;border-radius:var(--r-sm);
+    background:var(--warnbg);color:var(--warn);border:1px solid rgba(180,83,9,.16);
+    font-size:12.5px;font-weight:500;display:flex;gap:11px;align-items:center;flex-wrap:wrap;
+  }
+  .ml-confirm.ok{background:var(--successbg);color:var(--success);border-color:rgba(21,128,61,.18)}
+
+  /* ML ekip önerisi */
+  .ml-dept{
+    margin-top:11px;border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:14px 15px;background:var(--panel);box-shadow:var(--sh-1);
+  }
+  .ml-dept.low{border-style:dashed;box-shadow:none}
+  .ml-dept .md-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ml-dept .md-lbl{font-size:10.5px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);width:100%}
+  .ml-dept .md-name{font-size:15px;font-weight:700;color:var(--text);margin-right:auto}
+  .ml-dept .md-why{margin-top:8px;font-size:12px;color:var(--text-2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .ml-dept .md-bars{margin-top:11px;display:grid;gap:6px}
+  .ml-dept .md-row{display:grid;grid-template-columns:118px 1fr 36px;gap:9px;align-items:center;font-size:12px;color:var(--text-2)}
+  .ml-dept .md-row span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ml-dept .md-track{height:6px;border-radius:99px;background:var(--panel2);overflow:hidden}
+  .ml-dept .md-fill{height:100%;border-radius:99px;background:var(--b-500);opacity:.55}
+  .ml-dept .md-row.top .md-fill{background:var(--b-700);opacity:1}
+  .ml-dept .md-row b{text-align:right;font-variant-numeric:tabular-nums;color:var(--text);font-weight:600}
+  .ml-dept .md-act{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text-2)}
+  .ml-dept .md-note{color:var(--muted);font-size:11.5px;line-height:1.5}
+  .ml-dept .md-ok{color:var(--success);font-weight:600;display:inline-flex;gap:6px;align-items:center}
+
+  /* ---------- Kanban ---------- */
+  .kanban{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:16px;overflow-x:auto;padding-bottom:10px}
+  .kcolumn{
+    background:var(--panel3);
+    border:1px solid var(--line);
+    border-radius:var(--r-lg);padding:12px;min-height:480px;
+  }
+  .kcolumn h4{
+    margin:5px 6px 14px;display:flex;justify-content:space-between;align-items:center;
+    font-size:13px;font-family:var(--f-sans);font-weight:600;
+    letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text);
+  }
+  .kcolumn h4 span{
+    color:var(--on-soft);background:var(--primary2);
+    border-radius:999px;padding:1px 8px;font-size:11px;letter-spacing:0;
+  }
+  .col-empty{padding:26px;text-align:center;color:var(--muted);font-size:12px;border:1.5px dashed var(--line-2);border-radius:var(--r-sm)}
+  .ticket{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:15px;margin-bottom:11px;box-shadow:var(--sh-1);cursor:pointer;
+    transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease);
+  }
+  .ticket:hover{transform:translateY(-2px);box-shadow:var(--sh-2);border-color:var(--b-300)}
+  .ticket .tt{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .ticket b{font-size:13.5px;display:block;line-height:1.4;font-weight:600}
+  .ticket p{color:var(--muted);font-size:11.5px;line-height:1.5;margin:7px 0 0}
+  .ticket-foot{display:flex;align-items:center;justify-content:space-between;margin-top:13px;gap:8px}
+  .mini-btn{
+    border:1px solid var(--line-2);border-radius:9px;padding:6px 11px;
+    font-weight:600;font-size:11.5px;cursor:pointer;
+    background:var(--panel);color:var(--b-700);letter-spacing:var(--ls-snug);
+    transition:background .16s var(--ease), border-color .16s var(--ease);
+  }
+  .mini-btn:hover{background:var(--b-50);border-color:var(--b-400)}
+
+  /* ---------- Detay ---------- */
+  .detail-layout{grid-template-columns:1fr 384px}
+  .timeline{position:relative;padding-left:26px;margin-top:6px}
+  .timeline:before{content:'';position:absolute;left:6px;top:6px;bottom:8px;width:1.5px;background:var(--line-2)}
+  .event{position:relative;margin-bottom:20px}
+  .event:last-child{margin-bottom:0}
+  .event:before{
+    content:'';position:absolute;left:-24px;top:5px;width:9px;height:9px;border-radius:50%;
+    background:var(--b-600);box-shadow:0 0 0 3.5px var(--b-100);
+  }
+  .event.status:before{background:var(--warn);box-shadow:0 0 0 3.5px var(--warnbg)}
+  .event.assign:before{background:var(--violet);box-shadow:0 0 0 3.5px var(--violetbg)}
+  .event.comment:before{background:#0f766e;box-shadow:0 0 0 3.5px #dcf3f0}
+  .event b{display:block;font-size:13px;font-family:var(--f-sans);font-weight:500;line-height:1.55;color:var(--text)}
+  .event span{font-size:11.5px;color:var(--muted)}
+  .comment{background:var(--b-50);border:1px solid var(--hair);border-radius:var(--r-sm);padding:14px;margin-top:12px;font-size:13px;line-height:1.6}
+  .progress{height:8px;background:var(--panel2);border-radius:999px;overflow:hidden}
+  .progress span{display:block;height:100%;background:linear-gradient(90deg,#15803d,#b45309);transition:width .5s var(--ease)}
+  .progress span.red{background:linear-gradient(90deg,#b45309,#b91c1c)}
+  .kv{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .kv:last-child{border-bottom:0}
+  .kv .k{color:var(--muted)}
+  .kv .v{font-weight:600;text-align:right;color:var(--text)}
+
+  /* ---------- Raporlar (sıkı yerleşim) ---------- */
+  .reports{display:block}
+  /* Kapsam şeridi: tablonun kurumu mu yalnız kullanıcının kapsamını mı
+     gösterdiği, grafiklere bakmadan okunsun. */
+  .rep-scope{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:12px}
+  .rep-scope .hint{margin:0}
+  .rep-scope .hint b{color:var(--text);font-weight:600}
+  .rep-wide{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-bottom:14px}
+  .rep-mason{column-count:3;column-gap:14px}
+  .rep-mason .rep-card{break-inside:avoid;margin:0 0 14px;display:block;width:100%}
+  .report-kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px;gap:14px}
+  .metric-box{padding:16px 18px;position:relative}
+  .metric-box>span:first-of-type{
+    font-size:11px;color:var(--muted);font-weight:600;
+    letter-spacing:var(--ls-wide);text-transform:uppercase;
+  }
+  .metric-box b{
+    display:block;font-family:var(--f-num);font-size:26px;font-weight:800;
+    margin:7px 0 3px;letter-spacing:-.035em;line-height:1.1;
+    font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;
+    color:var(--text);
+  }
+  .metric-box span{font-size:11.5px;color:var(--muted)}
+
+  /* Rapor panelleri */
+  .rep-card{display:flex;flex-direction:column;overflow:hidden}
+  .rep-card.span-2{grid-column:span 2}
+  .rep-head{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:14px 16px 0;flex-wrap:wrap;
+  }
+  .rep-head h3{margin:0;font-size:14.5px;font-weight:700;letter-spacing:var(--ls-tight)}
+  .rep-body{padding:12px 16px 16px;flex:1}
+  .rep-body .bar-row{grid-template-columns:104px 1fr 42px;gap:10px;margin:9px 0;font-size:12.5px}
+  .rep-body .chart-bars{gap:0;margin-top:4px}
+
+  /* Donut (conic-gradient — kütüphane yok) */
+  .donut-wrap{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .donut{
+    width:132px;height:132px;border-radius:50%;flex-shrink:0;
+    display:grid;place-items:center;
+  }
+  .donut-hole{
+    width:88px;height:88px;border-radius:50%;background:var(--panel);
+    display:grid;place-items:center;align-content:center;text-align:center;
+  }
+  .donut-hole b{
+    font-family:var(--f-num);font-size:23px;font-weight:800;line-height:1;
+    letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--text);
+  }
+  .donut-hole span{font-size:10.5px;color:var(--muted);margin-top:2px}
+  .donut-legend{list-style:none;margin:0;padding:0;flex:1;min-width:180px}
+  .donut-legend li{
+    display:flex;align-items:center;gap:8px;font-size:12.5px;
+    padding:3px 0;color:var(--text-2);
+  }
+  .donut-legend i{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .donut-legend .lg-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .donut-legend b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);min-width:24px;text-align:right}
+  .donut-legend em{
+    font-style:normal;color:var(--muted);font-size:11.5px;
+    min-width:44px;text-align:right;font-variant-numeric:tabular-nums;
+  }
+
+  /* SLA halkaları */
+  .ring-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .ring{text-align:center}
+  .ring-c{
+    width:74px;height:74px;border-radius:50%;margin:0 auto 8px;
+    display:grid;place-items:center;
+  }
+  .ring-c::before{
+    content:'';grid-area:1/1;width:58px;height:58px;border-radius:50%;background:var(--panel);
+  }
+  .ring-c span{
+    grid-area:1/1;font-family:var(--f-num);font-size:15px;font-weight:800;
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--text);z-index:1;
+  }
+  .ring b{display:block;font-size:12px;font-weight:700}
+  .ring em{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:1px}
+
+  /* Sıkı tablo */
+  .table.compact th,.table.compact td{padding:9px 8px;font-size:12.5px}
+
+  .metric-list,.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .settings-item{padding:16px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+  .settings-item b{display:block;margin-bottom:5px;font-size:14px;font-weight:700;letter-spacing:var(--ls-tight)}
+  .settings-item span{font-size:12.5px;color:var(--muted);line-height:1.55}
+
+  @media(max-width:1180px){
+    .rep-wide{grid-template-columns:1fr}
+    .rep-mason{column-count:2}
+  }
+  @media(max-width:760px){ .rep-mason{column-count:1} }
+  .mobile-top{display:none}
+
+  /* ---------- Modal / Toast ---------- */
+  .modal-bg{
+    position:fixed;inset:0;background:rgba(3,33,26,.52);
+    backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:80;
+    animation:fade .2s var(--ease) both;
+  }
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modal{
+    background:var(--panel);border-radius:var(--r-lg);width:100%;max-width:510px;max-height:90vh;
+    display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-3);
+    animation:pop .26s var(--ease) both;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-h{display:flex;justify-content:space-between;align-items:center;padding:20px 24px;border-bottom:1px solid var(--line)}
+  .modal-h h3{margin:0;font-size:18px;letter-spacing:var(--ls-tight)}
+  .modal-h button{border:0;background:transparent;cursor:pointer;color:var(--muted);display:grid;place-items:center;padding:4px;border-radius:8px}
+  .modal-h button:hover{background:var(--panel2);color:var(--text)}
+  .modal-b{padding:24px;overflow:auto}
+  .modal-f{padding:16px 24px;border-top:1px solid var(--line);background:var(--panel2);display:flex;justify-content:flex-end;gap:10px}
+
+  #toast{
+    position:fixed;right:26px;bottom:26px;
+    background:linear-gradient(140deg,#04372c,#065f46);
+    color:#fff;padding:13px 18px;border-radius:var(--r-sm);
+    box-shadow:var(--sh-3), inset 0 1px 0 rgba(255,255,255,.12);
+    z-index:90;font-weight:500;font-size:13px;
+    opacity:0;transform:translateY(10px);transition:.24s var(--ease);pointer-events:none;
+    border:1px solid rgba(255,255,255,.10);
+  }
+  #toast.show{opacity:1;transform:translateY(0)}
+  #toast.ok{background:linear-gradient(140deg,#15803d,#047857)}
+  #toast.err{background:linear-gradient(140deg,#991b1b,#b91c1c)}
+
+  /* =====================================================================
+     GEZİCİ ASİSTAN (Agent)
+     Kucuk yuvarlak kafa + iki dijital goz + altinda yuzen isik govdesi.
+     ===================================================================== */
+  .agent{
+    position:fixed;left:0;top:0;width:40px;height:40px;z-index:78;
+    cursor:pointer;will-change:transform;
+    transform:translate3d(-300px,-300px,0);
+    -webkit-tap-highlight-color:transparent;
+    /* duruma göre değişen renkler */
+    --c1:#10b981; --c2:#059669; --c3:#047857;
+    --ring:rgba(16,185,129,.55); --dust:#34d399;
+  }
+  .agent.st-ok   { --c1:#4ade80; --c2:#22c55e; --c3:#15803d; --ring:rgba(74,222,128,.6);  --dust:#4ade80 }
+  .agent.st-err  { --c1:#f87171; --c2:#ef4444; --c3:#b91c1c; --ring:rgba(248,113,113,.6); --dust:#f87171 }
+  .agent.st-think{ --c1:#fbbf24; --c2:#f59e0b; --c3:#b45309; --ring:rgba(251,191,36,.6);  --dust:#fbbf24 }
+
+  .a-wrap{width:100%;height:100%;position:relative}
+
+  .agent-body{
+    width:100%;height:100%;border-radius:50%;
+    background:linear-gradient(140deg, var(--c1) 0%, var(--c2) 45%, var(--c3) 100%);
+    display:grid;place-items:center;color:#fff;position:relative;
+    box-shadow:0 10px 28px rgba(4,120,87,.42), inset 0 1px 0 rgba(255,255,255,.32);
+    transition:transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s var(--ease),
+               background .3s var(--ease);
+  }
+  .agent.hot .agent-body{
+    transform:scale(1.3);
+    box-shadow:0 18px 40px rgba(4,120,87,.5), inset 0 1px 0 rgba(255,255,255,.38);
+  }
+  .agent.paused .agent-body{transform:scale(.9)}
+
+  .agent-ring{
+    position:absolute;inset:-7px;border-radius:50%;
+    border:1.5px solid var(--ring);
+    animation:agentPulse 2.8s var(--ease) infinite;pointer-events:none;
+    transition:border-color .3s var(--ease);
+  }
+  @keyframes agentPulse{
+    0%{transform:scale(.88);opacity:.7}
+    70%{transform:scale(1.45);opacity:0}
+    100%{transform:scale(1.45);opacity:0}
+  }
+
+  /* ikon katmanları — durum göstergesi */
+  .a-svg{width:20px;height:20px;display:block;overflow:visible}
+  .eyeset{opacity:0;transition:opacity .18s var(--ease)}
+  .eyeset.on{opacity:1}
+
+  /* düşünme noktaları (rozetin üstünde) */
+  .a-dots{
+    position:absolute;bottom:calc(100% + 3px);left:50%;transform:translateX(-50%);
+    display:flex;gap:3px;opacity:0;transition:opacity .2s var(--ease);pointer-events:none;
+  }
+  .agent.st-think .a-dots{opacity:1}
+  .a-dots i{
+    width:4px;height:4px;border-radius:50%;background:var(--dust);
+    animation:aDot 1.25s ease-in-out infinite;
+  }
+  .a-dots i:nth-child(2){animation-delay:.16s}
+  .a-dots i:nth-child(3){animation-delay:.32s}
+  @keyframes aDot{0%,100%{opacity:.25;transform:translateY(0) scale(.85)}45%{opacity:1;transform:translateY(-3px) scale(1)}}
+
+  /* konuşma balonu ipucu */
+  .a-tip{
+    position:absolute;bottom:calc(100% + 12px);left:50%;
+    transform:translateX(-50%) translateY(6px) scale(.94);
+    background:#04372c;color:#eafaf5;padding:7px 12px;border-radius:11px;
+    font-size:11.5px;font-weight:600;white-space:nowrap;letter-spacing:var(--ls-snug);
+    opacity:0;pointer-events:none;box-shadow:var(--sh-2);z-index:2;
+    transition:opacity .22s var(--ease), transform .22s cubic-bezier(.34,1.4,.5,1);
+  }
+  .a-tip::after{
+    content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    border:5px solid transparent;border-top-color:#04372c;
+  }
+  .agent.hot .a-tip{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+
+  /* Sag alta yerlesince balon ortalanirsa ekrandan tasar: saga hizala. */
+  .agent.docked .a-tip{left:auto;right:-2px;transform:translateY(6px) scale(.94)}
+  .agent.docked.hot .a-tip,
+  .agent.docked:focus-visible .a-tip{transform:translateY(0) scale(1)}
+  .agent.docked .a-tip::after{left:auto;right:16px;transform:none}
+  .agent.paused .a-tip{opacity:0 !important}
+
+  .agent:focus-visible{outline:none}
+  .agent:focus-visible .agent-body{box-shadow:0 0 0 3px #eafaf5, 0 10px 28px rgba(4,120,87,.42)}
+  .agent:focus-visible .a-tip{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+
+  /* =============== YILDIZ TOZU İZİ (roket kuyruğu) =============== */
+  #agentTrail{position:fixed;inset:0;pointer-events:none;z-index:77;overflow:hidden}
+  .dust{
+    position:absolute;left:0;top:0;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;
+    opacity:0;will-change:transform,opacity;
+    background:radial-gradient(circle, #ffffff 0%, var(--dc,#6ee7b7) 42%, rgba(16,185,129,0) 72%);
+    border-radius:50%;
+  }
+  .dust.star{
+    background:var(--dc,#a7f3d0);border-radius:0;
+    clip-path:polygon(50% 0%,59% 41%,100% 50%,59% 59%,50% 100%,41% 59%,0% 50%,41% 41%);
+  }
+  .dust.go{animation:dustFall var(--dur,900ms) cubic-bezier(.15,.55,.35,1) forwards}
+  @keyframes dustFall{
+    0%  {opacity:.95;transform:translate3d(var(--x),var(--y),0) scale(var(--s0,1)) rotate(0deg)}
+    100%{opacity:0;  transform:translate3d(calc(var(--x) + var(--dx)),calc(var(--y) + var(--dy)),0) scale(.12) rotate(var(--rot,90deg))}
+  }
+
+  .agent.parked{transition:transform .5s cubic-bezier(.22,1,.36,1)}
+  @media (prefers-reduced-motion: reduce){
+    .agent-ring,.a-dots i,.dust.go{animation:none !important}
+    #agentTrail{display:none}
+  }
+  @media (max-width:640px){
+    .agent{width:34px;height:34px}
+    .a-svg{width:17px;height:17px}
+  }
+
+  /* ---------- Sohbet paneli ---------- */
+  .chat{
+    position:fixed;right:26px;bottom:26px;width:354px;max-height:74vh;z-index:86;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+    box-shadow:var(--sh-3);display:flex;flex-direction:column;overflow:hidden;
+    animation:chatIn .34s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes chatIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+  .chat-h{
+    display:flex;align-items:center;gap:11px;padding:15px 17px;
+    background:linear-gradient(135deg,#04372c 0%,#065f46 60%,#047857 100%);color:#fff;
+  }
+  .chat-h .av{
+    width:36px;height:36px;border-radius:50%;flex-shrink:0;
+    background:linear-gradient(140deg,#34d399,#059669);
+    display:grid;place-items:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .chat-h b{display:block;font-size:14px;font-family:var(--f-display);font-weight:600;letter-spacing:var(--ls-tight)}
+  .chat-h small{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(167,243,208,.85);margin-top:1px}
+  .chat-h small i{width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block}
+  .chat-h button{
+    margin-left:auto;border:0;background:rgba(255,255,255,.12);color:#fff;
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;cursor:pointer;
+    transition:background .18s var(--ease);
+  }
+  .chat-h button:hover{background:rgba(255,255,255,.22)}
+
+  .chat-body{
+    padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
+    background:var(--panel2);flex:1;min-height:170px;
+  }
+  .msg{
+    max-width:88%;padding:11px 14px;border-radius:15px;font-size:13px;line-height:1.6;
+    animation:msgIn .34s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes msgIn{from{opacity:0;transform:translateY(9px) scale(.97)}to{opacity:1;transform:none}}
+  .msg.bot{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:5px;align-self:flex-start;box-shadow:var(--sh-1)}
+  .msg.me{background:var(--grad);color:#fff;border-bottom-right-radius:5px;align-self:flex-end}
+  .msg b{font-weight:600}
+  .msg .kpi-box{
+    margin:9px 0 2px;padding:12px 14px;border-radius:12px;
+    background:var(--b-50);border:1px solid var(--hair);
+  }
+  .msg .kpi-box .k{
+    font-size:10px;font-weight:600;letter-spacing:var(--ls-wide);
+    text-transform:uppercase;color:var(--muted);
+  }
+  .msg .kpi-box .v{
+    font-family:var(--f-num);font-size:26px;font-weight:700;line-height:1.1;
+    letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:var(--b-800);margin:4px 0 2px;
+  }
+  .msg .kpi-box .d{font-size:11.5px;color:var(--text-2)}
+  .msg ul{margin:7px 0 0;padding-left:17px}
+  .msg li{margin-bottom:3px}
+
+  .typing{display:flex;gap:4px;align-items:center;padding:13px 15px;background:var(--panel);
+    border:1px solid var(--line);border-radius:15px;border-bottom-left-radius:5px;
+    align-self:flex-start;box-shadow:var(--sh-1)}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--b-400);animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.18s}
+  .typing i:nth-child(3){animation-delay:.36s}
+  @keyframes blink{0%,60%,100%{opacity:.28;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+
+  .chat-chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px 13px;background:var(--panel2)}
+  .chip{
+    border:1px solid var(--line-2);background:var(--panel);border-radius:999px;
+    padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--b-700);cursor:pointer;
+    transition:background .16s var(--ease), border-color .16s var(--ease), transform .16s var(--ease);
+  }
+  .chip:hover{background:var(--b-50);border-color:var(--b-400);transform:translateY(-1px)}
+
+  .chat-f{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);background:var(--panel)}
+  .chat-f input{
+    flex:1;border:1px solid var(--line-2);border-radius:999px;padding:9px 15px;font-size:13px;
+    transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .chat-f input:focus{outline:none;border-color:var(--b-500);box-shadow:0 0 0 3px var(--focus-ring)}
+  .chat-f button{
+    width:38px;height:38px;border-radius:50%;border:0;flex-shrink:0;
+    background:var(--grad);color:#fff;display:grid;place-items:center;cursor:pointer;
+    box-shadow:0 6px 16px rgba(4,120,87,.3);
+  }
+
+  /* sohbet açıkken toast panele çarpmasın */
+  body.chat-open #toast{right:398px}
+
+  @media(max-width:640px){
+    .chat{right:12px;left:12px;width:auto;bottom:12px}
+    body.chat-open #toast{right:26px;bottom:auto;top:80px}
+  }
+
+  /* ---------- Login ---------- */
+  .login-wrap{max-width:440px;margin:40px auto}
+  .login-wrap .brand h1{color:var(--text)}
+  .login-wrap .brand span{color:var(--muted)}
+
+  /* ---------- Responsive ---------- */
+  @media(max-width:1080px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .sidebar.open{display:flex;position:fixed;left:0;top:0;width:274px;z-index:70}
+    .mobile-top{display:flex;gap:9px}
+    .main{padding:18px}
+    .topbar{align-items:flex-start;flex-direction:column}
+    .page-title h2{font-size:26px}
+    .actions{width:100%;flex-wrap:wrap}
+    .search{flex:1;min-width:220px}.search input{width:100%}
+    .kpis,.dashboard-layout,.form-layout,.detail-layout,.reports,.report-kpis,.settings-grid,.metric-list{grid-template-columns:1fr}
+    .kanban{grid-template-columns:repeat(4,262px)}
+  }
+  @media(max-width:640px){
+    .main{padding:15px}
+    .kpi .value{font-size:31px}
+    .card-head{align-items:flex-start;gap:12px;flex-direction:column}
+    .actions .btn{flex:1;justify-content:center}
+    .type-cards{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="50" cy="50" r="34" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="3 3" opacity=".55"/><circle cx="50" cy="50" r="21" stroke="#3b82f6" stroke-width="3.4" opacity=".3"/><path d="M50 29V19M50 81V71M29 50H19M81 50H71M35.2 35.2l-7-7M64.8 64.8l7 7M64.8 35.2l7-7M35.2 64.8l-7 7" stroke="#2563eb" stroke-width="1.7" opacity=".5"/><circle cx="50" cy="16" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.4 19.4c0-1.7 1.5-2.6 3.6-2.6s3.6.9 3.6 2.6M50 15.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8" fill="#2563eb"/><circle cx="76" cy="27" r="11" fill="#fff" stroke="#f59e0b" stroke-width="2.6"/><path d="M76 21.5a4 4 0 0 0-2.3 7.3v1.4h4.6v-1.4A4 4 0 0 0 76 21.5M74.4 32h3.2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><circle cx="84" cy="55" r="11" fill="#fff" stroke="#4caf3f" stroke-width="2.6"/><path d="M80 55.2l2.9 2.9 5.3-5.6" stroke="#4caf3f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="84" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.6 78.6h5l2 2v6.8h-7z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><path d="M48.4 83h3.2M48.4 85.2h3.2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="66" r="11" fill="#fff" stroke="#7c4ddb" stroke-width="2.6"/><circle cx="18" cy="66" r="2.6" stroke="#7c4ddb" stroke-width="2"/><path d="M18 60.4v-1.8M18 73.4v-1.8M23.6 66h1.8M10.6 66h1.8M21.9 62.1l1.3-1.3M12.8 71.2l1.3-1.3M21.9 69.9l1.3 1.3M12.8 60.8l1.3 1.3" stroke="#7c4ddb" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="31" r="11" fill="#fff" stroke="#0d9c92" stroke-width="2.6"/><path d="M13.4 34.4v-4M17 34.4v-7.6M20.6 34.4v-5.6" stroke="#0d9c92" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="50" r="14.5" fill="#12275c"/><path d="M43.5 44.5h13a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-5.2l-3.6 3.2v-3.2h-4.2a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2" fill="#fff"/><circle cx="46.6" cy="49.8" r="1.35" fill="#12275c"/><circle cx="50" cy="49.8" r="1.35" fill="#12275c"/><circle cx="53.4" cy="49.8" r="1.35" fill="#12275c"/></svg>
+      </div>
+      <h1>İç Hatlar<span>Bilgi ve Öneri Sistemi</span></h1>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Ana Menü</div>
+      <button class="active" data-view="dashboard">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/></svg>
+        <span class="lbl">Dashboard</span></button>
+      <button data-view="new-ticket">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="lbl">Yeni Kayıt</span></button>
+      <button data-view="my-tickets">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="lbl">Açtığım Kayıtlar</span> <span class="badge" id="bMy">0</span></button>
+      <button data-view="team-tickets">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16.5 3.63a4 4 0 0 1 0 7.75"/></svg>
+        <span class="lbl">Ekibe Gelen Kayıtlar</span> <span class="badge" id="bTeam">0</span></button>
+      <button data-view="owned-tickets">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.14"/><path d="M22 4 12 14.02l-3-3"/></svg>
+        <span class="lbl">Üzerimdeki Kayıtlar</span> <span class="badge" id="bOwned">0</span></button>
+      <button data-view="all-records">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="5" rx="1.6"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9M10 13.5h4"/></svg>
+        <span class="lbl">Tüm Kayıtlar</span></button>
+      <button data-view="reports">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 20V9.5M12 20V4M5.5 20v-6.5"/></svg>
+        <span class="lbl">Raporlar</span></button>
+      <div class="nav-section">Sistem</div>
+      <button data-view="management">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-6.5M4 10.5V3M12 21v-9.5M12 7.5V3M20 21v-4.5M20 12.5V3M1.5 14.5h5M9.5 7.5h5M17.5 16.5h5"/></svg>
+        <span class="lbl">Yönetim</span></button>
+      <button data-view="login">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="10.5" width="17" height="10.5" rx="2"/><path d="M7.5 10.5V7a4.5 4.5 0 0 1 9 0v3.5"/></svg>
+        <span class="lbl">Login Ekranı</span></button>
+    </div>
+    <div class="profile">
+      <div class="who">
+        <div class="avatar sm grad" id="pAvatar">ÖU</div>
+        <div>
+          <div class="name" id="pName">—</div>
+          <div class="role" id="pRole">—</div>
+        </div>
+      </div>
+      <div class="switch-lbl">Kullanıcı olarak görüntüle</div>
+      <select id="userSwitch"></select>
+    </div>
+    <div class="side-foot">© 2026 İç Hatlar<br>Tüm hakları saklıdır.</div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <div class="mobile-top actions" style="margin-bottom:14px">
+      <button class="btn btn-ghost" onclick="document.getElementById('sidebar').classList.toggle('open')">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Menü</button>
+      <button class="btn btn-primary" data-view="new-ticket">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Yeni Kayıt</button>
+    </div>
+
+    <header class="topbar">
+      <div class="page-title">
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSub">Kurum içi kayıtların genel durumu, gecikmeler ve ekip verimliliği.</p>
+      </div>
+      <div class="actions">
+        <div class="search">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
+          <input id="globalSearch" placeholder="Kayıt no, başlık veya departman ara..." />
+        </div>
+        <button class="btn btn-ghost" id="bellBtn">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5A6 6 0 0 0 6 8.5c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></svg>
+          <span id="bellCount">0</span></button>
+        <button class="btn btn-primary" data-view="new-ticket">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Yeni Kayıt</button>
+      </div>
+    </header>
+
+    <!-- ---------- DASHBOARD ---------- -->
+    <section id="dashboard" class="view active">
+      <div class="grid kpis" id="dashKpis"></div>
+      <div class="grid dashboard-layout">
+        <div class="card">
+          <div class="card-head"><h3>Departman Bazlı Dağılım</h3><span class="pill blue"><span class="dot"></span>Canlı görünüm</span></div>
+          <div class="card-body" id="deptChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Öne Çıkan Metrikler</h3><span class="pill purple" id="metricPeriod">Bu dönem</span></div>
+          <div class="card-body" id="highlights"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-head"><h3>Son Oluşturulan ve Öncelikli Kayıtlar</h3><button class="btn btn-soft" data-view="team-tickets">Ekibe Gelen Kayıtlara Git</button></div>
+        <div class="card-body table-wrap">
+          <table class="table">
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <tbody id="recentRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- YENİ KAYIT ---------- -->
+    <section id="new-ticket" class="view">
+      <div class="grid form-layout">
+        <div class="card form-card">
+          <h3>Yeni Kayıt Oluştur</h3>
+          <p class="hint" style="margin:0 0 18px">Kayıt kişiye değil, ilgili ekibin tüm üyelerine düşer. Ekipten biri “Üzerime Al” diyerek sahiplenir.</p>
+
+          <div class="field">
+            <label>Kayıt Türü</label>
+            <div class="type-cards" id="typeCards">
+              <div class="type-card" data-type="bilgi">
+                <div class="ic-wrap">
+                  <svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 16.5v-5M12 7.8h.01"/></svg>
+                </div>
+                <div><b>Bilgi</b><span>Bir bilgiye ihtiyacım var.</span></div>
+              </div>
+              <div class="type-card" data-type="oneri">
+                <div class="ic-wrap">
+                  <svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21.5h3"/><path d="M15.1 14.2c.2-1.05.7-1.85 1.5-2.65A5 5 0 1 0 7.4 8.5c0 1.05.25 2.35 1.5 3.6.8.8 1.3 1.6 1.5 2.65"/></svg>
+                </div>
+                <div><b>Öneri</b><span>Bir fikrim var.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="field"><label>Başlık</label><input id="fTitle" placeholder="Lütfen başlığı giriniz" /></div>
+          <div class="field"><label>Açıklama</label><textarea id="fDesc" placeholder="Kaydınızı açık ve anlaşılır şekilde yazın..."></textarea>
+            <p class="hint" style="margin-top:6px">Ne kadar detay verirseniz, akıllı çözüm önerileri o kadar isabetli olur.</p></div>
+
+          <div class="field">
+            <label>Gönderim Tercihi</label>
+            <div class="toggle-row">
+              <button type="button" id="anonToggle" class="btn btn-soft toggle-btn">Anonim: Kapalı</button>
+              <span class="hint">Açıldığında kaydınız anonim olarak iletilir.</span>
+            </div>
+          </div>
+
+          <div class="grid" style="grid-template-columns:1fr 1fr">
+            <div class="field"><label>İlgili Ekip 1</label><select id="fDept1"></select></div>
+            <div class="field"><label>İlgili Ekip 2 (Opsiyonel)</label><select id="fDept2"></select>
+              <p class="hint" style="margin-top:6px">Kayıt en fazla 2 ekibe yönlendirilebilir.</p></div>
+          </div>
+
+          <div class="grid" style="grid-template-columns:1fr 1fr">
+            <div class="field"><label>Öncelik</label><select id="fPrio"></select></div>
+            <div class="field"><label>Ek Dosya</label>
+              <div class="dropzone" id="dropzone">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05 12.25 20.2a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                Dosya seçin veya buraya sürükleyin
+              </div>
+              <input type="file" id="fFiles" multiple hidden />
+              <div id="fileList"></div>
+            </div>
+          </div>
+
+          <div class="inline-actions" style="margin-top:6px">
+            <button class="btn btn-soft" id="mlBtn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/></svg> ML ile Kontrol Et</button>
+            <button class="btn btn-primary" id="createBtn" disabled title="Önce ML kontrolü yapmalısınız">Kaydı Oluştur</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="card ml-card">
+            <div class="ml-head">
+              <div class="ml-ic"><svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/><path d="M18.6 16.4l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></svg></div>
+              <div><b>Akıllı Çözüm Asistanı</b><span>Geçmişte çözülmüş benzer kayıtları tarar.</span></div>
+            </div>
+            <div class="ml-status" id="mlStatus">
+              Başlık ve açıklamayı yazdıktan sonra <b>ML ile Kontrol Et</b>'e basın.
+              Sistem geçmiş çözümleri tarayıp önerileri gösterir; onayladıktan sonra kaydı iletebilirsiniz.
+            </div>
+            <div id="mlDept"></div>
+            <div id="mlResults"></div>
+            <div id="mlConfirm"></div>
+          </div>
+
+          <div class="card form-card">
+            <h3 style="font-size:16px">SLA Önizleme</h3>
+            <div class="leader"><div class="avatar">1</div><div><b>İlk geri dönüş</b><span id="slaPreview1">Önceliğe göre hesaplanır</span></div></div>
+            <div class="leader"><div class="avatar">2</div><div><b>Yanıt hedefi</b><span>Kayıt ekibe düşer, sahiplenilmesi beklenir</span></div></div>
+            <div class="leader"><div class="avatar">3</div><div><b>Hatırlatma</b><span>Gecikirse ekip ve yönetici bilgilendirilir</span></div></div>
+            <p class="hint" style="margin-top:12px">Renk göstergesi: <span class="pill green" style="padding:2px 8px"><span class="dot"></span>normal</span> <span class="pill yellow" style="padding:2px 8px"><span class="dot"></span>yaklaşıyor</span> <span class="pill red" style="padding:2px 8px"><span class="dot"></span>gecikmiş</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- AÇTIĞIM KAYITLAR ---------- -->
+    <section id="my-tickets" class="view">
+      <div class="card">
+        <div class="card-head"><h3>Açtığım Kayıtlar</h3><span class="pill blue" id="myCount">0 kayıt</span></div>
+        <div class="card-body table-wrap">
+          <table class="table">
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Sahip</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th></tr></thead>
+            <tbody id="myRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- EKİBE GELEN (KANBAN) ---------- -->
+    <section id="team-tickets" class="view">
+      <div class="kanban">
+        <div class="kcolumn"><h4>Yeni <span id="cnt-new">0</span></h4><div id="col-new"></div></div>
+        <div class="kcolumn"><h4>Üzerime Alındı <span id="cnt-owned">0</span></h4><div id="col-owned"></div></div>
+        <div class="kcolumn"><h4>Çalışılıyor <span id="cnt-working">0</span></h4><div id="col-working"></div></div>
+        <div class="kcolumn"><h4>Ek Bilgi / Geciken <span id="cnt-risk">0</span></h4><div id="col-risk"></div></div>
+      </div>
+    </section>
+
+    <!-- ---------- ÜZERİMDEKİ KAYITLAR ---------- -->
+    <section id="owned-tickets" class="view">
+      <div class="card">
+        <div class="card-head"><h3>Üzerimdeki Kayıtlar</h3><span class="pill purple" id="ownedCount">0 aktif kayıt</span></div>
+        <div class="card-body table-wrap">
+          <table class="table">
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <tbody id="ownedRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- DETAY ---------- -->
+    <section id="detail" class="view"><div id="detailBody"></div></section>
+
+    <!-- ---------- TÜM KAYITLAR ---------- -->
+    <section id="all-records" class="view">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
+          <input id="fltText" class="" placeholder="Ara..." style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:13px;padding:10px 13px" />
+          <select id="fltType" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm türler</option></select>
+          <select id="fltDept" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm departmanlar</option></select>
+          <select id="fltStatus" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm durumlar</option></select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Kayıt Havuzu</h3><span class="pill gray" id="allCount">0 kayıt</span></div>
+        <div class="card-body table-wrap">
+          <table class="table">
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <tbody id="allRows"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- RAPORLAR ---------- -->
+    <section id="reports" class="view">
+      <div class="grid report-kpis" id="repKpis"></div>
+      <div class="grid reports" id="repCharts"></div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-head"><h3>Rapor Çıktıları</h3><button class="btn btn-ghost" id="csvBtn">CSV'ye Aktar</button></div>
+        <div class="card-body">
+          <div class="grid metric-list">
+            <div class="settings-item"><b>SLA Uyum Raporu</b><span>İlk geri dönüş, kapanış ve gecikme oranları ekip bazında izlenir.</span></div>
+            <div class="settings-item"><b>Anonim Gönderim Raporu</b><span>Anonim kayıt adedi, oranı ve ekip dağılımı analiz edilir.</span></div>
+            <div class="settings-item"><b>Öneri Dönüşüm Raporu</b><span>Öneri kayıtlarının değerlendirme ve uygulamaya alınma sonuçları raporlanır.</span></div>
+            <div class="settings-item"><b>Yönlendirme Raporu</b><span>Kayıtların hangi ekiplere ve hangi sıklıkla yönlendirildiği takip edilir.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- YÖNETİM ---------- -->
+    <section id="management" class="view">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>Departman ve Ekip Tanımları</h3><span class="pill blue" id="mgmtDeptCount">0 ekip</span></div>
+        <div class="card-body table-wrap">
+          <table class="table"><thead><tr><th>Departman</th><th>Ekip Üyeleri</th><th>Açık Kayıt</th><th>Toplam</th></tr></thead><tbody id="mgmtDepts"></tbody></table>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>SLA Kuralları</h3><span class="pill yellow">Öncelik bazlı</span></div>
+        <div class="card-body table-wrap">
+          <table class="table"><thead><tr><th>Öncelik</th><th>İlk Geri Dönüş / Kapanış Hedefi</th><th>Uyarı Eşiği (sarı)</th></tr></thead><tbody id="mgmtSla"></tbody></table>
+        </div>
+      </div>
+      <div class="grid settings-grid">
+        <div class="settings-item"><b>Kategori Yönetimi</b><span>Kayıt türleri (Bilgi, Öneri) ve ekip yönlendirme seçenekleri tanımlanır.</span></div>
+        <div class="settings-item"><b>Rol Bazlı Yetki</b><span>Kullanıcı, ekip üyesi, yönetici ve sistem yöneticisi rolleri yönetilir.</span></div>
+        <div class="settings-item"><b>Bildirim Şablonları</b><span>Uygulama içi ve e-posta bildirim içerikleri düzenlenir.</span></div>
+        <div class="settings-item"><b>Demo Verisi</b><span>Prototip verisini başlangıç durumuna döndürün.<br><button class="btn btn-ghost" id="resetBtn" style="margin-top:10px"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg> Demo Verisini Sıfırla</button></span></div>
+      </div>
+    </section>
+
+    <!-- ---------- LOGIN ---------- -->
+    <section id="login" class="view">
+      <div class="login-wrap card form-card">
+        <div class="brand" style="color:var(--text);margin-bottom:18px">
+          <div class="logo"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="50" cy="50" r="34" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="3 3" opacity=".55"/><circle cx="50" cy="50" r="21" stroke="#3b82f6" stroke-width="3.4" opacity=".3"/><path d="M50 29V19M50 81V71M29 50H19M81 50H71M35.2 35.2l-7-7M64.8 64.8l7 7M64.8 35.2l7-7M35.2 64.8l-7 7" stroke="#2563eb" stroke-width="1.7" opacity=".5"/><circle cx="50" cy="16" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.4 19.4c0-1.7 1.5-2.6 3.6-2.6s3.6.9 3.6 2.6M50 15.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8" fill="#2563eb"/><circle cx="76" cy="27" r="11" fill="#fff" stroke="#f59e0b" stroke-width="2.6"/><path d="M76 21.5a4 4 0 0 0-2.3 7.3v1.4h4.6v-1.4A4 4 0 0 0 76 21.5M74.4 32h3.2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><circle cx="84" cy="55" r="11" fill="#fff" stroke="#4caf3f" stroke-width="2.6"/><path d="M80 55.2l2.9 2.9 5.3-5.6" stroke="#4caf3f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="84" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.6 78.6h5l2 2v6.8h-7z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><path d="M48.4 83h3.2M48.4 85.2h3.2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="66" r="11" fill="#fff" stroke="#7c4ddb" stroke-width="2.6"/><circle cx="18" cy="66" r="2.6" stroke="#7c4ddb" stroke-width="2"/><path d="M18 60.4v-1.8M18 73.4v-1.8M23.6 66h1.8M10.6 66h1.8M21.9 62.1l1.3-1.3M12.8 71.2l1.3-1.3M21.9 69.9l1.3 1.3M12.8 60.8l1.3 1.3" stroke="#7c4ddb" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="31" r="11" fill="#fff" stroke="#0d9c92" stroke-width="2.6"/><path d="M13.4 34.4v-4M17 34.4v-7.6M20.6 34.4v-5.6" stroke="#0d9c92" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="50" r="14.5" fill="#12275c"/><path d="M43.5 44.5h13a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-5.2l-3.6 3.2v-3.2h-4.2a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2" fill="#fff"/><circle cx="46.6" cy="49.8" r="1.35" fill="#12275c"/><circle cx="50" cy="49.8" r="1.35" fill="#12275c"/><circle cx="53.4" cy="49.8" r="1.35" fill="#12275c"/></svg></div>
+          <h1 style="color:var(--text)">İç Hatlar<span style="color:var(--muted)">Kurumsal giriş</span></h1>
+        </div>
+        <div class="field"><label>E-posta</label><input placeholder="ad.soyad@sirket.com" value="omer.uygun@sirket.com" /></div>
+        <div class="field"><label>Şifre</label><input type="password" placeholder="••••••••" value="demo1234" /></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" data-view="dashboard">Giriş Yap</button>
+        <p class="hint" style="text-align:center;margin-top:14px">SSO / kurumsal hesap ile giriş desteklenir. (Prototip — giriş simülasyondur.)</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ================= GEZİCİ ASİSTAN =================
+     İlk tasarım: zümrüt yuvarlak rozet + parıltı ikonu + nabız halkası.
+     Sağ bölgede rastgele dolaşır, altından yıldız tozu döker.        -->
+<div id="agentTrail" aria-hidden="true"></div>
+<div class="agent st-idle" id="agent" role="button" tabindex="0"
+     aria-label="Zümrüt Asistan — sohbeti açmak için tıklayın">
+  <div class="a-tip" id="aTip" aria-hidden="true">Bir şey mi arıyorsunuz?</div>
+  <div class="a-wrap">
+    <div class="a-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="agent-ring" aria-hidden="true"></div>
+    <div class="agent-body">
+      <svg class="a-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true" focusable="false">
+        <!-- bekleme / hareket / düşünme / konuşma -->
+        <g class="eyeset on" id="eyesNormal">
+          <path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/>
+          <path d="M18.6 16.4l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/>
+        </g>
+        <!-- başarı -->
+        <g class="eyeset" id="eyesHappy">
+          <path stroke-width="2.1" d="M20 6.5 9.5 17 4 11.5"/>
+        </g>
+        <!-- hata -->
+        <g class="eyeset" id="eyesErr">
+          <path stroke-width="2.1" d="M18 6 6 18M6 6l12 12"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+<div id="chatRoot" hidden></div>
+
+<div id="modalRoot" hidden></div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================================
+   1) SABİTLER
+   ========================================================================= */
+const STORE_KEY = 'kayit_yonetimi_v1';
+
+const DEPARTMENTS = [
+  { id:'ik',     name:'İnsan Kaynakları' },
+  { id:'ki',     name:'Kurumsal İletişim' },
+  { id:'idari',  name:'İdari İşler' },
+  { id:'fin',    name:'Finans' },
+  { id:'sat',    name:'Satın Alma' },
+  { id:'kalite', name:'Kalite' },
+];
+
+const USERS = [
+  { id:'u1',  name:'Ömer Uygun',    dept:'ik',     role:'Ekip Üyesi' },
+  { id:'u2',  name:'Ayşe Kaya',     dept:'ik',     role:'Ekip Üyesi' },
+  { id:'u3',  name:'Mehmet Demir',  dept:'ik',     role:'Yönetici' },
+  { id:'u4',  name:'Melda Yalçın',  dept:'ik',     role:'Ekip Üyesi' },
+  { id:'u5',  name:'Deniz Acar',    dept:'ki',     role:'Ekip Üyesi' },
+  { id:'u6',  name:'Selin Aydın',   dept:'ki',     role:'Yönetici' },
+  { id:'u7',  name:'Kerem Yıldız',  dept:'idari',  role:'Ekip Üyesi' },
+  { id:'u8',  name:'Murat Koç',     dept:'idari',  role:'Ekip Üyesi' },
+  { id:'u9',  name:'Zeynep Şahin',  dept:'fin',    role:'Ekip Üyesi' },
+  { id:'u10', name:'Ece Sarı',      dept:'fin',    role:'Yönetici' },
+  { id:'u11', name:'Elif Arslan',   dept:'sat',    role:'Ekip Üyesi' },
+  { id:'u12', name:'Cem Öztürk',    dept:'kalite', role:'Ekip Üyesi' },
+];
+
+const TYPES = [
+  { id:'bilgi', label:'Bilgi', icon:'info' },
+  { id:'oneri', label:'Öneri', icon:'bulb' },
+];
+
+/* Satır içi SVG ikon seti — emoji yerine tutarlı, çizgi tabanlı ikonlar */
+const SVG = (d, cls) =>
+  '<svg class="ic ' + (cls || 'ic-sm') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
+  + ' stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+
+const ICON = {
+  info:  '<circle cx="12" cy="12" r="9.5"/><path d="M12 16.5v-5M12 7.8h.01"/>',
+  bulb:  '<path d="M9.5 18h5M10.5 21.5h3"/><path d="M15.1 14.2c.2-1.05.7-1.85 1.5-2.65A5 5 0 1 0 7.4 8.5c0 1.05.25 2.35 1.5 3.6.8.8 1.3 1.6 1.5 2.65"/>',
+  spark: '<path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/><path d="M18.6 16.4l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/>',
+  check: '<path d="M20 6.5 9.5 17 4 11.5"/>',
+  clip:  '<path d="M21.4 11.05 12.25 20.2a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  x:     '<path d="M18 6 6 18M6 6l12 12"/>',
+  search:'<circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/>',
+  back:  '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  chat:  '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20.5l1.4-4.1A8.3 8.3 0 0 1 3.6 12a8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 9 7.9z"/>',
+  users: '<path d="M16 20v-1.8a3.6 3.6 0 0 0-3.6-3.6H6.2A3.6 3.6 0 0 0 2.6 18.2V20"/><circle cx="9.3" cy="7.4" r="3.4"/><path d="M21.4 20v-1.8a3.6 3.6 0 0 0-2.7-3.5M15.6 4.2a3.6 3.6 0 0 1 0 6.9"/>',
+  clock: '<circle cx="12" cy="12" r="9.2"/><path d="M12 7.2V12l3.2 1.9"/>',
+};
+const icon = (name, cls) => SVG(ICON[name] || '', cls);
+
+/* Öncelik — mockup ile uyumlu: Normal / Yüksek / Kritik */
+const PRIORITIES = [
+  { id:'normal', label:'Normal', sla:48 },
+  { id:'yuksek', label:'Yüksek', sla:24 },
+  { id:'kritik', label:'Kritik', sla:8  },
+];
+
+const STATUSES = [
+  { id:'yeni',           label:'Yeni',                cls:'gray'   },
+  { id:'uzerime_alindi', label:'Üzerime Alındı',      cls:'blue'   },
+  { id:'inceleniyor',    label:'İnceleniyor',         cls:'blue'   },
+  { id:'calisiliyor',    label:'Çalışılıyor',         cls:'purple' },
+  { id:'ek_bilgi',       label:'Ek Bilgi Bekleniyor', cls:'yellow' },
+  { id:'cozuldu',        label:'Çözüldü',             cls:'green'  },
+  { id:'kapatildi',      label:'Kapatıldı',           cls:'gray'   },
+  { id:'reddedildi',     label:'Reddedildi',          cls:'red'    },
+];
+
+const OPEN_STATUSES = ['yeni','uzerime_alindi','inceleniyor','calisiliyor','ek_bilgi'];
+
+/* =========================================================================
+   2) YARDIMCILAR
+   ========================================================================= */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const deptName  = id => (DEPARTMENTS.find(d=>d.id===id)||{}).name || '—';
+const userById  = id => USERS.find(u=>u.id===id);
+const userName  = id => (userById(id)||{}).name || '—';
+const typeLabel = id => (TYPES.find(t=>t.id===id)||{}).label || id;
+const typeIcon  = id => icon(((TYPES.find(t=>t.id===id)||{}).icon) || 'info');
+const prioObj   = id => PRIORITIES.find(p=>p.id===id) || PRIORITIES[0];
+const statusObj = id => STATUSES.find(s=>s.id===id) || STATUSES[0];
+const initials  = n => { const p=String(n||'?').split(' '); return ((p[0]||'?')[0] + (p[1]?p[1][0]:'')).toUpperCase(); };
+
+const HOUR = 3600*1000, DAY = 24*HOUR;
+const hAgo = h => new Date(Date.now()-h*HOUR).toISOString();
+const dAgo = d => new Date(Date.now()-d*DAY).toISOString();
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  return new Date(iso).toLocaleDateString('tr-TR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+function fmtRel(iso){
+  if(!iso) return '—';
+  const m = Math.floor((Date.now()-new Date(iso))/60000);
+  if(m<1) return 'az önce';
+  if(m<60) return m+' dk önce';
+  const h=Math.floor(m/60); if(h<24) return h+' sa önce';
+  const d=Math.floor(h/24); if(d<30) return d+' gün önce';
+  return Math.floor(d/30)+' ay önce';
+}
+function fmtDur(h){
+  if(h==null) return '—';
+  if(h<1) return Math.round(h*60)+' dk';
+  if(h<48) return h.toFixed(1)+' sa';
+  return (h/24).toFixed(1)+' gün';
+}
+/* SLA rengi: yeşil normal, sarı yaklaşıyor (%70+), kırmızı gecikmiş */
+function slaLevel(r){
+  if(!OPEN_STATUSES.includes(r.status)) return 'green';
+  const limit = prioObj(r.priority).sla * HOUR;
+  const age = Date.now() - new Date(r.createdAt);
+  if(age >= limit) return 'red';
+  if(age >= limit*0.7) return 'yellow';
+  return 'green';
+}
+function slaPill(r){
+  const lv = slaLevel(r);
+  const txt = lv==='red' ? 'Gecikmiş' : lv==='yellow' ? 'Yaklaşıyor' : 'Normal';
+  const cls = lv==='red' ? 'red' : lv==='yellow' ? 'yellow' : 'green';
+  return '<span class="pill '+cls+'"><span class="dot"></span>'+txt+'</span>';
+}
+const statusPill = s => '<span class="pill '+statusObj(s).cls+'">'+esc(statusObj(s).label)+'</span>';
+const typePill   = t => '<span class="pill '+(t==='bilgi'?'blue':'yellow')+'">'+typeIcon(t)+' '+esc(typeLabel(t))+'</span>';
+
+function toast(msg, kind){
+  /* asistanın yüzü sonuca tepki versin */
+  if (typeof Agent !== 'undefined' && Agent.el) Agent.setState(kind === 'err' ? 'err' : kind === 'ok' ? 'ok' : 'idle', 1700);
+  const t=$('#toast'); t.textContent=msg; t.className = kind?kind:'';
+  requestAnimationFrame(()=>t.classList.add('show'));
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+/* =========================================================================
+   3) ML — Türkçe metin benzerliği (kütüphanesiz)
+   ========================================================================= */
+const STOPWORDS = new Set(['ve','veya','ile','için','gibi','kadar','daha','çok','az','bir','bu','şu',
+  'da','de','ki','mi','mı','mu','mü','ama','fakat','ancak','her','hem','ise','değil','ne','nasıl',
+  'ben','biz','siz','benim','bizim','olarak','göre','sonra','önce','içinde','yani','tüm','bütün',
+  'olan','olması','olmak','etmek','yapmak','talep','öneri','öneriyorum','istiyorum','ediyorum',
+  'rica','lütfen','konu','konusunda','hakkında','ilgili','gerekli','edilmesini','edilmesi',
+  'yapılmasını','sağlanmasını','düşünüyorum','var','yok','ihtiyacım','ihtiyaç']);
+
+function mlNorm(t){
+  return String(t||'').replace(/İ/g,'i').replace(/I/g,'ı').toLocaleLowerCase('tr-TR')
+    .replace(/[^a-zçğıöşü0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+function mlTokens(t){ return mlNorm(t).split(' ').filter(w=>w.length>=3 && !STOPWORDS.has(w)); }
+function jaccard(a,b){
+  if(!a.size && !b.size) return 0;
+  let i=0; a.forEach(x=>{ if(b.has(x)) i++; });
+  const u = a.size + b.size - i;
+  return u ? i/u : 0;
+}
+function overlapRatio(arr,set){
+  if(!arr.length) return 0;
+  let h=0; arr.forEach(t=>{ if(set.has(t)) h++; });
+  return h/arr.length;
+}
+function mlScore(q, c){
+  const qT = mlTokens(q.title), qD = mlTokens(q.description);
+  const qAll = qT.concat(qD);
+  const cTs = new Set(mlTokens(c.title));
+  const cAll = new Set(mlTokens(c.title).concat(mlTokens(c.description)));
+  const s = 0.40*jaccard(new Set(qAll), cAll)
+          + 0.35*jaccard(new Set(qT), cTs)
+          + 0.25*overlapRatio(qAll, cAll);
+  let out = s;
+  if(q.department && (c.department===q.department || c.department2===q.department)) out += 0.05;
+  if(q.type && c.type===q.type) out += 0.05;
+  return Math.max(0, Math.min(1, out));
+}
+function mlKeywords(q,c,max){
+  const a=new Set(mlTokens(q.title).concat(mlTokens(q.description)));
+  const b=new Set(mlTokens(c.title).concat(mlTokens(c.description)));
+  const out=[]; a.forEach(w=>{ if(b.has(w) && out.length<(max||4)) out.push(w); });
+  return out;
+}
+function findSimilar(query, records, topN){
+  /* Çözülmüş VE çözülüp kapatılmış kayıtların tamamı öneri havuzundadır */
+  return records
+    .filter(r => (r.status==='cozuldu' || r.status==='kapatildi') && r.resolution)
+    .map(r => ({ record:r, score:mlScore(query,r), percent:Math.round(mlScore(query,r)*100), keywords:mlKeywords(query,r) }))
+    .filter(x => x.percent >= 12)
+    .sort((a,b)=>b.score-a.score)
+    .slice(0, topN||3);
+}
+
+/* =========================================================================
+   4) SEED VERİ — 50 kayıt, İK çoğunlukta, sadece Bilgi + Öneri
+   ========================================================================= */
+/* [tür, başlık, açıklama, çözüm] */
+const TPL = {
+  ik: [
+    ['bilgi','İşe giriş belgesi talebi','Banka kredisi başvurum için işe giriş bildirgemin bir kopyasını rica ediyorum.','Belge e-imzalı olarak hazırlandı ve kurumsal e-posta adresinize iletildi.'],
+    ['bilgi','Yıllık izin bakiyesi düzeltme talebi','İzin bakiyem sistemde eksik görünüyor, geçen yıldan devreden günler işlenmemiş.','Devir kaydı manuel olarak işlendi, bakiye güncellendi ve ekran görüntüsü paylaşıldı.'],
+    ['oneri','Oryantasyon programının zenginleştirilmesi','Yeni başlayanlar için departman tanıtım turu ve mentör eşleştirmesi eklenmesini öneriyorum.','Öneri kabul edildi; yeni oryantasyon akışına departman turu ve ilk hafta mentör ataması eklendi.'],
+    ['bilgi','Eğitim katılım belgesi talebi','Geçen ay tamamladığım liderlik eğitimi için katılım belgesi rica ediyorum.','Katılım belgesi PDF olarak iletildi ve özlük dosyanıza eklendi.'],
+    ['bilgi','Bordro dökümü talebi','Son üç aya ait bordro dökümlerime ihtiyacım var.','Bordrolar İK portalında erişime açıldı, ayrıca e-posta ile de gönderildi.'],
+    ['oneri','Esnek çalışma saatleri önerisi','Giriş-çıkış saatlerinde bir saatlik esneklik uygulamasına geçilmesini öneriyorum.','Pilot uygulama kararı alındı; iki departmanda üç ay boyunca denenecek.'],
+    ['bilgi','Çalışma belgesi talebi','Vize başvurum için güncel çalışma belgesi rica ediyorum.','Çalışma belgesi aynı gün hazırlanıp elden teslim edildi.'],
+    ['oneri','Kariyer haritalarının güncellenmesi','Departman bazlı kariyer haritalarının güncel rollerle yenilenmesini öneriyorum.','Kariyer haritaları güncellendi ve intranette yayınlandı.'],
+    ['bilgi','Özel sağlık sigortası kapsam güncellemesi','Yeni doğan çocuğumun sağlık sigortası kapsamına eklenmesini talep ediyorum.','Sigorta şirketine bildirim yapıldı, kapsam güncellemesi tamamlandı.'],
+    ['bilgi','BES kesintisi düzeltme talebi','Bu ayki bireysel emeklilik kesintim çift yapılmış görünüyor.','Fazla kesinti tespit edildi; iade bir sonraki bordroya yansıtıldı.'],
+    ['oneri','İç eğitim kataloğu oluşturulması','Tüm iç eğitimlerin tek katalogda toplanmasını ve dönemsel yayınlanmasını öneriyorum.','Eğitim kataloğu hazırlandı; çeyrek bazında güncellenerek yayınlanacak.'],
+    ['bilgi','Fazla mesai onayı düzeltme talebi','Geçen haftaki fazla mesai kaydım onay akışında görünmüyor.','Kayıt yönetici onayına yeniden gönderildi ve işleme alındı.'],
+    ['oneri','Çalışan takdir programı önerisi','Aylık teşekkür kartı uygulaması ile ekipler arası takdirin görünür olmasını öneriyorum.','Öneri kabul edildi; takdir programı iletişim planıyla birlikte devreye alınacak.'],
+    ['bilgi','Görev tanımı güncelleme talebi','Görev tanımım mevcut sorumluluklarımı yansıtmıyor, güncellenmesini talep ediyorum.','Yöneticiyle birlikte görev tanımı revize edildi ve sisteme yüklendi.'],
+    ['oneri','Mentorluk programı başlatılması','Deneyimli çalışanlarla yeni mezunları eşleştiren bir mentorluk programı öneriyorum.','Mentorluk programı pilotu on eşleşme ile başlatıldı.'],
+    ['bilgi','Performans hedef girişi süre uzatımı','Hedef giriş ekranı kapandı, girişimi tamamlayamadım; süre uzatımı rica ediyorum.','Ekran üç gün süreyle yeniden açıldı, hedef girişi tamamlandı.'],
+    ['oneri','Uzaktan çalışma politikasının netleştirilmesi','Hibrit çalışma günlerinin ekip bazında netleştirilmesini öneriyorum.','Politika güncellendi; ekip bazlı gün planı tüm yöneticilere iletildi.'],
+    ['bilgi','Doğum yardımı ödemesi talebi','Doğum yardımı ödemesinin tarafıma yapılmasını talep ediyorum.','Gerekli belgeler tamamlandı; ödeme bordro dönemine yansıtıldı.'],
+    ['oneri','Yan hakların çalışan anketiyle belirlenmesi','Yan hak paketinin yıllık çalışan anketi ile şekillendirilmesini öneriyorum.','Anket tasarlandı; sonuçlar gelecek yıl yan hak planlamasına girdi olacak.'],
+    ['bilgi','Askerlik sevk belgesi bildirimi','Askerlik sevk tarihimi bildirmek ve ücretsiz izin sürecini başlatmak istiyorum.','Ücretsiz izin süreci başlatıldı, dönüş planı yöneticinizle paylaşıldı.'],
+  ],
+  ki: [
+    ['bilgi','Kurumsal sunum şablonu talebi','Müşteri sunumu için güncel kurumsal sunum şablonuna ihtiyacım var.','Güncel şablon seti paylaşıldı ve intranet bağlantısı iletildi.'],
+    ['oneri','İç iletişim bülteninin aylık yayınlanması','Bültenin düzenli aylık formata geçmesini öneriyorum.','Bülten aylık periyoda alındı; ilk sayı yayınlandı.'],
+    ['bilgi','Etkinlik duyurusu yayınlama talebi','Departman etkinliğimizin intranet ve panolarda duyurulmasını rica ediyorum.','Duyuru görseli hazırlandı ve tüm iç kanallarda yayınlandı.'],
+    ['oneri','Intranet ana sayfasının sadeleştirilmesi','Ana sayfada en çok kullanılan bağlantıların öne çıkarılmasını öneriyorum.','Ana sayfa düzeni yenilendi; hızlı erişim alanı eklendi.'],
+    ['bilgi','Logo kullanım kılavuzu talebi','Tedarikçiyle paylaşmak üzere logo kullanım kılavuzuna ihtiyacım var.','Marka kılavuzu ve doğru logo paketi iletildi.'],
+    ['oneri','Çalışan başarı hikayeleri köşesi','İntranette aylık çalışan başarı hikayeleri köşesi açılmasını öneriyorum.','Köşe açıldı; ilk hikaye yayına alındı.'],
+    ['bilgi','Sosyal medya paylaşım onayı','Ekibimizin aldığı ödül haberinin kurumsal hesaplardan paylaşılmasını talep ediyorum.','İçerik onaylandı ve kurumsal hesaplardan paylaşıldı.'],
+    ['oneri','Tek kanal kayıt yönetimi iletişimi','Yeni kayıt yönetim sisteminin tüm çalışanlara tanıtım kampanyasıyla duyurulmasını öneriyorum.','İletişim planı hazırlandı; tanıtım videosu ve e-posta serisi yayınlandı.'],
+  ],
+  idari: [
+    ['bilgi','Ofis sıcaklığı ayarı talebi','Üçüncü kat öğleden sonra aşırı ısınıyor, klima ayarının gözden geçirilmesini rica ediyorum.','Bina yönetimiyle görüşüldü; setpoint 22°C ye çekildi, ölçümler normale döndü.'],
+    ['oneri','Yemekhanede vejetaryen seçenek','Her gün en az bir vejetaryen ana yemek bulunmasını öneriyorum.','Tedarikçiyle anlaşıldı; menüye günlük vejetaryen ana yemek eklendi.'],
+    ['bilgi','Toplantı odası ekipman talebi','B2 toplantı odasına HDMI kablosu ve sunum tıklayıcısı gerekiyor.','Ekipmanlar temin edildi ve odaya sabitlendi.'],
+    ['oneri','Servis saatlerinin gözden geçirilmesi','Sabah giriş yoğunluğuna göre servis saatlerinin yeniden değerlendirilmesini öneriyorum.','Alternatif saat anketi yapıldı; iki güzergâhta kalkış saati güncellendi.'],
+    ['bilgi','Otopark kartı talebi','Yeni aracım için otopark geçiş kartı talep ediyorum.','Kart tanımlandı ve elden teslim edildi.'],
+    ['oneri','Ofis geri dönüşüm istasyonları','Katlara cam, plastik ve kağıt ayrıştırma üniteleri konulmasını öneriyorum.','Her kata üçlü geri dönüşüm ünitesi yerleştirildi.'],
+    ['bilgi','Kartlı geçiş yetkisi güncelleme','Arşiv odasına erişim yetkimin tanımlanmasını talep ediyorum.','Yetki tanımı yapıldı; kart aynı gün aktif edildi.'],
+    ['oneri','Toplantı odası rezervasyon sürecinin sadeleştirilmesi','Rezervasyonun takvim üzerinden tek adımda yapılabilmesini öneriyorum.','Takvim entegrasyonu devreye alındı; rezervasyon tek adıma indirildi.'],
+  ],
+  fin: [
+    ['bilgi','Seyahat masraf iadesi talebi','Geçen haftaki şehir dışı görev masraflarımın iadesini talep ediyorum.','Beyan onaylandı; iade ödemesi banka hesabınıza aktarıldı.'],
+    ['bilgi','Fatura kopyası talebi','Mart ayına ait eğitim faturasının kopyasını rica ediyorum.','Fatura kopyası e-arşivden alınarak iletildi.'],
+    ['oneri','Masraf beyanının mobilden yapılabilmesi','Fiş fotoğrafı ile mobil masraf beyanı imkânı öneriyorum.','Mobil beyan özelliği yol haritasına alındı; pilot kullanım başladı.'],
+    ['bilgi','Seyahat avansı talebi','Yaklaşan saha ziyareti için seyahat avansı talep ediyorum.','Avans onaylandı ve hesaba yatırıldı.'],
+    ['bilgi','Tedarikçi ödeme durumu sorgusu','Tedarikçimiz ödemesinin durumunu soruyor, kontrol edilmesini rica ederim.','Ödeme planı kontrol edildi; ödeme gerçekleşti ve tedarikçi bilgilendirildi.'],
+    ['oneri','Bütçe raporu şablonunun sadeleştirilmesi','Aylık bütçe raporunun bir yönetici özeti sayfasıyla başlamasını öneriyorum.','Şablona yönetici özeti eklendi; yeni format kullanıma alındı.'],
+  ],
+  sat: [
+    ['bilgi','Yeni monitör talebi','Mevcut monitörümde renk bozulması başladı, değişim talep ediyorum.','Envanterden 24 inç monitör tahsis edildi ve kurulumu yapıldı.'],
+    ['bilgi','Kırtasiye siparişi talebi','Ekibimiz için dosya, kalem ve defter siparişi rica ediyorum.','Sipariş verildi; ürünler ekibe teslim edildi.'],
+    ['oneri','Tedarikçi değerlendirme anketi','Yıllık tedarikçi değerlendirmesinin anketle sistematik yapılmasını öneriyorum.','Anket formu tasarlandı ve yıllık değerlendirme sürecine eklendi.'],
+    ['bilgi','Ergonomik sandalye talebi','Bel rahatsızlığım nedeniyle ergonomik sandalye talep ediyorum.','Sağlık raporu doğrultusunda ergonomik sandalye temin edildi.'],
+    ['oneri','Toplu alım takvimi oluşturulması','Sık kullanılan sarf malzemeleri için çeyreklik toplu alım takvimi öneriyorum.','Toplu alım takvimi oluşturuldu; ilk dönem alımı tamamlandı.'],
+  ],
+  kalite: [
+    ['bilgi','Doküman revizyon talebi','P-04 prosedüründeki onay akışının güncellenmesini talep ediyorum.','Doküman revize edildi; yeni versiyon yayınlandı.'],
+    ['oneri','Onay adımlarının sadeleştirilmesi','İç denetim formlarındaki çift onay adımının tekilleştirilmesini öneriyorum.','Akış analizi yapıldı; tek onaylı yeni akış devreye alındı.'],
+    ['bilgi','Denetim raporu erişim talebi','Son iç denetim raporuna erişim yetkisi rica ediyorum.','Erişim yetkisi tanımlandı ve rapor paylaşıldı.'],
+  ],
+};
+
+/* Durum ve öncelik döngüleri — dengeli dağılım için */
+const ST_CYCLE = ['cozuldu','cozuldu','yeni','cozuldu','inceleniyor','cozuldu','cozuldu','calisiliyor',
+                  'cozuldu','yeni','cozuldu','ek_bilgi','cozuldu','uzerime_alindi','kapatildi',
+                  'yeni','cozuldu','calisiliyor','cozuldu','reddedildi'];
+const PR_CYCLE = ['normal','normal','yuksek','normal','kritik','normal','yuksek','normal'];
+
+function buildSeed(){
+  const out = [];
+  let i = 0, seq = 100;
+  DEPARTMENTS.forEach(dept => {
+    const team = USERS.filter(u => u.dept === dept.id);
+    (TPL[dept.id] || []).forEach(tpl => {
+      const [type, title, description, resolution] = tpl;
+      const status = ST_CYCLE[i % ST_CYCLE.length];
+      const priority = PR_CYCLE[i % PR_CYCLE.length];
+      const closed = ['cozuldu','kapatildi','reddedildi'].includes(status);
+      const isNew = status === 'yeni';
+
+      const outsiders = USERS.filter(u => u.dept !== dept.id);
+      const creator = outsiders[i % outsiders.length];
+      const assignee = isNew ? null : team[i % team.length];
+
+      let createdAt, updatedAt, firstResponseAt = null, resolvedAt = null;
+      if (closed) {
+        const c = 4 + ((i * 2.7) % 55);
+        createdAt = dAgo(c);
+        firstResponseAt = dAgo(c - (0.15 + (i % 6) * 0.09));
+        resolvedAt = dAgo(Math.max(0.4, c - 1 - (i % 5) * 0.7));
+        updatedAt = resolvedAt;
+      } else if (isNew) {
+        /* Bir kısmı SLA içinde, bir kısmı gecikmiş olsun */
+        createdAt = hAgo(3 + (i % 5) * 18);
+        updatedAt = createdAt;
+      } else {
+        /* Devam eden kayıtlar: çoğu SLA içinde kalsın ki kanban dengeli görünsün */
+        const h = 5 + (i % 4) * 9;            // 5 / 14 / 23 / 32 saat
+        createdAt = hAgo(h);
+        firstResponseAt = hAgo(h - 2);
+        updatedAt = hAgo(Math.max(0.5, h - 3 - (i % 3)));
+      }
+
+      /* Her 5. kayda ikinci ekip ata */
+      let dept2 = null;
+      if (i % 5 === 2) {
+        const others = DEPARTMENTS.filter(d => d.id !== dept.id);
+        dept2 = others[i % others.length].id;
+      }
+
+      const rec = {
+        code: 'KAY-2026-' + String(++seq).padStart(4,'0'),
+        type, title, description, priority, status,
+        department: dept.id, department2: dept2,
+        createdBy: creator.id,
+        assignee: assignee ? assignee.id : null,
+        anonymous: i % 8 === 3,
+        createdAt, updatedAt, firstResponseAt, resolvedAt,
+        attachments: [],
+        mlSuggested: null,
+        history: [{ t:'create', at:createdAt, by:creator.id, text:'Kayıt oluşturuldu ve ' + dept.name + ' ekibine iletildi.' }],
+      };
+      if (status === 'cozuldu') rec.resolution = resolution;
+
+      if (rec.assignee) rec.history.push({ t:'assign', at:firstResponseAt||createdAt, by:rec.assignee, text:'Kayıt ' + userName(rec.assignee) + ' tarafından üzerine alındı.' });
+      if (!isNew) rec.history.push({ t:'status', at:updatedAt, by:rec.assignee, text:'Durum güncellendi: ' + statusObj(status).label });
+      if (status === 'cozuldu') rec.history.push({ t:'comment', at:resolvedAt, by:rec.assignee, text:resolution });
+
+      out.push(rec);
+      i++;
+    });
+  });
+  out.sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  return { records: out, seq };
+}
+
+/* =========================================================================
+   5) STORE
+   ========================================================================= */
+/* Güvenli depolama — dosyaya çift tıklayarak (file://) veya ağ paylaşımından
+   açıldığında tarayıcı localStorage'ı engelleyebilir. O durumda bellek içi
+   depoya düşeriz: uygulama yine tam çalışır, veri yalnızca sekme kapanınca sıfırlanır. */
+const safeStore = (() => {
+  try {
+    const probe = '__ky_probe__';
+    window.localStorage.setItem(probe, '1');
+    window.localStorage.removeItem(probe);
+    return { ls: window.localStorage, persistent: true };
+  } catch (e) {
+    let mem = {};
+    return {
+      persistent: false,
+      ls: {
+        getItem: k => (k in mem ? mem[k] : null),
+        setItem: (k, v) => { mem[k] = String(v); },
+        removeItem: k => { delete mem[k]; },
+      },
+    };
+  }
+})();
+
+const Store = {
+  data: null,
+  load(){
+    const raw = safeStore.ls.getItem(STORE_KEY);
+    if (raw) { try { this.data = JSON.parse(raw); return; } catch(e){ console.warn('state bozuk, seed yükleniyor'); } }
+    const s = buildSeed();
+    this.data = { currentUserId:'u1', records:s.records, seq:s.seq };
+    this.save();
+  },
+  save(){ try { safeStore.ls.setItem(STORE_KEY, JSON.stringify(this.data)); } catch(e){ console.warn('kayıt saklanamadı', e); } },
+  reset(){ safeStore.ls.removeItem(STORE_KEY); this.load(); },
+  me(){ return userById(this.data.currentUserId); },
+  setMe(id){ this.data.currentUserId = id; this.save(); },
+  find(code){ return this.data.records.find(r => r.code === code); },
+  nextCode(){ this.data.seq = (this.data.seq||150) + 1; return 'KAY-2026-' + String(this.data.seq).padStart(4,'0'); },
+  create(p){
+    const now = new Date().toISOString(), me = this.me();
+    const rec = {
+      code: this.nextCode(), type:p.type, title:p.title, description:p.description,
+      priority:p.priority, status:'yeni',
+      department:p.department, department2:p.department2 || null,
+      createdBy: me.id, assignee: null, anonymous: !!p.anonymous,
+      createdAt: now, updatedAt: now, firstResponseAt: null, resolvedAt: null,
+      attachments: p.attachments || [], mlSuggested: p.mlSuggested || null,
+      history: [{ t:'create', at:now, by:me.id, text:'Kayıt oluşturuldu ve ' + deptName(p.department) + ' ekibine iletildi.' }],
+    };
+    if (p.department2) rec.history.push({ t:'assign', at:now, by:me.id, text:'Kayıt ayrıca ' + deptName(p.department2) + ' ekibiyle paylaşıldı.' });
+    this.data.records.unshift(rec); this.save(); return rec;
+  },
+  update(code, changes, hist){
+    const r = this.find(code); if(!r) return null;
+    Object.assign(r, changes);
+    r.updatedAt = new Date().toISOString();
+    if (hist) r.history.push(Object.assign({ at:r.updatedAt, by:this.data.currentUserId }, hist));
+    this.save(); return r;
+  },
+  comment(code, text){
+    const r = this.find(code); if(!r) return null;
+    const now = new Date().toISOString();
+    r.history.push({ t:'comment', at:now, by:this.data.currentUserId, text });
+    r.updatedAt = now;
+    if (!r.firstResponseAt) r.firstResponseAt = now;
+    this.save(); return r;
+  },
+};
+
+/* Kullanıcının ekibine düşen kayıtlar (ana veya ikincil ekip) */
+function teamRecords(u){
+  return Store.data.records.filter(r => r.department === u.dept || r.department2 === u.dept);
+}
+
+/* =========================================================================
+   6) ROUTER
+   ========================================================================= */
+const TITLES = {
+  'dashboard':     ['Dashboard','Kurum içi kayıtların genel durumu, gecikmeler ve ekip verimliliği.'],
+  'new-ticket':    ['Yeni Kayıt','Bilgi veya öneri kaydı oluşturun.'],
+  'my-tickets':    ['Açtığım Kayıtlar','Oluşturduğunuz kayıtların durumunu ve geçmişini takip edin.'],
+  'team-tickets':  ['Ekibe Gelen Kayıtlar','Departmanınıza gelen kayıtları kanban görünümünde yönetin.'],
+  'owned-tickets': ['Üzerimdeki Kayıtlar','Üzerinize aldığınız kayıtları yönetin ve güncelleyin.'],
+  'all-records':   ['Tüm Kayıtlar','Kurum içi kayıt havuzunu inceleyin ve filtreleyin.'],
+  'reports':       ['Raporlar','Kayıt performansı, SLA ve yönlendirme metriklerini görüntüleyin.'],
+  'management':    ['Yönetim','Departman, kategori, SLA, rol ve bildirim ayarları.'],
+  'login':         ['Login','Kurumsal giriş ekranı önizlemesi.'],
+  'detail':        ['Kayıt Detay','Kayıt geçmişi, yönlendirme ve sahiplenme aksiyonları.'],
+};
+
+let CURRENT = 'dashboard', DETAIL_CODE = null, LAST_VIEW = 'dashboard';
+
+function show(id, param){
+  if (id === 'detail') { if (CURRENT !== 'detail') LAST_VIEW = CURRENT; DETAIL_CODE = param || DETAIL_CODE; }
+  CURRENT = id;
+  $$('.view').forEach(v => v.classList.remove('active'));
+  const el = document.getElementById(id); if (el) el.classList.add('active');
+  $$('.nav button').forEach(b => b.classList.toggle('active', b.dataset.view === id));
+  if (TITLES[id]) { $('#pageTitle').textContent = TITLES[id][0]; $('#pageSub').textContent = TITLES[id][1]; }
+  $('#sidebar').classList.remove('open');
+  renderView(id);
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function renderView(id){
+  if (id === 'dashboard')     renderDashboard();
+  if (id === 'new-ticket')    resetForm();
+  if (id === 'my-tickets')    renderMy();
+  if (id === 'team-tickets')  renderKanban();
+  if (id === 'owned-tickets') renderOwned();
+  if (id === 'all-records')   renderAll();
+  if (id === 'detail')        renderDetail();
+  if (id === 'reports')       renderReports();
+  if (id === 'management')    renderManagement();
+  renderChrome();
+}
+
+/* =========================================================================
+   7) ÜST/YAN ÇERÇEVE
+   ========================================================================= */
+function renderChrome(){
+  const me = Store.me(), recs = Store.data.records;
+  $('#pName').textContent = me.name;
+  $('#pRole').textContent = me.role + ' • ' + deptName(me.dept);
+  $('#pAvatar').textContent = initials(me.name);
+
+  const mine = recs.filter(r => r.createdBy === me.id && OPEN_STATUSES.includes(r.status)).length;
+  const team = teamRecords(me).filter(r => !r.assignee && OPEN_STATUSES.includes(r.status)).length;
+  const owned = recs.filter(r => r.assignee === me.id && OPEN_STATUSES.includes(r.status)).length;
+  $('#bMy').textContent = mine; $('#bTeam').textContent = team; $('#bOwned').textContent = owned;
+  $('#bellCount').textContent = teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length;
+}
+
+/* =========================================================================
+   8) DASHBOARD
+   ========================================================================= */
+function renderDashboard(){
+  const recs = Store.data.records;
+  const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
+  const late = open.filter(r => slaLevel(r) === 'red');
+  const closed = recs.filter(r => ['cozuldu','kapatildi'].includes(r.status));
+
+  const resp = recs.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt) - new Date(r.createdAt)) / HOUR);
+  const avgResp = resp.length ? resp.reduce((a,b)=>a+b,0)/resp.length : null;
+
+  const owned = recs.filter(r => r.assignee && OPEN_STATUSES.includes(r.status)).length;
+  $('#dashKpis').innerHTML = [
+    ['c1','chat',  'Açık Kayıtlar',   open.length,   (late.length ? late.length + ' tanesi gecikmiş' : 'Gecikme yok'), late.length ? 'down' : 'up'],
+    ['c2','users', 'Üzerinde Çalışılan', owned,      'Sahiplenilmiş kayıtlar', 'up'],
+    ['c3','clock', 'SLA\'sı Yaklaşan', open.filter(r => slaLevel(r) === 'yellow').length, 'Süre dolmak üzere', 'down'],
+    ['c4','check', 'Kapanan Kayıt',   closed.length, 'Toplam ' + recs.length + ' kayıt içinde', 'up'],
+    ['c5','clock', 'Ort. İlk Dönüş',  fmtDur(avgResp), (avgResp != null && avgResp < 24) ? 'Hedef içinde' : 'İyileştirme alanı', (avgResp != null && avgResp < 24) ? 'up' : 'down'],
+  ].map(k =>
+    '<div class="card kpi"><div class="ico '+k[0]+'">'+icon(k[1],'ic')+'</div>'
+    + '<div class="kpi-txt"><div class="label">'+esc(k[2])+'</div>'
+    + '<div class="value">'+k[3]+'</div>'
+    + '<div class="trend '+k[5]+'">'+esc(k[4])+'</div></div></div>'
+  ).join('');
+
+  /* Departman dağılımı (açık kayıt) */
+  const byDept = DEPARTMENTS.map(d => ({ d, n: open.filter(r => r.department === d.id).length }))
+                            .sort((a,b) => b.n - a.n);
+  const maxD = Math.max(1, ...byDept.map(x => x.n));
+  $('#deptChart').innerHTML = byDept.map(x =>
+    '<div class="bar-row"><span>'+esc(x.d.name)+'</span><div class="bar"><span style="width:'+(x.n/maxD*100)+'%"></span></div><b>'+x.n+'</b></div>'
+  ).join('');
+
+  /* Öne çıkan metrikler — gerçek veriden */
+  const perDept = DEPARTMENTS.map(d => {
+    const all = recs.filter(r => r.department === d.id);
+    const rs = all.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt)-new Date(r.createdAt))/HOUR);
+    const ontime = all.filter(r => !OPEN_STATUSES.includes(r.status) || slaLevel(r) !== 'red').length;
+    return { d, avg: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null, sla: all.length ? Math.round(ontime/all.length*100) : 0,
+             oneri: all.filter(r => r.type==='oneri' && r.status==='cozuldu').length };
+  });
+  const fastest = perDept.filter(x => x.avg != null).sort((a,b) => a.avg - b.avg)[0];
+  const bestSla = perDept.slice().sort((a,b) => b.sla - a.sla)[0];
+  const topOneri = perDept.slice().sort((a,b) => b.oneri - a.oneri)[0];
+
+  $('#highlights').innerHTML =
+    '<div class="leader"><div class="avatar">SLA</div><div><b>En Yüksek SLA Uyum Oranı</b><span>'+esc(bestSla.d.name)+' • %'+bestSla.sla+'</span></div></div>' +
+    '<div class="leader"><div class="avatar">AK</div><div><b>En Çok Aksiyona Dönüşen Öneri</b><span>'+esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri uygulamaya alındı</span></div></div>' +
+    '<div class="leader"><div class="avatar">HIZ</div><div><b>En Hızlı İlk Geri Dönüş</b><span>'+(fastest ? esc(fastest.d.name)+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
+
+  /* Son kayıtlar */
+  const recent = recs.slice().sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0,6);
+  $('#recentRows').innerHTML = recent.length ? recent.map(rowRecent).join('')
+    : '<tr><td colspan="7" class="empty">Kayıt bulunmuyor.</td></tr>';
+}
+
+function rowRecent(r){
+  return '<tr>'
+    + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
+    + '<td>'+typePill(r.type)+'</td>'
+    + '<td>'+esc(deptName(r.department))+'</td>'
+    + '<td>'+(r.assignee ? esc(userName(r.assignee)) : '<span class="small">Atanmadı</span>')+'</td>'
+    + '<td>'+statusPill(r.status)+'</td>'
+    + '<td>'+slaPill(r)+'</td>'
+    + '<td><button class="mini-btn" data-open="'+esc(r.code)+'">Detay</button></td>'
+    + '</tr>';
+}
+
+/* =========================================================================
+   9) LİSTELER
+   ========================================================================= */
+function renderMy(){
+  const me = Store.me();
+  const rows = Store.data.records.filter(r => r.createdBy === me.id)
+                .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  $('#myCount').textContent = rows.length + ' kayıt';
+  $('#myRows').innerHTML = rows.length ? rows.map(r =>
+    '<tr>'
+    + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
+    + '<td>'+typePill(r.type)+'</td>'
+    + '<td>'+esc(deptName(r.department))+'</td>'
+    + '<td>'+(r.assignee ? esc(userName(r.assignee)) : '<span class="small">Atanmadı</span>')+'</td>'
+    + '<td>'+statusPill(r.status)+'</td>'
+    + '<td class="small">'+esc(fmtRel(r.updatedAt))+'</td>'
+    + '<td>'+slaPill(r)+'</td>'
+    + '</tr>'
+  ).join('') : '<tr><td colspan="7" class="empty">Henüz kayıt açmadınız. “Yeni Kayıt” ile başlayabilirsiniz.</td></tr>';
+  $$('#myRows tr').forEach((tr,i) => { if(rows[i]) tr.onclick = () => show('detail', rows[i].code); });
+}
+
+function renderOwned(){
+  const me = Store.me();
+  const rows = Store.data.records.filter(r => r.assignee === me.id)
+                .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  const active = rows.filter(r => OPEN_STATUSES.includes(r.status)).length;
+  $('#ownedCount').textContent = active + ' aktif / ' + rows.length + ' toplam';
+  $('#ownedRows').innerHTML = rows.length ? rows.map(r =>
+    '<tr>'
+    + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
+    + '<td>'+typePill(r.type)+'</td>'
+    + '<td>'+esc(deptName(r.department))+'</td>'
+    + '<td>'+statusPill(r.status)+'</td>'
+    + '<td class="small">'+esc(fmtRel(r.updatedAt))+'</td>'
+    + '<td>'+slaPill(r)+'</td>'
+    + '<td><button class="mini-btn" data-open="'+esc(r.code)+'">Aç</button></td>'
+    + '</tr>'
+  ).join('') : '<tr><td colspan="7" class="empty">Üzerinize aldığınız kayıt yok. “Ekibe Gelen Kayıtlar”dan sahiplenebilirsiniz.</td></tr>';
+}
+
+function renderAll(){
+  /* filtre seçeneklerini bir kez doldur */
+  if (!$('#fltType').dataset.ready) {
+    $('#fltType').innerHTML   = '<option value="">Tüm türler</option>' + TYPES.map(t=>'<option value="'+t.id+'">'+t.label+'</option>').join('');
+    $('#fltDept').innerHTML   = '<option value="">Tüm departmanlar</option>' + DEPARTMENTS.map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+    $('#fltStatus').innerHTML = '<option value="">Tüm durumlar</option>' + STATUSES.map(s=>'<option value="'+s.id+'">'+esc(s.label)+'</option>').join('');
+    $('#fltType').dataset.ready = '1';
+    ['#fltText','#fltType','#fltDept','#fltStatus'].forEach(sel => {
+      $(sel).addEventListener('input', renderAll);
+      $(sel).addEventListener('change', renderAll);
+    });
+  }
+  const q = ($('#fltText').value||'').toLocaleLowerCase('tr-TR');
+  const ft = $('#fltType').value, fd = $('#fltDept').value, fs = $('#fltStatus').value;
+
+  const rows = Store.data.records.filter(r => {
+    if (ft && r.type !== ft) return false;
+    if (fd && r.department !== fd && r.department2 !== fd) return false;
+    if (fs && r.status !== fs) return false;
+    if (q) {
+      const hay = (r.code + ' ' + r.title + ' ' + r.description + ' ' + deptName(r.department)).toLocaleLowerCase('tr-TR');
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  $('#allCount').textContent = rows.length + ' kayıt';
+  $('#allRows').innerHTML = rows.length ? rows.map(rowRecent).join('')
+    : '<tr><td colspan="7" class="empty">Filtrelere uyan kayıt bulunamadı.</td></tr>';
+}
+
+/* =========================================================================
+   10) KANBAN — Ekibe Gelen
+   ========================================================================= */
+function ticketCard(r){
+  return '<div class="ticket" data-open="'+esc(r.code)+'">'
+    + '<div class="tt">'+slaPill(r)+typePill(r.type)+'</div>'
+    + '<b>'+esc(r.title)+'</b>'
+    + '<p>'+esc(r.code)+' • '+esc(deptName(r.department))+' • '+esc(prioObj(r.priority).label)+'</p>'
+    + '<div class="ticket-foot"><span class="small">'+(r.assignee ? 'Sahip: '+esc(userName(r.assignee)) : 'Atanmadı')+'</span>'
+    + '<button class="mini-btn" data-open="'+esc(r.code)+'">Aç</button></div>'
+    + '</div>';
+}
+
+function renderKanban(){
+  const me = Store.me();
+  const open = teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status));
+
+  const risk = open.filter(r => r.status === 'ek_bilgi' || slaLevel(r) === 'red');
+  const riskSet = new Set(risk.map(r => r.code));
+  const rest = open.filter(r => !riskSet.has(r.code));
+
+  const cols = {
+    'new':     rest.filter(r => !r.assignee),
+    'owned':   rest.filter(r => r.assignee && ['uzerime_alindi','inceleniyor'].includes(r.status)),
+    'working': rest.filter(r => r.assignee && r.status === 'calisiliyor'),
+    'risk':    risk,
+  };
+  Object.keys(cols).forEach(k => {
+    $('#cnt-'+k).textContent = cols[k].length;
+    $('#col-'+k).innerHTML = cols[k].length ? cols[k].map(ticketCard).join('')
+      : '<div class="col-empty">Kayıt yok</div>';
+  });
+}
+
+/* =========================================================================
+   11) DETAY
+   ========================================================================= */
+function renderDetail(){
+  const r = Store.find(DETAIL_CODE);
+  if (!r) { $('#detailBody').innerHTML = '<div class="card"><div class="empty">Kayıt bulunamadı.</div></div>'; return; }
+
+  const me = Store.me();
+  const isCreator  = r.createdBy === me.id;
+  const isAssignee = r.assignee === me.id;
+  const inTeam     = me.dept === r.department || me.dept === r.department2;
+  const isOpen     = OPEN_STATUSES.includes(r.status);
+
+  /* Aksiyonlar */
+  const acts = [];
+  if (isOpen && inTeam && !r.assignee) acts.push('<button class="btn btn-primary" data-act="claim">Üzerime Al</button>');
+  if (isOpen && inTeam)                acts.push('<button class="btn btn-ghost" data-act="forward">Kaydı Yönlendir</button>');
+  if (isOpen && isAssignee) {
+    acts.push('<button class="btn btn-soft" data-act="status">Durum Güncelle</button>');
+    acts.push('<button class="btn btn-success" data-act="resolve">Çözüldü</button>');
+    acts.push('<button class="btn btn-danger" data-act="reject">Reddet</button>');
+  }
+  if (r.status === 'cozuldu' && isCreator) acts.push('<button class="btn btn-ghost" data-act="close">Kaydı Kapat</button>');
+
+  /* SLA ilerleme */
+  const limit = prioObj(r.priority).sla * HOUR;
+  const age = Date.now() - new Date(r.createdAt);
+  const pct = Math.min(100, Math.round(age / limit * 100));
+  const remain = limit - age;
+  const slaText = !isOpen ? 'Kayıt kapandı — SLA takibi durdu.'
+    : remain > 0 ? 'Süre aşımına ' + fmtDur(remain/HOUR) + ' kaldı.'
+    : 'Süre ' + fmtDur(-remain/HOUR) + ' aşıldı.';
+
+  const openerName = r.anonymous ? 'Anonim kullanıcı' : userName(r.createdBy);
+
+  $('#detailBody').innerHTML =
+  '<div class="grid detail-layout">'
+  + '<div>'
+    + '<div class="card form-card">'
+      + '<div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">'
+        + '<div style="min-width:0">'
+          + '<div class="inline-actions" style="margin-bottom:8px">'+slaPill(r)+typePill(r.type)+statusPill(r.status)
+            + '<span class="pill gray">'+esc(prioObj(r.priority).label)+'</span></div>'
+          + '<h3 style="margin:0 0 6px">'+esc(r.title)+'</h3>'
+          + '<p class="hint">'+esc(r.code)+' • Kaydı açan: '+esc(openerName)+' • Ekip: '+esc(deptName(r.department))
+            + (r.department2 ? ' + ' + esc(deptName(r.department2)) : '')
+            + ' • '+esc(fmtDate(r.createdAt))+'</p>'
+        + '</div>'
+        + '<button class="btn btn-ghost" data-act="back">'+icon('back')+' Geri</button>'
+      + '</div>'
+      + '<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">'
+      + '<p style="white-space:pre-wrap;line-height:1.6;margin:0">'+esc(r.description)+'</p>'
+      + (r.attachments && r.attachments.length
+          ? '<div style="margin-top:16px"><label style="font-size:13px;font-weight:800;display:block;margin-bottom:8px">Ek Dosyalar</label>'
+            + r.attachments.map(f => '<div class="file-item">'+icon('clip')+' '+esc(f.name)+' <span class="small">'+esc(f.size)+'</span></div>').join('') + '</div>'
+          : '')
+      + (r.resolution ? '<div class="comment" style="margin-top:16px"><b>'+icon('check')+' Çözüm:</b> '+esc(r.resolution)+'</div>' : '')
+      + (acts.length ? '<div class="inline-actions" style="margin-top:18px">'+acts.join('')+'</div>' : '')
+    + '</div>'
+
+    + '<div class="card form-card" style="margin-top:16px">'
+      + '<h3 style="font-size:16px;margin:0 0 14px">Süreç Geçmişi</h3>'
+      + '<div class="timeline">'
+      + r.history.map(h =>
+          '<div class="event '+esc(h.t)+'"><b>'+esc(h.text)+'</b>'
+          + '<span>'+esc(fmtDate(h.at))+' • '+esc(h.by ? userName(h.by) : 'Sistem')+'</span></div>'
+        ).join('')
+      + '</div>'
+      + ((isCreator || inTeam)
+          ? '<div class="field" style="margin:18px 0 10px"><label>Yorum / Güncelleme</label>'
+            + '<textarea id="cmtInput" placeholder="Durum güncellemesi veya yanıt yazın..."></textarea></div>'
+            + '<button class="btn btn-soft" data-act="comment">Güncelleme Ekle</button>'
+          : '')
+    + '</div>'
+  + '</div>'
+
+  + '<div>'
+    + '<div class="card form-card">'
+      + '<h3 style="font-size:16px;margin:0 0 14px">Süre ve SLA</h3>'
+      + '<div class="field"><label>İlk Geri Dönüş / Kapanış SLA ('+prioObj(r.priority).sla+' sa)</label>'
+        + '<div class="progress"><span class="'+(pct>=100?'red':'')+'" style="width:'+pct+'%"></span></div>'
+        + '<p class="hint" style="margin-top:8px">'+esc(slaText)+'</p></div>'
+      + '<div class="kv"><span class="k">Kayıt No</span><span class="v">'+esc(r.code)+'</span></div>'
+      + '<div class="kv"><span class="k">Tür</span><span class="v">'+esc(typeLabel(r.type))+'</span></div>'
+      + '<div class="kv"><span class="k">Öncelik</span><span class="v">'+esc(prioObj(r.priority).label)+'</span></div>'
+      + '<div class="kv"><span class="k">Ekip</span><span class="v">'+esc(deptName(r.department))+'</span></div>'
+      + (r.department2 ? '<div class="kv"><span class="k">İkincil Ekip</span><span class="v">'+esc(deptName(r.department2))+'</span></div>' : '')
+      + '<div class="kv"><span class="k">Durum</span><span class="v">'+esc(statusObj(r.status).label)+'</span></div>'
+      + '<div class="kv"><span class="k">Açan</span><span class="v">'+esc(openerName)+'</span></div>'
+      + '<div class="kv"><span class="k">Sahiplenen</span><span class="v">'+(r.assignee?esc(userName(r.assignee)):'—')+'</span></div>'
+      + '<div class="kv"><span class="k">Oluşturma</span><span class="v">'+esc(fmtDate(r.createdAt))+'</span></div>'
+      + '<div class="kv"><span class="k">Son Güncelleme</span><span class="v">'+esc(fmtDate(r.updatedAt))+'</span></div>'
+      + (r.firstResponseAt ? '<div class="kv"><span class="k">İlk Geri Dönüş</span><span class="v">'+esc(fmtDate(r.firstResponseAt))+'</span></div>' : '')
+      + (r.resolvedAt ? '<div class="kv"><span class="k">Çözülme</span><span class="v">'+esc(fmtDate(r.resolvedAt))+'</span></div>' : '')
+    + '</div>'
+    + (r.mlSuggested && r.mlSuggested.length
+        ? '<div class="card form-card" style="margin-top:16px"><h3 style="font-size:16px;margin:0 0 6px">Açılışta Önerilen Çözümler</h3>'
+          + '<p class="hint" style="margin-bottom:10px">Kayıt oluşturulurken asistanın bulduğu benzer kayıtlar.</p>'
+          + r.mlSuggested.map(m =>
+              '<div class="ml-match"><div class="mh"><b>'+esc(m.title)+'</b><span class="pill '+(m.percent>=35?'green':'yellow')+'">%'+m.percent+'</span></div>'
+              + '<div class="ml-sol">'+esc(m.resolution)+'</div>'
+              + '<div class="ml-meta"><span>'+esc(m.code)+'</span></div></div>'
+            ).join('')
+          + '</div>'
+        : '')
+  + '</div>'
+  + '</div>';
+}
+
+/* =========================================================================
+   12) DETAY AKSİYONLARI
+   ========================================================================= */
+function actClaim(r){
+  Store.update(r.code, {
+    assignee: Store.data.currentUserId,
+    status: 'uzerime_alindi',
+    firstResponseAt: r.firstResponseAt || new Date().toISOString(),
+  }, { t:'assign', text:'Kayıt ' + Store.me().name + ' tarafından üzerine alındı.' });
+  toast('Kayıt üzerinize alındı', 'ok'); renderDetail(); renderChrome();
+}
+
+function actForward(r){
+  const me = Store.me();
+  const mates = USERS.filter(u => u.dept === me.dept && u.id !== me.id);
+  openModal('Kayıt Yönlendirme',
+    '<div class="field"><label>Departman Seçiniz</label><select id="fwdDept"><option value="">— seçiniz —</option>'
+    + DEPARTMENTS.filter(d => d.id !== r.department).map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('')
+    + '</select></div>'
+    + '<div class="field"><label>— veya — Takım Arkadaşı Seçiniz</label><select id="fwdMate"><option value="">— seçiniz —</option>'
+    + mates.map(u => '<option value="'+u.id+'">'+esc(u.name)+'</option>').join('')
+    + '</select></div>'
+    + '<div class="field"><label>Yönlendirme Notu</label><textarea id="fwdNote" placeholder="Yönlendirme sebebini yazın..."></textarea></div>',
+    [
+      { label:'İptal', cls:'btn-ghost' },
+      { label:'Yönlendirmeyi Kaydet', cls:'btn-primary', run(){
+          const d = $('#fwdDept').value, u = $('#fwdMate').value, note = ($('#fwdNote').value||'').trim();
+          if (!d && !u) return toast('Lütfen departman veya takım arkadaşı seçin','err');
+          let changes, text;
+          if (d) { changes = { department:d, assignee:null, status:'yeni' }; text = 'Kayıt ' + deptName(d) + ' ekibine yönlendirildi.'; }
+          else   { changes = { assignee:u, status:'uzerime_alindi' };          text = 'Kayıt ' + userName(u) + ' kişisine atandı.'; }
+          if (note) text += ' Not: ' + note;
+          Store.update(r.code, changes, { t:'assign', text });
+          closeModal(); toast('Kayıt yönlendirildi','ok'); renderDetail(); renderChrome();
+        }}
+    ]);
+}
+
+function actStatus(r){
+  const opts = STATUSES.filter(s => ['inceleniyor','calisiliyor','ek_bilgi'].includes(s.id));
+  openModal('Durum Güncelle',
+    '<div class="field"><label>Yeni Durum</label><select id="stSel">'
+    + opts.map(s => '<option value="'+s.id+'"'+(r.status===s.id?' selected':'')+'>'+esc(s.label)+'</option>').join('')
+    + '</select></div><div class="field"><label>Not (opsiyonel)</label><textarea id="stNote" placeholder="Kısa açıklama..."></textarea></div>',
+    [
+      { label:'İptal', cls:'btn-ghost' },
+      { label:'Güncelle', cls:'btn-primary', run(){
+          const s = $('#stSel').value, n = ($('#stNote').value||'').trim();
+          Store.update(r.code, { status:s }, { t:'status', text:'Durum güncellendi: ' + statusObj(s).label + (n ? ' — ' + n : '') });
+          closeModal(); toast('Durum güncellendi','ok'); renderDetail(); renderChrome();
+        }}
+    ]);
+}
+
+function actResolve(r){
+  openModal('Kaydı Çözüldü Yap',
+    '<div class="field"><label>Çözüm Açıklaması</label>'
+    + '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>'
+    + '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>',
+    [
+      { label:'İptal', cls:'btn-ghost' },
+      { label:'Çözüldü Olarak İşaretle', cls:'btn-success', run(){
+          const t = ($('#resTxt').value||'').trim();
+          if (!t) return toast('Çözüm açıklaması zorunludur','err');
+          Store.update(r.code, { status:'cozuldu', resolution:t, resolvedAt:new Date().toISOString() },
+                       { t:'status', text:'Kayıt çözüldü. Çözüm: ' + t });
+          closeModal(); toast('Kayıt çözüldü olarak işaretlendi','ok'); renderDetail(); renderChrome();
+        }}
+    ]);
+}
+
+function actReject(r){
+  openModal('Kaydı Reddet',
+    '<div class="field"><label>Ret Sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz?"></textarea></div>',
+    [
+      { label:'İptal', cls:'btn-ghost' },
+      { label:'Reddet', cls:'btn-danger', run(){
+          const t = ($('#rejTxt').value||'').trim();
+          if (!t) return toast('Ret sebebi zorunludur','err');
+          Store.update(r.code, { status:'reddedildi' }, { t:'status', text:'Kayıt reddedildi. Sebep: ' + t });
+          closeModal(); toast('Kayıt reddedildi','ok'); renderDetail(); renderChrome();
+        }}
+    ]);
+}
+
+function actClose(r){
+  openModal('Kaydı Kapat', '<p class="hint">Çözümü onaylayıp kaydı kapatmak istediğinize emin misiniz?</p>',
+    [
+      { label:'Vazgeç', cls:'btn-ghost' },
+      { label:'Kaydı Kapat', cls:'btn-primary', run(){
+          Store.update(r.code, { status:'kapatildi' }, { t:'status', text:'Kayıt, kaydı açan kullanıcı tarafından kapatıldı.' });
+          closeModal(); toast('Kayıt kapatıldı','ok'); renderDetail(); renderChrome();
+        }}
+    ]);
+}
+
+function actComment(r){
+  const el = $('#cmtInput'); const t = (el && el.value || '').trim();
+  if (!t) return toast('Boş güncelleme eklenemez','err');
+  Store.comment(r.code, t);
+  toast('Güncelleme eklendi','ok'); renderDetail(); renderChrome();
+}
+
+/* =========================================================================
+   13) YENİ KAYIT FORMU + ML AKIŞI
+   ========================================================================= */
+let form = { type:null, anon:false, files:[], mlDone:false, mlOk:false, matches:[], sig:null };
+
+function formSig(){
+  return [form.type, $('#fTitle').value, $('#fDesc').value, $('#fDept1').value, $('#fDept2').value, $('#fPrio').value].join('|');
+}
+
+function resetForm(){
+  form = { type:null, anon:false, files:[], mlDone:false, mlOk:false, matches:[], sig:null };
+  $('#fTitle').value = ''; $('#fDesc').value = '';
+  $('#fDept1').value = ''; $('#fDept2').value = ''; $('#fPrio').value = 'normal';
+  $$('#typeCards .type-card').forEach(c => c.classList.remove('active'));
+  $('#anonToggle').textContent = 'Anonim: Kapalı'; $('#anonToggle').classList.remove('active');
+  $('#fileList').innerHTML = '';
+  $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
+  $('#mlStatus').innerHTML = 'Başlık ve açıklamayı yazdıktan sonra <b>ML ile Kontrol Et</b>\'e basın. Sistem geçmiş çözümleri tarayıp önerileri gösterir; onayladıktan sonra kaydı iletebilirsiniz.';
+  updateSlaPreview(); syncCreateBtn();
+}
+
+function updateSlaPreview(){
+  const p = prioObj($('#fPrio').value || 'normal');
+  $('#slaPreview1').textContent = p.label + ' öncelik — ' + p.sla + ' saat içinde sahiplenilmeli';
+}
+
+function syncCreateBtn(){
+  const ok = form.mlDone && form.mlOk;
+  $('#createBtn').disabled = !ok;
+  $('#createBtn').title = ok ? '' : 'Önce ML kontrolü yapıp önerileri onaylamalısınız';
+}
+
+function invalidateMl(){
+  const s = formSig();
+  if (form.sig && form.sig !== s && form.mlDone) {
+    form.mlDone = false; form.mlOk = false; form.deptApplied = false; form.mlInferenceId = null;
+    $('#mlStatus').innerHTML = 'Form içeriği değişti. Kaydı iletmeden önce tekrar <b>ML ile Kontrol Et</b>\'e basın.';
+    $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
+    syncCreateBtn();
+  }
+}
+
+/* ML ekip önerisi. Öneri sunucudan gelir (api-store.js → mlDepartmentSuggestion);
+   sunucusuz prototipte fonksiyon tanımlı değildir ve kutu boş kalır. */
+function renderDeptSuggestion(){
+  const box = $('#mlDept'); if (!box) return;
+  const s = (typeof mlDepartmentSuggestion === 'function') ? mlDepartmentSuggestion() : null;
+  if (!s || !s.candidates || !s.candidates.length) { box.innerHTML = ''; return; }
+
+  const top = s.candidates[0];
+  const sel = $('#fDept1').value;
+  const low = !!s.lowConfidence;
+  const pill = low ? 'yellow' : top.percent >= 60 ? 'green' : 'blue';
+
+  let act;
+  if (sel === top.id) {
+    act = '<span class="md-ok">'+icon('check')+' '
+        + (form.deptApplied ? 'Önerilen ekip seçildi.' : 'Seçtiğiniz ekip öneriyle aynı.') + '</span>';
+  } else {
+    act = '<button class="btn btn-soft" type="button" id="mlDeptApply">Bu ekibi seç</button>'
+        + (sel ? '<span class="md-note">Şu an seçili: <b>'+esc(deptName(sel))+'</b></span>' : '');
+  }
+
+  box.innerHTML =
+    '<div class="ml-dept'+(low?' low':'')+'">'
+    + '<div class="md-head"><span class="md-lbl">'+(low ? 'Olası ekip' : 'Önerilen ekip')+'</span>'
+    +   '<span class="md-name">'+esc(top.name)+'</span>'
+    +   '<span class="pill '+pill+'">%'+top.percent+'</span></div>'
+    + (top.terms && top.terms.length
+        ? '<div class="md-why">Gerekçe:'+top.terms.map(t => '<span class="kw">'+esc(t)+'</span>').join('')+'</div>' : '')
+    + '<div class="md-bars">'
+    +   s.candidates.map((c,i) =>
+          '<div class="md-row'+(i===0?' top':'')+'"><span>'+esc(c.name)+'</span>'
+          + '<div class="md-track"><div class="md-fill" style="width:'+Math.max(2,c.percent)+'%"></div></div>'
+          + '<b>%'+c.percent+'</b></div>').join('')
+    + '</div>'
+    + (low ? '<div class="md-note" style="margin-top:9px">Metin kısa ya da genel; öneriden emin değilim. Ekibi kendiniz kontrol edin.</div>' : '')
+    + '<div class="md-act">'+act+'</div>'
+    + '</div>';
+
+  const btn = $('#mlDeptApply');
+  if (btn) btn.onclick = () => applyDeptSuggestion(top.id);
+}
+
+function applyDeptSuggestion(id){
+  $('#fDept1').value = id;
+  if ($('#fDept2').value === id) $('#fDept2').value = '';
+  form.deptApplied = true;
+  // Programatik seçim kontrolü geçersiz kılmasın: imzayı yeni seçimle tazele.
+  form.sig = formSig();
+  renderDeptSuggestion();
+  toast('Ekip seçildi: ' + deptName(id), 'ok');
+}
+
+function runMl(){
+  const title = $('#fTitle').value.trim(), desc = $('#fDesc').value.trim();
+  if (!form.type) return toast('Önce kayıt türünü seçin','err');
+  if (!title || !desc) return toast('Başlık ve açıklama gereklidir','err');
+
+  $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
+  $('#mlStatus').innerHTML = '<div class="ml-loading"><div class="spin"></div>Geçmiş çözülmüş kayıtlar taranıyor...</div>';
+  if (typeof Agent !== 'undefined' && Agent.el) Agent.setState('think');   // asistan düşünüyor
+
+  setTimeout(() => {
+    const q = { title, description:desc, department:$('#fDept1').value, type:form.type };
+    const found = findSimilar(q, Store.data.records, 3);
+    form.matches = found; form.mlDone = true; form.sig = formSig();
+    if (typeof Agent !== 'undefined' && Agent.el) Agent.setState(found.length ? 'ok' : 'idle', 1800);
+
+    if (!found.length) {
+      $('#mlStatus').innerHTML = 'Geçmişte benzer bir çözülmüş kayıt bulunamadı. Bu konu yeni görünüyor, kaydı oluşturabilirsiniz.';
+      $('#mlResults').innerHTML = '<div class="ml-empty">Benzer bir kayıt bulunamadı</div>';
+    } else {
+      $('#mlStatus').innerHTML = '<b>'+found.length+' benzer çözülmüş kayıt bulundu.</b> Önerilen çözümler aşağıda; sorununuz burada çözülüyorsa yeni kayıt açmanıza gerek olmayabilir.';
+      $('#mlResults').innerHTML = found.map(m =>
+        '<div class="ml-match">'
+        + '<div class="mh"><b>'+typeIcon(m.record.type)+' '+esc(m.record.title)+'</b>'
+        + '<span class="pill '+(m.percent>=35?'green':m.percent>=20?'blue':'yellow')+'">%'+m.percent+'</span></div>'
+        + '<div class="ml-sol"><b>Önerilen çözüm:</b> '+esc(m.record.resolution)+'</div>'
+        + '<div class="ml-meta"><span>'+esc(m.record.code)+'</span><span>'+esc(deptName(m.record.department))+'</span>'
+        + '<span>'+esc(fmtRel(m.record.resolvedAt || m.record.updatedAt))+'</span>'
+        + m.keywords.map(k => '<span class="kw">'+esc(k)+'</span>').join('')
+        + '</div></div>'
+      ).join('');
+    }
+
+    renderDeptSuggestion();
+
+    $('#mlConfirm').innerHTML =
+      '<div class="ml-confirm">'+icon('spark')+' Önerileri inceledim, yine de yeni kayıt açmak istiyorum.'
+      + '<button class="btn btn-primary" id="mlOkBtn" style="margin-left:auto">Onayla ve Devam Et</button></div>';
+    $('#mlOkBtn').onclick = () => {
+      form.mlOk = true;
+      $('#mlConfirm').innerHTML = '<div class="ml-confirm ok">'+icon('check')+' Kontrol onaylandı — kaydı şimdi oluşturabilirsiniz.</div>';
+      syncCreateBtn(); toast('Kontrol onaylandı','ok');
+    };
+    syncCreateBtn();
+  }, 700);
+}
+
+function createRecord(){
+  const title = $('#fTitle').value.trim(), desc = $('#fDesc').value.trim();
+  const d1 = $('#fDept1').value, d2 = $('#fDept2').value, pr = $('#fPrio').value;
+  if (!form.type) return toast('Kayıt türü seçin','err');
+  if (!title)     return toast('Başlık zorunludur','err');
+  if (!desc)      return toast('Açıklama zorunludur','err');
+  if (!d1)        return toast('İlgili Ekip 1 seçin','err');
+  if (d2 && d2 === d1) return toast('İki ekip farklı olmalıdır','err');
+  if (!form.mlDone) return toast('Önce ML kontrolü yapın','err');
+  if (!form.mlOk)   return toast('Önerileri gördüğünüzü onaylayın','err');
+
+  const rec = Store.create({
+    type: form.type, title, description: desc,
+    department: d1, department2: d2 || null, priority: pr,
+    anonymous: form.anon, attachments: form.files.slice(),
+    mlSuggested: form.matches.map(m => ({ code:m.record.code, title:m.record.title, resolution:m.record.resolution, percent:m.percent })),
+  });
+  toast((form.anon ? 'Kayıt anonim olarak gönderildi: ' : 'Kayıt oluşturuldu: ') + rec.code, 'ok');
+  resetForm();
+  show('detail', rec.code);
+}
+
+/* =========================================================================
+   14) RAPORLAR
+   -------------------------------------------------------------------------
+   Bu ekran önceden yalnızca `Store.data.records` üzerinden hesaplıyordu; o
+   dizi kullanıcının GÖREBİLDİĞİ kayıtları tutar. Yönetici için sonuç
+   yanıltıcıydı: kurum geneli sanılan sayılar aslında kendi kapsamıydı.
+
+   Artık iki aşamalı. Önce yerel veriyle anında çiziliyor (ekran boş
+   kalmasın, görünüm anahtarı senkron çağırıyor), ardından
+   /api/reports/summary dönerse kurum geneliyle yeniden çiziliyor. Uç 403
+   verirse — yönetici değilse — ya da sayfa dosya olarak açıldıysa yerel
+   görünüm kalır. Hangi kapsamın çizildiği üst şeritte yazılı: sessizce
+   eksik sayı göstermek en baştaki hataydı.
+   ========================================================================= */
+
+const REP_TTL = 30000;     /* özet ucu kısa süreli önbelleğe alınır */
+let repCache = null;       /* {at, sum} */
+
+const repPct = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
+const repAvg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+/* Kurum geneli özet. Yetki yoksa ya da uca erişilemiyorsa null döner;
+   çağıran taraf yerel görünümde kalır. Hata yutuluyor çünkü 403 burada
+   arıza değil, normal bir durum: ekip üyesi bu ucu göremez. */
+function fetchReportSummary(){
+  if (location.protocol === 'file:') return Promise.resolve(null);
+  if (repCache && Date.now() - repCache.at < REP_TTL) return Promise.resolve(repCache.sum);
+  return fetch('/api/reports/summary', { credentials:'same-origin' })
+    .then(res => (res.ok ? res.json() : null))
+    .then(sum => {
+      if (!sum || !sum.totals) return null;
+      repCache = { at: Date.now(), sum };
+      return sum;
+    })
+    .catch(() => null);
+}
+
+/* Gecikenler yalnızca kullanıcının görebildiği kayıtlardan listelenebilir:
+   özet ucu kayıt gövdesi döndürmüyor. Sayı kurumun, liste kapsamın. */
+function repVisibleLate(){
+  return Store.data.records.filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
+}
+
+function reportModelLocal(){
+  const recs = Store.data.records;
+  const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
+  const late = repVisibleLate();
+  const anon = recs.filter(r => r.anonymous).length;
+  const oneri = recs.filter(r => r.type === 'oneri');
+  const oneriOk = oneri.filter(r => r.status === 'cozuldu').length;
+
+  /* İkincil ekip de sayılır — özet ucu da öyle sayıyor. İki görünüm
+     arasında gidip gelirken sayılar zıplamasın. */
+  const depts = DEPARTMENTS.map(d => {
+    const all = recs.filter(r => r.department === d.id || r.department2 === d.id);
+    return {
+      label: d.name,
+      n: all.length,
+      resp: repAvg(all.filter(r => r.firstResponseAt)
+             .map(r => (new Date(r.firstResponseAt) - new Date(r.createdAt)) / HOUR)),
+      solve: repAvg(all.filter(r => r.resolvedAt)
+             .map(r => (new Date(r.resolvedAt) - new Date(r.createdAt)) / HOUR)),
+    };
+  });
+
+  const wc = {};
+  recs.forEach(r => mlTokens(r.title).forEach(w => { wc[w] = (wc[w] || 0) + 1; }));
+
+  return {
+    scope: 'local',
+    total: recs.length, open: open.length, late: late.length,
+    anonPct:  recs.length ? repPct(anon, recs.length) : null,
+    slaPct:   recs.length ? repPct(recs.length - late.length, recs.length) : null,
+    oneriPct: oneri.length ? repPct(oneriOk, oneri.length) : null,
+    avgResp: null, avgSolve: null,
+    depts,
+    types:    TYPES.map(t => ({ label:t.label, n:recs.filter(r => r.type === t.id).length })),
+    statuses: STATUSES.map(s => ({ label:s.label, n:recs.filter(r => r.status === s.id).length }))
+                      .filter(x => x.n > 0),
+    topics:   Object.keys(wc).map(k => ({ label:k, n:wc[k] })).sort((a,b) => b.n - a.n).slice(0,6),
+    lateRows: late.slice(0,6), lateHidden: 0,
+  };
+}
+
+function reportModelServer(sum){
+  const t = sum.totals;
+  const vis = repVisibleLate();
+  return {
+    scope: 'org',
+    total: t.records, open: t.open, late: t.late,
+    anonPct: t.anonymousPct, slaPct: t.slaPct, oneriPct: t.oneriAcceptPct,
+    avgResp: t.avgFirstResponseHours, avgSolve: t.avgSolveHours,
+    depts:    (sum.byDepartment || []).map(d => ({ label:d.name, n:d.total, resp:d.resp, solve:d.solve })),
+    types:    (sum.byType   || []).map(x => ({ label:x.label, n:x.n })),
+    statuses: (sum.byStatus || []).map(x => ({ label:x.label, n:x.n })),
+    topics:   (sum.topics   || []).slice(0,6).map(x => ({ label:x.term, n:x.n })),
+    lateRows: vis.slice(0,6),
+    lateHidden: Math.max(0, t.late - vis.length),
+  };
+}
+
+function renderReports(){
+  paintReports(reportModelLocal());
+  fetchReportSummary().then(sum => { if (sum) paintReports(reportModelServer(sum)); });
+}
+
+function paintReports(m){
+  if (!$('#repKpis') || !$('#repCharts')) return;
+  const yuzde = v => (v == null ? '—' : '%' + v);
+
+  $('#repKpis').innerHTML = [
+    ['Toplam Kayıt', m.total, m.scope === 'org' ? 'Kurum geneli' : 'Görebildiğiniz kayıtlar'],
+    ['Anonim Gönderim Oranı', yuzde(m.anonPct), 'Şeffaf geri bildirim göstergesi'],
+    ['SLA Uyumu', yuzde(m.slaPct), 'Hedef: %90+'],
+    ['Öneri Kabul Oranı', yuzde(m.oneriPct), 'Uygulamaya alınan öneriler'],
+  ].map(k => '<div class="card metric-box"><span>'+k[0]+'</span><b>'+k[1]+'</b><span>'+k[2]+'</span></div>').join('');
+
+  const barChart = (rows, fmt, cls) => {
+    if(!rows.length) return '<p class="hint">Veri yok.</p>';
+    const max = Math.max(1, ...rows.map(r => r.n || 0));
+    return rows.map(r => '<div class="bar-row"><span>'+esc(r.label)+'</span><div class="bar"><span class="'+(cls||'')+'" style="width:'+((r.n||0)/max*100)+'%"></span></div><b>'+fmt(r.n)+'</b></div>').join('');
+  };
+
+  /* Sıkı panel: küçük başlık + rozet, dar iç boşluk */
+  const card = (title, badge, body, span) =>
+    '<div class="card rep-card'+(span ? ' span-' + span : '')+'">'
+    + '<div class="rep-head"><h3>'+title+'</h3>'+(badge||'')+'</div>'
+    + '<div class="rep-body">'+body+'</div></div>';
+
+  /* Donut: departman dağılımı — conic-gradient ile, kütüphanesiz.
+     Ortadaki sayı gerçek kayıt adedi; dilimler ikincil ekip yüzünden
+     bundan biraz fazla toplayabilir, yüzdeler dilim toplamına göre. */
+  const donutColors = ['#2563eb','#0d9c92','#f59e0b','#7c4ddb','#4caf3f','#94a3b8'];
+  const dTop = m.depts.filter(x => x.n > 0).sort((a,b) => b.n - a.n);
+  const dSum = dTop.reduce((a,c) => a + c.n, 0) || 1;
+  let acc = 0;
+  const dilimler = dTop.map((r,i) => {
+    const bas = acc / dSum * 360, son = (acc += r.n) / dSum * 360;
+    return donutColors[i % donutColors.length] + ' ' + bas.toFixed(1) + 'deg ' + son.toFixed(1) + 'deg';
+  }).join(',');
+  const donut = dTop.length
+    ? '<div class="donut-wrap">'
+      + '<div class="donut" style="background:conic-gradient(' + dilimler + ')">'
+      +   '<div class="donut-hole"><b>'+m.total+'</b><span>Kayıt</span></div></div>'
+      + '<ul class="donut-legend">'
+      + dTop.map((r,i) =>
+          '<li><i style="background:'+donutColors[i % donutColors.length]+'"></i>'
+          + '<span class="lg-name">'+esc(r.label)+'</span>'
+          + '<b>'+r.n+'</b><em>%'+(r.n/dSum*100).toFixed(1)+'</em></li>').join('')
+      + '</ul></div>'
+      + (dSum > m.total
+          ? '<p class="hint">Dilimler '+dSum+' atama gösteriyor: ikincil ekibe de yönlendirilen kayıt iki departmanda birden sayılır. Ortadaki sayı gerçek kayıt adedi.</p>'
+          : '')
+    : '<p class="hint">Henüz kayıt yok.</p>';
+
+  /* SLA halkaları. Özet ucu "sarıya yaklaşan" kırılımını vermiyor
+     (yalnızca açık ve aşan), o yüzden iki görünüm de aynı dört ölçüyü
+     gösteriyor: sürede olan, açık, aşan, toplam. */
+  const inSla = Math.max(0, m.total - m.late);
+  const ring = (y, renk, ust, alt) =>
+    '<div class="ring"><div class="ring-c" style="background:conic-gradient('+renk+' 0deg '+(y*3.6).toFixed(1)+'deg,#eef1f7 '+(y*3.6).toFixed(1)+'deg 360deg)">'
+    + '<span>%'+y+'</span></div><b style="color:'+renk+'">'+ust+'</b><em>'+alt+'</em></div>';
+  const slaBlok = '<div class="ring-row">'
+    + ring(repPct(inSla,  m.total), '#2f9e44', 'SLA İçinde',  inSla+' kayıt')
+    + ring(repPct(m.open, m.total), '#2563eb', 'Açık Kayıt',  m.open+' kayıt')
+    + ring(repPct(m.late, m.total), '#e03131', 'Süresi Aşan', m.late+' kayıt')
+    + ring(100,                     '#64748b', 'Toplam',      m.total+' kayıt')
+    + '</div>';
+
+  /* Kapsam şeridi: tablonun neyi kapsadığı okunmadan görünsün. */
+  const kapsam = m.scope === 'org'
+    ? '<span class="pill blue">Kurum geneli</span>'
+      + '<span class="hint">Sayılar rapor ucundan geliyor; bütün departmanları kapsıyor.</span>'
+    : '<span class="pill gray">Görebildiğiniz kayıtlar</span>'
+      + '<span class="hint">Kurum geneli tablo için yönetici yetkisi gerekiyor. Buradaki sayılar yalnızca erişebildiğiniz kayıtları kapsar.</span>';
+  const ortalama = (m.avgResp != null || m.avgSolve != null)
+    ? '<span class="hint">Ort. ilk yanıt <b>'+fmtDur(m.avgResp)+'</b> · ort. çözüm <b>'+fmtDur(m.avgSolve)+'</b></span>'
+    : '';
+
+  const respRows  = m.depts.filter(x => x.resp  != null).sort((a,b) => a.resp  - b.resp ).map(x => ({label:x.label, n:x.resp }));
+  const solveRows = m.depts.filter(x => x.solve != null).sort((a,b) => a.solve - b.solve).map(x => ({label:x.label, n:x.solve}));
+
+  const geciken = m.lateRows.length
+    ? '<div class="table-wrap"><table class="table compact"><tbody>'
+      + m.lateRows.map(r => '<tr><td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td><td>'+esc(deptName(r.department))+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
+      + '</tbody></table></div>'
+      + (m.lateHidden ? '<p class="hint">Görüntüleme kapsamınız dışında '+m.lateHidden+' geciken kayıt daha var.</p>' : '')
+    : (m.late
+        ? '<p class="hint">'+m.late+' geciken kayıt var; hiçbiri görüntüleme kapsamınızda değil.</p>'
+        : '<p class="hint">Geciken kayıt bulunmuyor.</p>');
+
+  $('#repCharts').innerHTML =
+    '<div class="rep-scope">'+kapsam+ortalama+'</div>'
+  + '<div class="rep-wide">'
+  +   card('Departman Bazlı Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
+  +   card('SLA Performansı','<span class="pill gray">'+(m.scope === 'org' ? 'Tüm departmanlar' : 'Kapsamınız')+'</span>', slaBlok)
+  + '</div><div class="rep-mason">'
+  + card('Kayıt Türü','<span class="pill yellow">Bilgi / Öneri</span>', barChart(m.types, v => v))
+  + card('Durum Dağılımı','', barChart(m.statuses, v => v))
+  + card('En Çok Gelen Konular','', barChart(m.topics, v => v))
+  + card('En Hızlı İlk Geri Dönüş','<span class="pill green">Departman</span>', barChart(respRows, fmtDur, 'g'))
+  + card('Ortalama Çözüm Süresi','<span class="pill yellow">Departman</span>', barChart(solveRows, fmtDur, 'o'))
+  + card('Geciken Kayıtlar','<span class="pill red">'+m.late+'</span>', geciken)
+  + '</div>';
+}
+
+function exportCsv(){
+  const head = ['Kayıt No','Tür','Başlık','Departman','İkincil Ekip','Öncelik','Durum','Açan','Sahip','Oluşturma','Son Güncelleme','SLA'];
+  const rows = Store.data.records.map(r => [
+    r.code, typeLabel(r.type), r.title, deptName(r.department), r.department2?deptName(r.department2):'',
+    prioObj(r.priority).label, statusObj(r.status).label,
+    r.anonymous?'Anonim':userName(r.createdBy), r.assignee?userName(r.assignee):'',
+    fmtDate(r.createdAt), fmtDate(r.updatedAt), slaLevel(r),
+  ]);
+  const csv = [head].concat(rows).map(a => a.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'kayitlar.csv'; a.click();
+  toast('CSV indirildi','ok');
+}
+
+/* =========================================================================
+   15) YÖNETİM
+   ========================================================================= */
+function renderManagement(){
+  const recs = Store.data.records;
+  $('#mgmtDeptCount').textContent = DEPARTMENTS.length + ' ekip';
+  $('#mgmtDepts').innerHTML = DEPARTMENTS.map(d => {
+    const all = recs.filter(r => r.department === d.id);
+    const open = all.filter(r => OPEN_STATUSES.includes(r.status)).length;
+    const team = USERS.filter(u => u.dept === d.id);
+    return '<tr><td><b>'+esc(d.name)+'</b></td>'
+      + '<td class="small">'+team.map(u => esc(u.name)).join(', ')+'</td>'
+      + '<td>'+(open ? '<span class="pill blue">'+open+'</span>' : '<span class="small">0</span>')+'</td>'
+      + '<td><b>'+all.length+'</b></td></tr>';
+  }).join('');
+
+  $('#mgmtSla').innerHTML = PRIORITIES.map(p =>
+    '<tr><td><b>'+esc(p.label)+'</b></td><td>'+p.sla+' saat</td><td class="small">'+Math.round(p.sla*0.7)+' saat sonrası sarı uyarı</td></tr>'
+  ).join('');
+}
+
+/* =========================================================================
+   16) MODAL
+   ========================================================================= */
+function openModal(title, bodyHtml, buttons){
+  const root = $('#modalRoot');
+  root.innerHTML =
+    '<div class="modal-bg" id="modalBg"><div class="modal">'
+    + '<div class="modal-h"><h3>'+esc(title)+'</h3><button id="mClose">'+icon('x')+'</button></div>'
+    + '<div class="modal-b">'+bodyHtml+'</div>'
+    + '<div class="modal-f" id="mFoot"></div>'
+    + '</div></div>';
+  root.hidden = false;
+  const foot = $('#mFoot');
+  (buttons||[]).forEach(b => {
+    const el = document.createElement('button');
+    el.className = 'btn ' + (b.cls || 'btn-ghost');
+    el.textContent = b.label;
+    el.onclick = () => b.run ? b.run() : closeModal();
+    foot.appendChild(el);
+  });
+  $('#mClose').onclick = closeModal;
+  $('#modalBg').onclick = e => { if (e.target.id === 'modalBg') closeModal(); };
+}
+function closeModal(){ const r = $('#modalRoot'); r.hidden = true; r.innerHTML = ''; }
+
+/* =========================================================================
+   17) BAŞLANGIÇ / OLAY BAĞLAMA
+   ========================================================================= */
+/* Beklenmedik bir hata olursa boş sayfa yerine görünür uyarı göster */
+window.addEventListener('error', e => {
+  const main = document.querySelector('.main');
+  if (main && !document.getElementById('fatalErr')) {
+    const d = document.createElement('div');
+    d.id = 'fatalErr'; d.className = 'card';
+    d.style.cssText = 'padding:20px;margin-bottom:16px;border-left:4px solid var(--danger)';
+    d.innerHTML = '<b style="color:var(--danger)">Uygulama hatası</b>'
+      + '<p class="hint" style="margin-top:6px">' + esc(e.message || 'Bilinmeyen hata') + '</p>';
+    main.prepend(d);
+  }
+});
+
+function init(){
+  Store.load();
+
+  /* Kalıcı depolama yoksa (file:// kısıtı) kullanıcıyı bilgilendir */
+  if (!safeStore.persistent) {
+    const tb = document.querySelector('.topbar .actions');
+    if (tb) {
+      const w = document.createElement('span');
+      w.className = 'pill yellow';
+      w.title = 'Tarayıcı bu konumda veri saklamaya izin vermiyor. Uygulama çalışır, ancak sekmeyi kapatınca değişiklikler kaybolur. Kalıcı kayıt için dosyayı bir web sunucusundan açın.';
+      w.textContent = 'Geçici mod';
+      tb.prepend(w);
+    }
+  }
+
+  /* Kullanıcı seçici */
+  $('#userSwitch').innerHTML = USERS.map(u =>
+    '<option value="'+u.id+'"'+(u.id===Store.data.currentUserId?' selected':'')+'>'+esc(u.name)+' — '+esc(deptName(u.dept))+'</option>'
+  ).join('');
+  $('#userSwitch').onchange = e => {
+    Store.setMe(e.target.value);
+    toast('Kullanıcı değiştirildi: ' + Store.me().name);
+    renderView(CURRENT);
+  };
+
+  /* Form seçenekleri */
+  $('#fDept1').innerHTML = '<option value="">Seçiniz...</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+  $('#fDept2').innerHTML = '<option value="">Seçiniz (opsiyonel)</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+  $('#fPrio').innerHTML  = PRIORITIES.map(p => '<option value="'+p.id+'"'+(p.id==='normal'?' selected':'')+'>'+p.label+' — SLA '+p.sla+' sa</option>').join('');
+
+  /* Menü / görünüm butonları (delegasyon) */
+  document.addEventListener('click', e => {
+    const v = e.target.closest('[data-view]');
+    if (v) { e.preventDefault(); show(v.dataset.view); return; }
+
+    const o = e.target.closest('[data-open]');
+    if (o) { e.preventDefault(); e.stopPropagation(); show('detail', o.dataset.open); return; }
+
+    const a = e.target.closest('[data-act]');
+    if (a) {
+      const r = Store.find(DETAIL_CODE); if (!r) return;
+      const act = a.dataset.act;
+      if (act === 'back')    return show(LAST_VIEW);
+      if (act === 'claim')   return actClaim(r);
+      if (act === 'forward') return actForward(r);
+      if (act === 'status')  return actStatus(r);
+      if (act === 'resolve') return actResolve(r);
+      if (act === 'reject')  return actReject(r);
+      if (act === 'close')   return actClose(r);
+      if (act === 'comment') return actComment(r);
+    }
+  });
+
+  /* Tür kartları */
+  $$('#typeCards .type-card').forEach(c => {
+    c.onclick = () => {
+      $$('#typeCards .type-card').forEach(x => x.classList.remove('active'));
+      c.classList.add('active'); form.type = c.dataset.type; invalidateMl();
+    };
+  });
+
+  /* Anonim */
+  $('#anonToggle').onclick = () => {
+    form.anon = !form.anon;
+    $('#anonToggle').textContent = 'Anonim: ' + (form.anon ? 'Açık' : 'Kapalı');
+    $('#anonToggle').classList.toggle('active', form.anon);
+  };
+
+  /* Dosya */
+  $('#dropzone').onclick = () => $('#fFiles').click();
+  $('#fFiles').onchange = e => {
+    Array.from(e.target.files).forEach(f => form.files.push({ name:f.name, size:Math.round(f.size/1024)+' KB' }));
+    e.target.value = ''; drawFiles();
+  };
+  function drawFiles(){
+    $('#fileList').innerHTML = form.files.map((f,i) =>
+      '<div class="file-item">'+icon('clip')+' '+esc(f.name)+' <span class="small">'+esc(f.size)+'</span><button data-rm="'+i+'">'+icon('x')+'</button></div>'
+    ).join('');
+    $$('#fileList [data-rm]').forEach(b => b.onclick = () => { form.files.splice(+b.dataset.rm,1); drawFiles(); });
+  }
+
+  /* Form değişimi → ML geçersiz */
+  ['#fTitle','#fDesc','#fDept1','#fDept2','#fPrio'].forEach(sel => {
+    $(sel).addEventListener('input', invalidateMl);
+    $(sel).addEventListener('change', () => { invalidateMl(); if (sel === '#fPrio') updateSlaPreview(); });
+  });
+
+  $('#mlBtn').onclick = runMl;
+  $('#createBtn').onclick = createRecord;
+
+  /* Global arama → Tüm Kayıtlar */
+  $('#globalSearch').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const q = e.target.value.trim();
+      show('all-records');
+      $('#fltText').value = q; renderAll();
+    }
+  });
+
+  /* Bildirim zili */
+  $('#bellBtn').onclick = () => {
+    const me = Store.me();
+    const list = teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
+    openModal('Gecikmiş Kayıtlar — ' + deptName(me.dept),
+      list.length
+        ? list.map(r => '<div class="leader" style="cursor:pointer" data-open="'+esc(r.code)+'"><div class="avatar">'+typeIcon(r.type)+'</div>'
+            + '<div><b>'+esc(r.title)+'</b><span>'+esc(r.code)+' • '+esc(fmtRel(r.createdAt))+' açıldı</span></div></div>').join('')
+        : '<p class="hint">Ekibinizde gecikmiş kayıt bulunmuyor.</p>',
+      [{ label:'Kapat', cls:'btn-ghost' }]);
+    $$('#modalRoot [data-open]').forEach(el => el.addEventListener('click', closeModal));
+  };
+
+  /* Sıfırlama */
+  $('#resetBtn').onclick = () => {
+    openModal('Demo Verisini Sıfırla', '<p class="hint">Tüm kayıtlar başlangıç durumuna döndürülecek. Devam edilsin mi?</p>',
+      [{ label:'Vazgeç', cls:'btn-ghost' },
+       { label:'Sıfırla', cls:'btn-danger', run(){
+           Store.reset(); closeModal(); toast('Demo verisi sıfırlandı','ok');
+           $('#userSwitch').value = Store.data.currentUserId; show('dashboard');
+         }}]);
+  };
+
+  $('#csvBtn').onclick = exportCsv;
+
+  Agent.init();
+  show('dashboard');
+}
+
+/* =========================================================================
+   18) GEZİCİ ASİSTAN — serbest dolaşım + imleç takibi + sohbet
+   ========================================================================= */
+
+/* Rapor ekranındaki metriklerden rastgele bir KPI üret */
+function randomKpi(){
+  const recs = Store.data.records;
+  const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
+  const late = open.filter(r => slaLevel(r) === 'red');
+  const closed = recs.filter(r => ['cozuldu','kapatildi'].includes(r.status));
+  const anon = recs.filter(r => r.anonymous).length;
+  const oneri = recs.filter(r => r.type === 'oneri');
+  const oneriOk = oneri.filter(r => r.status === 'cozuldu').length;
+  const ontime = recs.filter(r => !OPEN_STATUSES.includes(r.status) || slaLevel(r) !== 'red').length;
+
+  const resp = recs.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt) - new Date(r.createdAt)) / HOUR);
+  const avgResp = resp.length ? resp.reduce((a,b)=>a+b,0)/resp.length : null;
+  const solve = recs.filter(r => r.resolvedAt).map(r => (new Date(r.resolvedAt) - new Date(r.createdAt)) / HOUR);
+  const avgSolve = solve.length ? solve.reduce((a,b)=>a+b,0)/solve.length : null;
+
+  const per = DEPARTMENTS.map(d => {
+    const all = recs.filter(r => r.department === d.id);
+    const rs = all.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt)-new Date(r.createdAt))/HOUR);
+    return { d, total: all.length, resp: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null };
+  });
+  const busiest = per.slice().sort((a,b)=>b.total-a.total)[0];
+  const fastest = per.filter(x=>x.resp!=null).sort((a,b)=>a.resp-b.resp)[0];
+
+  const pool = [
+    { k:'Toplam Açık Kayıt', v:String(open.length), d: late.length ? late.length + ' tanesi SLA süresini aşmış durumda.' : 'Tamamı SLA hedefi içinde.' },
+    { k:'Geciken Kayıt',     v:String(late.length), d: late.length ? 'Bu kayıtlar öncelikli aksiyon bekliyor.' : 'Şu an geciken kayıt yok.' },
+    { k:'Kapanan Kayıt',     v:String(closed.length), d:'Toplam ' + recs.length + ' kayıt içinde.' },
+    { k:'Ort. İlk Geri Dönüş', v:fmtDur(avgResp), d:(avgResp!=null && avgResp<24) ? 'Hedefin içinde ilerliyoruz.' : 'İyileştirilebilir bir alan.' },
+    { k:'Ort. Çözüm Süresi', v:fmtDur(avgSolve), d:'Kayıt açılışından kapanışına kadar geçen ortalama süre.' },
+    { k:'SLA Uyumu',         v:'%' + Math.round(ontime/recs.length*100), d:'Hedef: %90 ve üzeri.' },
+    { k:'Anonim Gönderim Oranı', v:'%' + Math.round(anon/recs.length*100), d:'Şeffaf geri bildirim kültürünün göstergesi.' },
+    { k:'Öneri Kabul Oranı', v: oneri.length ? '%' + Math.round(oneriOk/oneri.length*100) : '—', d: oneriOk + ' öneri uygulamaya alındı.' },
+    { k:'En Yoğun Departman', v:busiest.d.name, d: busiest.total + ' kayıt ile listenin başında.' },
+  ];
+  if (fastest) pool.push({ k:'En Hızlı Geri Dönüş', v:fastest.d.name, d:fmtDur(fastest.resp) + ' ortalama ilk dönüş süresi.' });
+
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* Karakter: küçük yuvarlak kafa + iki dijital göz + altında yüzen ışık gövdesi.
+   Davranış: imleci yay (spring) fiziğiyle takip eder, gözleriyle yöne bakar,
+   boşta göz kırpar/etrafına bakınır. Durumlar farklı yüz ifadeleri üretir. */
+/* Karakter: konuşma balonu gövdesi + iki yan çıkıntı + kuyruk + iki yuvarlak göz.
+   Davranış: SAĞ bölgede rastgele dolaşır (sol menüye girmez), fareyi TAKİP ETMEZ.
+   Altından roket izi gibi yıldız tozu döker. */
+
+/* ---------- Yıldız tozu izi (havuzlu, çöp üretmez) ---------- */
+const Trail = {
+  box:null, pool:[], i:0, N:26, last:0,
+
+  init(){
+    this.box = document.getElementById('agentTrail');
+    if (!this.box) return;
+    for (let k = 0; k < this.N; k++){
+      const d = document.createElement('i');
+      d.className = 'dust';
+      this.box.appendChild(d);
+      this.pool.push(d);
+    }
+  },
+
+  /* x,y: karakterin alt-orta noktası; sp: anlık hız (yoğunluğu belirler) */
+  emit(x, y, sp, vx, vy){
+    if (!this.box) return;
+    const d = this.pool[this.i]; this.i = (this.i + 1) % this.N;
+    const star = Math.random() < 0.38;
+    d.className = 'dust' + (star ? ' star' : '');
+    const jx = (Math.random() - 0.5) * 9;
+    const jy = (Math.random() - 0.5) * 4;
+    d.style.setProperty('--x',  (x + jx).toFixed(1) + 'px');
+    d.style.setProperty('--y',  (y + jy).toFixed(1) + 'px');
+    /* hareketin tersine + aşağı savrulsun (roket kuyruğu) */
+    d.style.setProperty('--dx', (-vx * 7 + (Math.random() - 0.5) * 12).toFixed(1) + 'px');
+    d.style.setProperty('--dy', (13 + Math.random() * 21).toFixed(1) + 'px');
+    d.style.setProperty('--s0', (0.6 + Math.random() * 0.75).toFixed(2));
+    d.style.setProperty('--rot', (Math.random() * 220 - 110).toFixed(0) + 'deg');
+    d.style.setProperty('--dur', (760 + Math.random() * 520).toFixed(0) + 'ms');
+    d.style.setProperty('--dc', Math.random() < 0.5 ? '#a7f3d0' : '#6ee7b7');
+    /* animasyonu yeniden başlat */
+    d.classList.remove('go'); void d.offsetWidth; d.classList.add('go');
+  },
+};
+
+const Agent = {
+  el:null, eyes:null, tip:null,
+  W:40, H:40,
+  x:0, y:0, vx:0, vy:0,
+  ang:2.4, angT:2.4, gl:0,        // yön (rad), hedef yön, süzülme çarpanı 0..1
+  look:0, lookShown:0,
+  hot:false, paused:false,
+  state:'idle', stateTimer:null,
+  nextWander:0, blinkAt:0, glance:null, lastFrame:0, lastEmit:0,
+  raf:null, placed:false,
+
+  /* Sag alta yerlesme: ilk DOCK_MS boyunca dolasir, sonra sag alt koseye
+     gecip orada bekler. Surekli ekranda gezinmesi dikkat dagitiyordu. */
+  DOCK_MS:10000,
+  dockAt:0, docking:false, docked:false,
+
+  reduced(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; },
+  clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); },
+
+  /* Dolaşım alanı: YALNIZCA sağ bölge — sol menünün üstüne çıkmaz */
+  bounds(){
+    const sb = document.querySelector('.sidebar');
+    const visible = sb && getComputedStyle(sb).display !== 'none';
+    const left = (visible ? sb.getBoundingClientRect().right : 0) + 22;
+    return {
+      minX: left,
+      maxX: Math.max(left, window.innerWidth  - this.W - 24),
+      minY: 100,                                    // üst başlığın altı
+      maxY: Math.max(150, window.innerHeight - this.H - 24),
+    };
+  },
+
+  /* Hedefe koşmak yerine sabit hızda süzülür; arada yeni bir yön seçer.
+     Böylece hızlanıp yavaşlama olmaz, akış kesintisiz kalır. */
+  pickWanderTarget(now){
+    this.angT = Math.random() * Math.PI * 2;
+    this.nextWander = (now == null ? performance.now() : now) + 4200 + Math.random() * 4200;
+  },
+
+  setState(s, ms){
+    if (this.state === s) return;
+    this.el.classList.remove('st-' + this.state);
+    this.state = s;
+    this.el.classList.add('st-' + s);
+    const set = s === 'ok' ? 'eyesHappy' : s === 'err' ? 'eyesErr' : 'eyesNormal';
+    ['eyesNormal','eyesHappy','eyesErr'].forEach(id => {
+      const g = document.getElementById(id);
+      if (g) g.classList.toggle('on', id === set);
+    });
+    clearTimeout(this.stateTimer);
+    if (ms) this.stateTimer = setTimeout(() => this.setState(this.paused ? 'talk' : 'idle'), ms);
+  },
+
+  /* Sag alt koseye yerles. now=true ise animasyonsuz, dogrudan. */
+  dock(immediate){
+    const b = this.bounds();
+    this.docking = false;
+    this.docked = true;
+    this.x = b.maxX; this.y = b.maxY;
+    this.vx = this.vy = 0;
+    this.el.classList.add('docked');
+    if (immediate) this.placed = true;
+  },
+
+  /* sohbet açıkken dolaşım durur */
+  setPaused(v){
+    this.paused = v;
+    this.el.classList.toggle('paused', v);
+    if (v) { this.setHot(false); this.setState('talk'); }
+    else   { this.setState('idle'); if (!this.docked) this.pickWanderTarget(); }
+  },
+
+  setHot(v){
+    if (this.hot === v) return;
+    this.hot = v;
+    this.el.classList.toggle('hot', v);
+    if (v) this.tip.textContent = HOVER_LINES[Math.floor(Math.random() * HOVER_LINES.length)];
+  },
+
+  blink(){
+    this.el.classList.add('blink');
+    setTimeout(() => this.el.classList.remove('blink'), 190);
+  },
+
+  startGlance(now){ this.glance = { t:now, seq:[-1,-1,0,1,1,0] }; },
+
+  tick(now){
+    if (!this.lastFrame) this.lastFrame = now;
+    const dt = this.clamp((now - this.lastFrame) / 16.667, 0.2, 3);
+    this.lastFrame = now;
+
+    const b = this.bounds();
+
+    /* İlk kare: pencere gerçek boyutunu aldıktan sonra yerleş */
+    if (!this.placed && window.innerWidth > 200) {
+      this.x = b.maxX - 60;
+      this.y = b.minY + 70;
+      this.placed = true;
+      this.ang = this.angT = 2.4;          // sol-aşağıya doğru başla
+      this.nextWander = now + 4200 + Math.random() * 4200;
+      this.dockAt = now + this.DOCK_MS;
+      /* Hareket azaltma tercihi varsa hic dolasmadan dogrudan koseye. */
+      if (this.reduced()) this.dock(true);
+    }
+
+    /* ---------------- Süzülme ----------------
+       Hedefe lerp yerine SABİT HIZ + yumuşak yön değişimi.
+       Böylece hızlanıp yavaşlama olmaz; akış hep aynı tempoda sürer. */
+    /* Sure doldu mu: sohbet acikken sayac beklemez, kapaninca devam eder. */
+    if (!this.docked && !this.docking && !this.paused && now >= this.dockAt) {
+      this.docking = true;
+    }
+
+    const durdu = this.hot || this.paused || this.reduced() || this.docked;
+    if (!durdu && !this.docking && now > this.nextWander) this.pickWanderTarget(now);
+
+    /* 1) Seçilen yöne yavaşça dön */
+    let d = ((this.angT - this.ang + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    this.ang += d * 0.010 * dt;
+
+    /* 2) Organik kıvrım — iki farklı periyotlu salınım, düz çizgi hissini kırar */
+    this.ang += (Math.sin(now * 0.00043) * 0.011 + Math.sin(now * 0.00071 + 2.1) * 0.007) * dt;
+
+    /* 3) Kenara yaklaşınca içeri doğru kıvır (sert çarpma yok) */
+    const m = 110;
+    let ax = 0, ay = 0;
+    if (this.x < b.minX + m) ax += (b.minX + m - this.x) / m;
+    if (this.x > b.maxX - m) ax -= (this.x - (b.maxX - m)) / m;
+    if (this.y < b.minY + m) ay += (b.minY + m - this.y) / m;
+    if (this.y > b.maxY - m) ay -= (this.y - (b.maxY - m)) / m;
+    if (ax || ay) {
+      const want = Math.atan2(ay, ax);
+      let dw = ((want - this.ang + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      this.ang += dw * 0.075 * Math.min(1, Math.hypot(ax, ay)) * dt;
+      this.angT = this.ang;                 // yeni yönü hedef say, geri dönmesin
+    }
+
+    /* 4) Durma/başlama yumuşak olsun diye 0..1 arası süzülme çarpanı */
+    this.gl += ((durdu ? 0 : 1) - this.gl) * 0.09 * dt;
+
+    if (this.docked) {
+      /* Yerlesti. Pencere yeniden boyutlanirsa kosede kalsin diye her
+         karede hedefe yaziliyor. */
+      this.x = b.maxX; this.y = b.maxY;
+      this.vx = this.vy = 0;
+    } else if (this.docking) {
+      /* Koseye gidis: sabit hiz yerine yumusak lerp — kosede sert
+         duracak gibi gorunmesin. */
+      const tx = b.maxX, ty = b.maxY;
+      const nx = this.x + (tx - this.x) * 0.055 * dt;
+      const ny = this.y + (ty - this.y) * 0.055 * dt;
+      this.vx = nx - this.x; this.vy = ny - this.y;
+      this.x = nx; this.y = ny;
+      if (Math.hypot(tx - this.x, ty - this.y) < 0.8) this.dock(false);
+    } else {
+      const SP = 0.75;                      // px/kare (~45 px/sn) — sabit tempo
+      this.vx = Math.cos(this.ang) * SP * this.gl * dt;
+      this.vy = Math.sin(this.ang) * SP * this.gl * dt;
+      this.x += this.vx;
+      this.y += this.vy;
+    }
+    this.x = this.clamp(this.x, b.minX, b.maxX);
+    this.y = this.clamp(this.y, b.minY, b.maxY);
+
+    const sp = Math.hypot(this.vx, this.vy);
+
+    /* --- Gözler: gittiği yöne baksın, dururken öne --- */
+    let look;
+    if (this.glance) {
+      const step = Math.floor((now - this.glance.t) / 420);
+      if (step >= this.glance.seq.length) { this.glance = null; look = 0; }
+      else look = this.glance.seq[step];
+    } else if (this.paused || this.hot) {
+      look = 0;                                   // kullanıcıya bak
+    } else {
+      look = this.clamp(this.vx / 1.6, -1, 1);    // gidiş yönü
+    }
+    this.look += (look - this.look) * 0.16 * dt;
+    if (Math.abs(this.look - this.lookShown) > 0.01) {
+      this.lookShown = this.look;
+      /* bu tasarımda göz yok — varsa bakış yönünü uygula, yoksa atla */
+      if (this.eyes) this.eyes.style.transform = 'translateX(' + (this.look * 2.4).toFixed(2) + 'px)';
+    }
+
+    /* --- Durum --- */
+    if (!this.paused && !this.hot && !['think','ok','err'].includes(this.state)) {
+      this.setState(sp > 0.35 ? 'move' : 'idle');
+    }
+
+    /* --- Boşta: göz kırpma + arada bakınma --- */
+    if (now > this.blinkAt) { this.blink(); this.blinkAt = now + 2800 + Math.random() * 3600; }
+    if (!this.paused && !this.glance && sp < 0.25 && Math.random() < 0.004) this.startGlance(now);
+
+    /* --- Yıldız tozu: hız arttıkça sıklaşır --- */
+    /* Yerlesikken duruyor: sabit bir rozetten surekli toz dokulmesi
+       anlamsiz olurdu, o yuzden yalnizca hareket halinde uretilir. */
+    if (!this.reduced() && !this.docked) {
+      const aralik = sp > 0.35 ? 62 : 210;
+      if (now - this.lastEmit > aralik) {
+        this.lastEmit = now;
+        Trail.emit(this.x + this.W / 2, this.y + this.H - 5, sp, this.vx, this.vy);
+      }
+    }
+
+    this.el.style.transform = 'translate3d(' + this.x.toFixed(1) + 'px,' + this.y.toFixed(1) + 'px,0)';
+    this.raf = requestAnimationFrame(t => this.tick(t));
+  },
+
+  init(){
+    this.el = document.getElementById('agent');
+    if (!this.el) return;
+    this.eyes = document.getElementById('aEyes');
+    this.tip  = document.getElementById('aTip');
+    Trail.init();
+
+    this.el.addEventListener('pointerenter', () => this.setHot(true));
+    this.el.addEventListener('pointerleave', () => this.setHot(false));
+    this.el.addEventListener('click', () => Chat.toggle());
+    this.el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Chat.toggle(); }
+    });
+
+    window.addEventListener('resize', () => this.pickWanderTarget());
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { this.lastFrame = 0; this.pickWanderTarget(); }
+    });
+
+    this.raf = requestAnimationFrame(t => this.tick(t));
+  },
+};
+
+/* Hover'da rastgele karşılama */
+const HOVER_LINES = [
+  'Bir şey mi arıyorsunuz?',
+  'Yardım ister misiniz?',
+  'Bir sorunuz mu var?',
+  'Buradayım, tıklayın.',
+  'Kayıtlarınıza bakalım mı?',
+  'Nasıl yardımcı olabilirim?',
+];
+
+/* ---------- Sohbet ---------- */
+const Chat = {
+  open:false,
+
+  toggle(){ this.open ? this.close() : this.show(); },
+
+  close(){
+    this.open = false;
+    Agent.setPaused(false);                 // takip yeniden başlasın
+    document.body.classList.remove('chat-open');
+    const r = $('#chatRoot'); r.hidden = true; r.innerHTML = '';
+    Agent.el.focus({ preventScroll:true });
+  },
+
+  show(){
+    this.open = true;
+    Agent.setPaused(true);                  // sohbet açıkken takip durur
+    document.body.classList.add('chat-open');
+    const root = $('#chatRoot');
+    root.hidden = false;
+    root.innerHTML =
+      '<div class="chat">'
+      + '<div class="chat-h">'
+        + '<div class="av">' + icon('spark') + '</div>'
+        + '<div><b>Zümrüt Asistan</b><small><i></i>Çevrimiçi</small></div>'
+        + '<button id="chatClose" aria-label="Kapat">' + icon('x') + '</button>'
+      + '</div>'
+      + '<div class="chat-body" id="chatBody"></div>'
+      + '<div class="chat-chips" id="chatChips"></div>'
+      + '<div class="chat-f">'
+        + '<input id="chatInput" placeholder="Bir soru yazın..." autocomplete="off" />'
+        + '<button id="chatSend" aria-label="Gönder">'
+          + '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>'
+        + '</button>'
+      + '</div>'
+      + '</div>';
+
+    $('#chatClose').onclick = () => this.close();
+    $('#chatSend').onclick  = () => this.submit();
+    $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') this.submit(); });
+
+    /* Açılış: selam + rastgele KPI + yardım teklifi */
+    const me = Store.me();
+    const k = randomKpi();
+    this.bot('Merhaba ' + esc(me.name.split(' ')[0]) + '. Ben Zümrüt Asistan.', 0);
+    this.bot('Raporlardan öne çıkan bir metrikle başlayayım:'
+      + '<div class="kpi-box"><div class="k">' + esc(k.k) + '</div>'
+      + '<div class="v">' + esc(k.v) + '</div>'
+      + '<div class="d">' + esc(k.d) + '</div></div>', 700);
+    this.bot('Peki, size nasıl yardımcı olabilirim?', 1600);
+    setTimeout(() => this.chips(), 1900);
+  },
+
+  el(){ return $('#chatBody'); },
+  scroll(){ const b = this.el(); if (b) b.scrollTop = b.scrollHeight; },
+
+  /* Yazıyor göstergesiyle birlikte bot mesajı */
+  bot(html, delay){
+    setTimeout(() => {
+      const b = this.el(); if (!b) return;
+      const t = document.createElement('div');
+      t.className = 'typing'; t.innerHTML = '<i></i><i></i><i></i>';
+      b.appendChild(t); this.scroll();
+      setTimeout(() => {
+        if (!this.el()) return;
+        t.remove();
+        const m = document.createElement('div');
+        m.className = 'msg bot'; m.innerHTML = html;
+        b.appendChild(m); this.scroll();
+      }, 420);
+    }, delay || 0);
+  },
+
+  me(text){
+    const b = this.el(); if (!b) return;
+    const m = document.createElement('div');
+    m.className = 'msg me'; m.textContent = text;
+    b.appendChild(m); this.scroll();
+  },
+
+  chips(){
+    const c = $('#chatChips'); if (!c) return;
+    const items = [
+      ['Geciken kayıtlar', 'geciken'],
+      ['Departman yoğunluğu', 'yogunluk'],
+      ['Üzerimdekiler', 'uzerim'],
+      ['Başka bir metrik', 'kpi'],
+      ['Yeni kayıt aç', 'yeni'],
+    ];
+    c.innerHTML = items.map(i => '<button class="chip" data-q="'+i[1]+'">'+esc(i[0])+'</button>').join('');
+    c.querySelectorAll('.chip').forEach(btn => {
+      btn.onclick = () => { this.me(btn.textContent); this.answer(btn.dataset.q); };
+    });
+  },
+
+  submit(){
+    const inp = $('#chatInput'); if (!inp) return;
+    const t = inp.value.trim(); if (!t) return;
+    inp.value = '';
+    this.me(t);
+    this.answer(this.route(t));
+  },
+
+  /* Basit anahtar kelime yönlendirmesi.
+     Türkçe karakterleri sadeleştiriyoruz ki kullanıcı "üzerimdeki" de yazsa
+     "uzerimdeki" de yazsa aynı kalıp eşleşsin. */
+  route(text){
+    const s = mlNorm(text)
+      .replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i')
+      .replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u');
+    if (/gecik|geciken|sla|kirmizi/.test(s)) return 'geciken';
+    if (/departman|yogun|ekip|dagilim/.test(s)) return 'yogunluk';
+    if (/uzerim|bana|atanan|sahip/.test(s))  return 'uzerim';
+    if (/yeni|olustur|kayit ac|talep ac/.test(s)) return 'yeni';
+    if (/kpi|metrik|rapor|ozet|istatistik/.test(s)) return 'kpi';
+    if (/tesekkur|sagol|eyvallah/.test(s)) return 'tesekkur';
+    if (/merhaba|selam|gunaydin/.test(s)) return 'selam';
+    return 'bilinmiyor';
+  },
+
+  answer(q){
+    const recs = Store.data.records, me = Store.me();
+
+    if (q === 'geciken') {
+      const late = recs.filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
+      if (!late.length) return this.bot('Şu anda geciken kayıt bulunmuyor — SLA hedeflerinin tamamı karşılanıyor.', 250);
+      const list = late.slice(0,3).map(r => '<li><b>'+esc(r.code)+'</b> — '+esc(r.title)+' <span style="color:var(--muted)">('+esc(deptName(r.department))+')</span></li>').join('');
+      return this.bot('Toplam <b>'+late.length+'</b> geciken kayıt var. Öne çıkanlar:<ul>'+list+'</ul>', 250);
+    }
+
+    if (q === 'yogunluk') {
+      const per = DEPARTMENTS.map(d => ({ d, n: recs.filter(r => r.department === d.id).length }))
+                             .sort((a,b) => b.n - a.n).slice(0,4);
+      const list = per.map(x => '<li><b>'+esc(x.d.name)+'</b> — '+x.n+' kayıt</li>').join('');
+      return this.bot('Departman bazlı yoğunluk şöyle:<ul>'+list+'</ul>', 250);
+    }
+
+    if (q === 'uzerim') {
+      const mine = recs.filter(r => r.assignee === me.id && OPEN_STATUSES.includes(r.status));
+      if (!mine.length) return this.bot('Üzerinizde açık kayıt yok. Ekibe gelen kayıtlardan sahiplenebilirsiniz.', 250);
+      const list = mine.slice(0,3).map(r => '<li><b>'+esc(r.code)+'</b> — '+esc(r.title)+'</li>').join('');
+      this.bot('Üzerinizde <b>'+mine.length+'</b> açık kayıt var:<ul>'+list+'</ul>', 250);
+      return setTimeout(() => { show('owned-tickets'); }, 1100);
+    }
+
+    if (q === 'yeni') {
+      this.bot('Yeni kayıt ekranını açıyorum. Unutmayın: kaydı iletmeden önce <b>ML ile Kontrol Et</b> adımını tamamlamanız gerekiyor.', 250);
+      return setTimeout(() => { show('new-ticket'); }, 1100);
+    }
+
+    if (q === 'kpi') {
+      const k = randomKpi();
+      return this.bot('Tabii, bir metrik daha:'
+        + '<div class="kpi-box"><div class="k">'+esc(k.k)+'</div>'
+        + '<div class="v">'+esc(k.v)+'</div><div class="d">'+esc(k.d)+'</div></div>', 250);
+    }
+
+    if (q === 'tesekkur') return this.bot('Rica ederim. Başka bir konuda yardım gerekirse buradayım.', 250);
+    if (q === 'selam')    return this.bot('Merhaba! Kayıtlar, SLA durumu veya raporlar hakkında soru sorabilirsiniz.', 250);
+
+    return this.bot('Bunu tam anlayamadım. Şunlarda yardımcı olabilirim: geciken kayıtlar, departman yoğunluğu, üzerinizdeki kayıtlar, rapor metrikleri veya yeni kayıt açma.', 250);
+  },
+};
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+<!-- Veri katmanı köprüsü: localStorage yerine API. Prototipin yukarıdaki
+     kodunda hiçbir değişiklik yok; Store ve aksiyonlar burada devralınır. -->
+<script src="/api-store.js"></script>
+<script src="/theme.js"></script>
+</body>
+</html>
