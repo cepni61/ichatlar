@@ -15,6 +15,7 @@ import recordRoutes from './routes/records.js';
 import actionRoutes from './routes/actions.js';
 import reportRoutes from './routes/reports.js';
 import mlRoutes from './routes/ml.js';
+import gateRoutes, { gateHook } from './routes/gate.js';
 import { startJobs } from './jobs/slaWatcher.js';
 import { connectMl, disconnectMl } from './ml/db.js';
 import { ensureModel, startMlJobs } from './ml/service.js';
@@ -27,7 +28,9 @@ const app = Fastify({
     level: env.isProd ? 'info' : 'debug',
     transport: env.isProd ? undefined : { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss' } },
   },
-  trustProxy: env.isProd,
+  // Geliştirmede yalnızca aynı makinedeki vekile (Cloudflare tüneli) güven:
+  // gerçek istemci IP'si hız sınırı ve kayıtlar için X-Forwarded-For'dan gelir.
+  trustProxy: env.isProd ? true : 'loopback',
   bodyLimit: 1024 * 1024,
 });
 
@@ -57,6 +60,9 @@ await app.register(rateLimit, {
   keyGenerator: (req) => req.ip,
 });
 
+/** ACCESS_CODE doluysa her istek önce erişim kapısından geçer (statik dosyalar dahil). */
+app.addHook('onRequest', gateHook);
+
 await app.register(fastifyStatic, { root: publicDir, index: ['index.html'] });
 
 /** Her istekte oturumu çözüp req.user'a bağla. */
@@ -81,6 +87,7 @@ app.setErrorHandler((err: unknown, req, reply) => {
   });
 });
 
+await app.register(gateRoutes);
 await app.register(authRoutes);
 await app.register(bootstrapRoutes);
 await app.register(recordRoutes);

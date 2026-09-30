@@ -26,6 +26,10 @@ export default async function authRoutes(app: FastifyInstance) {
   app.get('/auth/login', async (req, reply) => {
     const returnTo = safeReturnTo((req.query as Record<string, unknown>)?.returnTo);
 
+    if (!env.entraConfigured && env.devAuth) {
+      return reply.redirect('/giris?returnTo=' + encodeURIComponent(returnTo));
+    }
+
     if (!env.entraConfigured) {
       // Yapılandırma yoksa sessizce başarısız olmak yerine ne yapılacağını söyle.
       return reply.code(503).type('text/plain; charset=utf-8').send(

@@ -171,7 +171,10 @@ export async function upsertUserFromClaims(claims: EntraClaims) {
 
 /** Dönüş adresinin açık yönlendirme (open redirect) olmadığını doğrular. */
 export function safeReturnTo(value: unknown): string {
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return '/';
+  // "/\evil.com" tarayıcıda "//evil.com" gibi yorumlanır; ters bölü de reddedilir.
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+    return '/';
+  }
   return value;
 }
 

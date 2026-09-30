@@ -42,6 +42,9 @@ const schema = z.object({
 
   DEV_AUTH_BYPASS: z.coerce.boolean().default(false),
 
+  /** Doluysa uygulamaya girmeden önce bu kod sorulur (internete açık test yayını). */
+  ACCESS_CODE: z.string().trim().default(''),
+
   STORAGE_DIR: z.string().default('./var/uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
 });
