@@ -27,7 +27,13 @@ export default async function authRoutes(app: FastifyInstance) {
     const returnTo = safeReturnTo((req.query as Record<string, unknown>)?.returnTo);
 
     if (!env.entraConfigured && env.devAuth) {
-      return reply.redirect('/giris?returnTo=' + encodeURIComponent(returnTo));
+      // Erişim kodu varsa önce kapı; yoksa prototipteki gibi doğrudan varsayılan
+      // kullanıcıyla aç (kullanıcı arayüzdeki seçiciden değiştirilir).
+      if (env.ACCESS_CODE) return reply.redirect('/giris?returnTo=' + encodeURIComponent(returnTo));
+      return reply.redirect(
+        '/auth/dev-login?email=' + encodeURIComponent(env.DEV_DEFAULT_USER) +
+          '&returnTo=' + encodeURIComponent(returnTo),
+      );
     }
 
     if (!env.entraConfigured) {
@@ -100,15 +106,21 @@ export default async function authRoutes(app: FastifyInstance) {
    * env.devAuth yalnızca NODE_ENV=production dışında true olabilir.
    */
   if (env.devAuth) {
-    const q = z.object({ email: z.string().email(), returnTo: z.string().optional() });
+    // Arayüzdeki kullanıcı seçici e-posta bilmez (bootstrap e-posta paylaşmaz),
+    // kimlikle gelir; elle giriş için e-posta da kabul edilir.
+    const q = z
+      .object({ email: z.string().email().optional(), userId: z.string().min(1).optional(), returnTo: z.string().optional() })
+      .refine((v) => v.email || v.userId);
 
     app.get('/auth/dev-login', async (req, reply) => {
       const parsed = q.safeParse(req.query);
-      if (!parsed.success) throw badRequest('email parametresi gerekli.');
+      if (!parsed.success) throw badRequest('email veya userId parametresi gerekli.');
 
       const user = await prisma.user.findUnique({
-        where: { email: parsed.data.email.toLocaleLowerCase('tr-TR') },
-        select: { id: true, active: true },
+        where: parsed.data.userId
+          ? { id: parsed.data.userId }
+          : { email: parsed.data.email!.toLocaleLowerCase('tr-TR') },
+        select: { id: true, active: true, email: true },
       });
       if (!user || !user.active) throw badRequest('Bu e-postayla kullanıcı yok. Önce `npm run db:seed`.');
 
@@ -117,7 +129,7 @@ export default async function authRoutes(app: FastifyInstance) {
         ip: req.ip,
       });
       setSessionCookie(reply, session.id, session.expiresAt);
-      app.log.warn({ email: parsed.data.email }, 'GELİŞTİRME girişi kullanıldı');
+      app.log.warn({ email: user.email }, 'GELİŞTİRME girişi kullanıldı');
       return reply.redirect(safeReturnTo(parsed.data.returnTo));
     });
 

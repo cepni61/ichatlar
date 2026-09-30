@@ -493,10 +493,19 @@
       ).join('');
     }
 
-    // Prototipin kullanıcı değiştirme kutusu gerçek sistemde anlamsız:
-    // yerine oturum sahibini ve çıkış bağlantısını göster.
+    // Test ortamında (geliştirme girişi) prototipteki kullanıcı seçici kalır;
+    // seçim yerel durumu değil, sunucudaki oturumu değiştirir.
     const sw = $('#userSwitch');
-    if (sw) {
+    if (sw && boot.devAuth) {
+      sw.innerHTML = USERS.map((u) =>
+        '<option value="' + u.id + '"' + (u.id === boot.me.id ? ' selected' : '') + '>' +
+          esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>',
+      ).join('');
+      sw.onchange = (e) => {
+        location.href = '/auth/dev-login?userId=' + encodeURIComponent(e.target.value) + '&returnTo=/';
+      };
+    } else if (sw) {
+      // Gerçek girişte seçici anlamsız: yerine oturum sahibi ve çıkış.
       const wrap = sw.parentElement;
       sw.remove();
       const out = document.createElement('button');

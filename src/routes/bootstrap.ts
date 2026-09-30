@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
 import { requireUser } from '../auth/guard.js';
+import { env } from '../env.js';
 import {
   PRIORITY_LABELS,
   PRIORITY_TO_SLUG,
@@ -40,6 +41,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
     ]);
 
     return {
+      /** Arayüz kullanıcı seçiciyi yalnızca geliştirme girişinde gösterir. */
+      devAuth: env.devAuth,
       me: {
         id: me.id,
         name: me.name,

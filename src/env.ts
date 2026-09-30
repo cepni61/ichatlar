@@ -44,6 +44,8 @@ const schema = z.object({
 
   /** Doluysa uygulamaya girmeden önce bu kod sorulur (internete açık test yayını). */
   ACCESS_CODE: z.string().trim().default(''),
+  /** Geliştirme girişinde oturum yokken açılan kullanıcı. */
+  DEV_DEFAULT_USER: z.string().email().default('omer.uygun@ornek.com'),
 
   STORAGE_DIR: z.string().default('./var/uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
