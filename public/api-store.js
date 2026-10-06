@@ -153,11 +153,25 @@
 
   /* --------------------------------------------------------- yenileme */
 
+  // Sunucu bir istekte en fazla 200 kayıt döner. Eskiden yalnızca ilk sayfa
+  // alınıyordu: 300 kaydı görebilen yönetici 200 görüyordu. Artık toplam
+  // sayıya ulaşana kadar sayfa sayfa çekilir.
+  const PAGE_SIZE = 200;
+
   async function refreshRecords() {
-    const out = await Api.records({ scope: 'all', pageSize: 200 });
+    const first = await Api.records({ scope: 'all', pageSize: PAGE_SIZE, page: 1 });
+    const all = first.records.slice();
+    for (let page = 2; all.length < first.total; page++) {
+      const next = await Api.records({ scope: 'all', pageSize: PAGE_SIZE, page });
+      if (!next.records.length) break; // arada kayıt silindiyse sonsuz döngüye girme
+      all.push(...next.records);
+    }
+    // Sayfalar arasında bir kayıt güncellenirse sıralaması kayar ve iki sayfada
+    // birden gelebilir; kayıt numarasına göre tekilleştir.
+    const unique = [...new Map(all.map((r) => [r.code, r])).values()];
     Store.data.records.length = 0;
-    out.records.forEach((r) => Store.data.records.push(r));
-    return out;
+    unique.forEach((r) => Store.data.records.push(r));
+    return { ...first, records: unique };
   }
 
   /** Sunucu yanıtını önbelleğe yaz, ekranı tazele. */
