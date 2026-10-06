@@ -32,6 +32,7 @@ export type Action =
   | 'resolve'
   | 'reject'
   | 'close'
+  | 'reopen'
   | 'comment'
   | 'attach';
 
@@ -89,6 +90,10 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
     case 'close':
       return rec.status === RecordStatus.COZULDU && (r.isCreator || r.isAdmin);
 
+    // Çözüm işe yaramadıysa açan kişi kaydı yeniden çalışmaya gönderir.
+    case 'reopen':
+      return rec.status === RecordStatus.COZULDU && (r.isCreator || r.isAdmin);
+
     case 'comment':
     case 'attach':
       return can('view', rec, actor);
@@ -100,7 +105,7 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
 
 /** Arayüze gönderilen izin listesi — düğme görünürlüğü için. */
 export function permissionsFor(rec: RecordShape, actor: Actor) {
-  const actions: Action[] = ['claim', 'forward', 'status', 'resolve', 'reject', 'close', 'comment', 'attach'];
+  const actions: Action[] = ['claim', 'forward', 'status', 'resolve', 'reject', 'close', 'reopen', 'comment', 'attach'];
   const out: Partial<Record<Action, boolean>> = {};
   for (const a of actions) out[a] = can(a, rec, actor);
   return out;

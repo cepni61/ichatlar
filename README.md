@@ -255,6 +255,7 @@ Prototipteki yetki koşulları birebir korundu (`src/domain/permissions.ts`):
 | Yönlendir | Kayıt açıkken, ekipten biri |
 | Durum güncelle / Çözüldü / Reddet | Kayıt açıkken, **yalnızca sahibi** |
 | Kaydı kapat | Durum "Çözüldü" iken, **yalnızca açan kişi** |
+| Yeniden aç ("Çözüm işe yaramadı") | Durum "Çözüldü" iken, **yalnızca açan kişi**, gerekçe zorunlu → Çalışılıyor |
 | Yorum / dosya | Kaydı görebilen herkes |
 
 Geçerli geçişler ayrı bir tabloda; yetkisi olan biri de geçersiz bir geçiş
@@ -361,7 +362,20 @@ okundu sayılır.
 | Kimsenin üzerinde değil | Ekibin tüm etkin üyeleri + ekip yöneticileri |
 | Birinin üzerinde | Sahibi + ekip yöneticileri |
 
-Pasif kullanıcılar ve kaydı açan kişi bildirim almaz. Aynı kişiye aynı kayıt
+Pasif kullanıcılar ve kaydı açan kişi SLA bildirimi almaz.
+
+Kayıt olaylarında karşı taraf da bildirilir (aynı işlemde yazılır; işlemi
+yapan kişi kendine bildirim almaz):
+
+| Olay | Kime |
+|---|---|
+| Çözüldü / Reddedildi / Ek bilgi istendi | Kaydı açan |
+| Yeniden açıldı | Kaydın sahibi |
+| Yeni güncelleme (yorum) | Ekip yazdıysa açana, açan yazdıysa sahibe |
+| Kişiye yönlendirildi | Atanan kişi |
+
+Aynı kayıtta aynı türde yeni olay olursa eski bildirim güncellenip yeniden
+okunmamış yapılır; zil şişmez. Aynı kişiye aynı kayıt
 için ikinci bildirim yazılmaz. Metne kayıt başlığı kopyalanmaz (KVKK: imhada
 unutulan bir kopyası kalmasın); başlık kayıttan okunur. Kayıt sonradan
 başka ekibe yönlendirildiyse eski alıcı yalnızca kayıt kodunu görür.

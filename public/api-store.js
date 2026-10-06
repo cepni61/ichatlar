@@ -288,7 +288,10 @@
   window.actReject = function (r) {
     openModal(
       'Kaydı Reddet',
-      '<div class="field"><label>Ret Sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz?"></textarea></div>',
+      // Ret kalıcıdır; yanlış ekibe gelen kayıt için doğru yol yönlendirmek.
+      '<p class="hint" style="margin:0 0 12px">Reddedilen kayıt yeniden açılamaz ve kaydı açan kişiye bildirilir. ' +
+        'Kayıt yanlış ekibe geldiyse reddetmek yerine <b>Kaydı Yönlendir</b>\'i kullanın.</p>' +
+        '<div class="field"><label>Ret Sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz? Bu metin kaydı açan kişiye görünür."></textarea></div>',
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
@@ -304,8 +307,29 @@
     );
   };
 
+  window.actReopen = function (r) {
+    openModal(
+      'Çözüm İşe Yaramadı',
+      '<p class="hint" style="margin:0 0 12px">Kayıt yeniden çalışmaya alınır ve sahibine bildirim gider. ' +
+        'Neyin eksik kaldığını yazın ki ekip doğru noktadan devam etsin.</p>' +
+        '<div class="field"><label>Neden</label><textarea id="reoTxt" placeholder="Ör. Fark ekim bordrosunda da ödenmedi."></textarea></div>',
+      [
+        { label: 'Vazgeç', cls: 'btn-ghost' },
+        {
+          label: 'Yeniden Aç',
+          cls: 'btn-primary',
+          run() {
+            const t = ($('#reoTxt').value || '').trim();
+            if (t.length < 10) return toast('Nedeni en az 10 karakterle yazın', 'err');
+            run(r.code, 'reopen', { reason: t }, 'Kayıt yeniden açıldı').then(closeModal, () => {});
+          },
+        },
+      ],
+    );
+  };
+
   window.actClose = function (r) {
-    openModal('Kaydı Kapat', '<p class="hint">Çözümü onaylayıp kaydı kapatmak istediğinize emin misiniz?</p>', [
+    openModal('Kaydı Kapat', '<p class="hint">Çözüm işinizi gördüyse kaydı kapatın. Kapatılan kayıt yeniden açılamaz.</p>', [
       { label: 'Vazgeç', cls: 'btn-ghost' },
       {
         label: 'Kaydı Kapat',
@@ -460,6 +484,12 @@
         const foot = document.querySelector('.side-foot');
         if (foot) foot.textContent = '© ' + new Date().getFullYear() + ' ' + boot.org.name;
       }
+
+      // Rol: yönetim menüsü yalnızca yönetici ve sistem yöneticisine. Yetki
+      // kararı yine sunucuda; bu yalnızca anlamsız menüyü gizler.
+      const isManager = boot.me.role === 'MANAGER' || boot.me.role === 'ADMIN';
+      document.querySelectorAll('[data-role-min="manager"]').forEach((el) => { el.hidden = !isManager; });
+      document.body.dataset.role = boot.me.role;
 
       Store.data.currentUserId = boot.me.id;
 

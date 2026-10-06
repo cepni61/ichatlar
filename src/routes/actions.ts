@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
-import { EventType, RecordStatus, type Role } from '../domain/enums.js';
+import { EventType, NotificationType, RecordStatus, type Role } from '../domain/enums.js';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { actorOf, requireUser } from '../auth/guard.js';
@@ -10,6 +10,7 @@ import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { serializeRecord } from '../lib/serialize.js';
 import { lockRecordByCode, toJsonText } from '../lib/dialect.js';
 import { recordForward } from '../ml/service.js';
+import { notifyUsers } from '../lib/notify.js';
 
 const withDetail = {
   events: {
@@ -48,6 +49,8 @@ async function mutate(
       data: Prisma.RecordUpdateInput;
       event: { type: EventType; text: string; meta?: unknown };
       nextStatus?: RecordStatus;
+      /** Aynı işlemde yazılacak bildirim. İşlemi yapan kişi kendine bildirim almaz. */
+      notify?: { userIds: (string | null)[]; type: NotificationType; text: string };
     };
   },
 ) {
@@ -101,6 +104,10 @@ async function mutate(
       },
       include: withDetail,
     });
+
+    if (planned.notify) {
+      await notifyUsers(tx, { ...planned.notify, except: opts.actorId, recordId: rec.id });
+    }
 
     await tx.auditLog.create({
       data: {
@@ -214,6 +221,9 @@ export default async function actionRoutes(app: FastifyInstance) {
         nextStatus,
         data: { ...data, ...stampFirstResponse(r) },
         event: { type: EventType.FORWARD, text, meta: { departmentId, assigneeId } },
+        ...(assigneeId
+          ? { notify: { userIds: [assigneeId], type: NotificationType.ASSIGNED, text: `${codeParam(req)} size atandı.` } }
+          : {}),
       }),
     });
 
@@ -253,6 +263,15 @@ export default async function actionRoutes(app: FastifyInstance) {
           text: `Durum güncellendi: ${STATUS_LABELS[next]}${note ? ` — ${note}` : ''}`,
           meta: { from: r.status, to: next },
         },
+        ...(next === RecordStatus.EK_BILGI
+          ? {
+              notify: {
+                userIds: [r.createdById],
+                type: NotificationType.INFO_REQUESTED,
+                text: `${codeParam(req)} için sizden ek bilgi bekleniyor. Kayda güncelleme ekleyerek yanıtlayın.`,
+              },
+            }
+          : {}),
       }),
     });
     return { record: await serializeRecord(rec, a) };
@@ -283,6 +302,11 @@ export default async function actionRoutes(app: FastifyInstance) {
           ...stampFirstResponse(r),
         },
         event: { type: EventType.COMMENT, text: resolution },
+        notify: {
+          userIds: [r.createdById],
+          type: NotificationType.RESOLVED,
+          text: `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.`,
+        },
       }),
     });
     return { record: await serializeRecord(rec, a) };
@@ -307,6 +331,41 @@ export default async function actionRoutes(app: FastifyInstance) {
         nextStatus: RecordStatus.REDDEDILDI,
         data: { status: RecordStatus.REDDEDILDI, closedAt: new Date(), ...stampFirstResponse(r) },
         event: { type: EventType.STATUS, text: `Kayıt reddedildi. Gerekçe: ${parsed.data.reason}` },
+        notify: { userIds: [r.createdById], type: NotificationType.REJECTED, text: `${codeParam(req)} reddedildi.` },
+      }),
+    });
+    return { record: await serializeRecord(rec, a) };
+  });
+
+  /**
+   * Yeniden aç — çözüm işe yaramadıysa kaydı açan kişi kaydı sahibine geri
+   * gönderir. Gerekçe zorunlu: sahip neyin eksik kaldığını bilmeli.
+   */
+  app.post('/api/records/:code/reopen', async (req) => {
+    const a = actorOf(req);
+    const parsed = z
+      .object({ reason: z.string().trim().min(10, 'Neden yeniden açtığınızı en az 10 karakterle yazın.').max(2000) })
+      .safeParse(req.body);
+    if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
+
+    const rec = await mutate(app, {
+      code: codeParam(req),
+      actorId: a.id,
+      actorRole: a.role,
+      actorDept: a.departmentId,
+      action: 'reopen',
+      ip: req.ip,
+      plan: (r) => ({
+        nextStatus: RecordStatus.CALISILIYOR,
+        // İşe yaramayan çözüm "güncel çözüm" olarak görünmesin ve ML onu benzer
+        // kayıtlarda önermesin; metni süreç geçmişinde kalıyor.
+        data: { status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null },
+        event: { type: EventType.REOPEN, text: `Kayıt yeniden açıldı. Gerekçe: ${parsed.data.reason}` },
+        notify: {
+          userIds: [r.assigneeId],
+          type: NotificationType.REOPENED,
+          text: `${codeParam(req)} yeniden açıldı: çözüm kaydı açan kişinin sorununu gidermedi.`,
+        },
       }),
     });
     return { record: await serializeRecord(rec, a) };
@@ -351,6 +410,12 @@ export default async function actionRoutes(app: FastifyInstance) {
         // yorumu sayılmamalı.
         data: r.createdById === a.id ? {} : stampFirstResponse(r),
         event: { type: EventType.COMMENT, text: parsed.data.text },
+        // Açan yazdıysa sahibine (ek bilgi yanıtı), ekipten biri yazdıysa açana.
+        notify: {
+          userIds: r.createdById === a.id ? [r.assigneeId] : [r.createdById],
+          type: NotificationType.COMMENT,
+          text: `${codeParam(req)} kaydına yeni güncelleme eklendi.`,
+        },
       }),
     });
     return { record: await serializeRecord(rec, a) };

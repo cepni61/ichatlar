@@ -10,6 +10,27 @@ import { NotificationType, Role } from '../domain/enums.js';
 type Tx = Prisma.TransactionClient;
 
 /**
+ * Kayıt olayı bildirimi (çözüldü, reddedildi, yorum…). Aynı kişiye aynı kayıt
+ * için aynı türde bildirim zaten varsa yenisi açılmaz; var olan güncellenip
+ * yeniden "okunmamış" yapılır ve listenin başına çıkar — zil şişmez, son
+ * durum görünür. İşlemi yapan kişi kendine bildirim almaz.
+ */
+export async function notifyUsers(
+  tx: Tx,
+  opts: { userIds: (string | null | undefined)[]; except: string; recordId: string; type: NotificationType; text: string },
+): Promise<number> {
+  const ids = [...new Set(opts.userIds)].filter((id): id is string => !!id && id !== opts.except);
+  for (const userId of ids) {
+    await tx.notification.upsert({
+      where: { userId_recordId_type: { userId, recordId: opts.recordId, type: opts.type } },
+      create: { userId, recordId: opts.recordId, type: opts.type, text: opts.text },
+      update: { text: opts.text, createdAt: new Date(), readAt: null },
+    });
+  }
+  return ids.length;
+}
+
+/**
  * SLA ihlalinde kim bilgilendirilir:
  *   - kayıt birinin üzerindeyse o kişi,
  *   - kimsenin üzerinde değilse ekibin tamamı (kayıt ekibe düşer, sahiplenen yok),

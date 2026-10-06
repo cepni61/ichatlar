@@ -59,8 +59,20 @@ export const EventType = {
 export type EventType = (typeof EventType)[keyof typeof EventType];
 
 export const NotificationType = {
-  /** Kayıt SLA hedefini aştı. */
+  /** Kayıt SLA hedefini aştı (ekip + yönetici). */
   SLA_BREACH: 'SLA_BREACH',
+  /** Kayıt çözüldü — açan kişi inceleyip kapatmalı ya da yeniden açmalı. */
+  RESOLVED: 'RESOLVED',
+  /** Kayıt reddedildi (açan kişi). */
+  REJECTED: 'REJECTED',
+  /** Ekip, açan kişiden ek bilgi bekliyor. */
+  INFO_REQUESTED: 'INFO_REQUESTED',
+  /** Açan kişi çözümü yetersiz bulup kaydı yeniden açtı (sahip). */
+  REOPENED: 'REOPENED',
+  /** Kayda yeni güncelleme yazıldı (karşı taraf). */
+  COMMENT: 'COMMENT',
+  /** Kayıt doğrudan bu kişiye atandı. */
+  ASSIGNED: 'ASSIGNED',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
