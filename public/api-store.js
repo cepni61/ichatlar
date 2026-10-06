@@ -182,6 +182,61 @@
     return { ...first, records: unique };
   }
 
+  /*
+   * Güncellik (UX denetimi B03). Kayıtlar açılışta bir kez yüklendiği için
+   * başka sekmede / başka kişinin eklediği yanıt, detaya yeniden girilse bile
+   * görünmüyordu. Artık:
+   *   - detay her açılışta sunucudan taze çekilir,
+   *   - sekmeye dönüldüğünde ve görünürken dakikada bir veriler yenilenir.
+   * Yeniden çizimde yazılmakta olan güncelleme metni korunur; açık pencere ya
+   * da Yeni Kayıt formu varken liste yeniden çizilmez.
+   */
+  function rerenderKeepingDraft() {
+    const box = $('#cmtInput');
+    const text = box ? box.value : null;
+    const focused = box && document.activeElement === box;
+    if (typeof renderDetail === 'function') renderDetail();
+    const again = $('#cmtInput');
+    if (again && text != null) {
+      again.value = text;
+      if (focused) again.focus();
+    }
+  }
+
+  async function refreshDetail(code) {
+    try {
+      const out = await Api.record(code);
+      upsertLocal(out.record);
+      if (typeof CURRENT !== 'undefined' && CURRENT === 'detail' && DETAIL_CODE === code) rerenderKeepingDraft();
+    } catch (err) {
+      if (err.status === 404 || err.status === 403) toast('Bu kayda artık erişiminiz yok', 'err');
+    }
+  }
+
+  let lastRefresh = Date.now();
+  async function refreshVisible() {
+    if (document.hidden || Date.now() - lastRefresh < 15000) return;
+    if (!$('#modalRoot').hidden) return;
+    lastRefresh = Date.now();
+    try {
+      if (CURRENT === 'detail') return refreshDetail(DETAIL_CODE);
+      if (CURRENT === 'new-ticket') return;
+      await refreshRecords();
+      if (typeof renderView === 'function') renderView(CURRENT);
+      if (typeof renderChrome === 'function') renderChrome();
+    } catch (_) { /* sessiz: bir sonraki denemede tekrar */ }
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshVisible(); });
+  window.addEventListener('focus', refreshVisible);
+  setInterval(refreshVisible, 60000);
+
+  const origShow = window.show;
+  window.show = function (id, param) {
+    const out = origShow.apply(this, arguments);
+    if (id === 'detail' && DETAIL_CODE) refreshDetail(DETAIL_CODE);
+    return out;
+  };
+
   /** Sunucu yanıtını önbelleğe yaz, ekranı tazele. */
   function applyAndRender(rec) {
     upsertLocal(rec);
@@ -303,15 +358,15 @@
     const mates = USERS.filter((u) => u.dept === me.dept && u.id !== me.id);
     openModal(
       'Kayıt Yönlendirme',
-      '<div class="field"><label>Departman Seçiniz</label><select id="fwdDept"><option value="">— seçiniz —</option>' +
+      '<div class="field"><label for="fwdDept">Başka bir ekibe gönder</label><select id="fwdDept"><option value="">— seçin —</option>' +
         DEPARTMENTS.filter((d) => d.id !== r.department)
           .map((d) => '<option value="' + d.id + '">' + esc(d.name) + '</option>')
           .join('') +
         '</select></div>' +
-        '<div class="field"><label>— veya — Takım Arkadaşı Seçiniz</label><select id="fwdMate"><option value="">— seçiniz —</option>' +
+        '<div class="field"><label for="fwdMate">— ya da — Ekip arkadaşına devret</label><select id="fwdMate"><option value="">— seçin —</option>' +
         mates.map((u) => '<option value="' + u.id + '">' + esc(u.name) + '</option>').join('') +
         '</select></div>' +
-        '<div class="field"><label>Yönlendirme Notu</label><textarea id="fwdNote" placeholder="Yönlendirme sebebini yazın..."></textarea></div>',
+        '<div class="field"><label for="fwdNote">Yönlendirme notu</label><textarea id="fwdNote" placeholder="Yönlendirme sebebini yazın..."></textarea></div>',
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
@@ -321,8 +376,8 @@
             const d = $('#fwdDept').value;
             const u = $('#fwdMate').value;
             const note = ($('#fwdNote').value || '').trim();
-            if (!d && !u) return toast('Lütfen departman veya takım arkadaşı seçin', 'err');
-            if (d && u) return toast('Departman veya kişi — ikisini birlikte seçemezsiniz', 'err');
+            if (!d && !u) return toast('Bir ekip ya da ekip arkadaşı seçin', 'err');
+            if (d && u) return toast('Ekip ya da kişi seçin — ikisi birlikte olmaz', 'err');
             const payload = d ? { departmentId: d } : { assigneeId: u };
             if (note) payload.note = note;
             run(r.code, 'forward', payload, 'Kayıt yönlendirildi').then(closeModal, () => {});
@@ -336,11 +391,11 @@
     const opts = STATUSES.filter((s) => ['inceleniyor', 'calisiliyor', 'ek_bilgi'].includes(s.id));
     openModal(
       'Durum Güncelle',
-      '<div class="field"><label>Yeni Durum</label><select id="stSel">' +
+      '<div class="field"><label for="stSel">Yeni durum</label><select id="stSel">' +
         opts
           .map((s) => '<option value="' + s.id + '"' + (r.status === s.id ? ' selected' : '') + '>' + esc(s.label) + '</option>')
           .join('') +
-        '</select></div><div class="field"><label>Not (opsiyonel)</label>' +
+        '</select></div><div class="field"><label for="stNote">Not (isteğe bağlı)</label>' +
         '<textarea id="stNote" placeholder="Kısa açıklama..."></textarea></div>',
       [
         { label: 'İptal', cls: 'btn-ghost' },
@@ -361,7 +416,7 @@
   window.actResolve = function (r) {
     openModal(
       'Kaydı Çözüldü Yap',
-      '<div class="field"><label>Çözüm Açıklaması</label>' +
+      '<div class="field"><label for="resTxt">Çözüm açıklaması</label>' +
         '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
         '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>' +
         window.attachPicker('resolve'),
@@ -387,7 +442,7 @@
       // Ret kalıcıdır; yanlış ekibe gelen kayıt için doğru yol yönlendirmek.
       '<p class="hint" style="margin:0 0 12px">Reddedilen kayıt yeniden açılamaz ve kaydı açan kişiye bildirilir. ' +
         'Kayıt yanlış ekibe geldiyse reddetmek yerine <b>Kaydı Yönlendir</b>\'i kullanın.</p>' +
-        '<div class="field"><label>Ret Sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz? Bu metin kaydı açan kişiye görünür."></textarea></div>',
+        '<div class="field"><label for="rejTxt">Ret sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz? Bu metin kaydı açan kişiye görünür."></textarea></div>',
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
@@ -408,7 +463,7 @@
       'Çözüm İşe Yaramadı',
       '<p class="hint" style="margin:0 0 12px">Kayıt yeniden çalışmaya alınır ve sahibine bildirim gider. ' +
         'Neyin eksik kaldığını yazın ki ekip doğru noktadan devam etsin.</p>' +
-        '<div class="field"><label>Neden</label><textarea id="reoTxt" placeholder="Ör. Fark ekim bordrosunda da ödenmedi."></textarea></div>',
+        '<div class="field"><label for="reoTxt">Neden</label><textarea id="reoTxt" placeholder="Ör. Fark ekim bordrosunda da ödenmedi."></textarea></div>',
       [
         { label: 'Vazgeç', cls: 'btn-ghost' },
         {
@@ -499,9 +554,17 @@
           form.deptApplied = false;
         }
       } catch (err) {
+        // Hata "benzer kayıt bulunamadı" gibi sunulmasın: kontrol tamamlanmış
+        // sayılmaz, form korunur, kullanıcı tekrar dener.
         similarCache = null;
         deptCache = null;
+        if (typeof form !== 'undefined' && form) { form.mlDone = false; form.mlOk = false; }
+        $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
+        $('#mlStatus').innerHTML = '<b>Benzer kayıt taraması yapılamadı.</b> Bağlantınızı kontrol edip ' +
+          '<b>ML ile Kontrol Et</b>’e yeniden basın. Yazdıklarınız korunuyor.';
+        if (typeof syncCreateBtn === 'function') syncCreateBtn();
         toast('Benzer kayıt taraması yapılamadı: ' + err.message, 'err');
+        return;
       }
     }
     // Geri kalan her şeyi prototipin kendi akışı çizer.

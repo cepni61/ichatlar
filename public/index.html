@@ -40,7 +40,7 @@
     --panel3:#eef2f8;   /* kanban kolonu gibi gomulu yuzeyler */
     --text:#12275c;
     --text-2:#3f4f75;
-    --muted:#7b89a6;
+    --muted:#5f6b85;            /* küçük metin ≥4.5:1 (UX denetimi B09; eski #7b89a6 = 3.5:1) */
     --line:#e6ebf5;
     --line-2:#d6deec;
 
@@ -66,7 +66,7 @@
     --grad:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
 
     /* — Durum renkleri — */
-    --success:#2f9e44; --successbg:#eaf7ea;
+    --success:#237a33; --successbg:#eaf7ea;   /* rozet metni ≥4.5:1 (eski #2f9e44 = 3.1:1) */
     --warn:#e8890c;    --warnbg:#fef4e4;
     --danger:#e03131;  --dangerbg:#fdeceb;
     --violet:#7c4ddb;  --violetbg:#f1ebfd;
@@ -216,7 +216,7 @@
 
     --text:#0d2620;
     --text-2:#3f5b53;
-    --muted:#6f8880;
+    --muted:#57706a;            /* ≥4.5:1 (eski #6f8880 = 3.8:1) */
     --line:rgba(6,95,70,.11);
     --line-2:rgba(6,95,70,.20);
 
@@ -238,7 +238,7 @@
     --hair:rgba(6,95,70,.12);
 
     /* Referanstaki durum renkleri — yesille uyumlu ama birbirinden ayrik */
-    --success:#15803d; --successbg:#e7f6ec;
+    --success:#126b33; --successbg:#e7f6ec;
     --warn:#b45309;    --warnbg:#fdf2e0;
     --danger:#b91c1c;  --dangerbg:#fbeaea;
     --violet:#6d28d9;  --violetbg:#efe9fb;
@@ -341,7 +341,7 @@
 
     --text:#141a26;
     --text-2:#3d465a;
-    --muted:#727c91;
+    --muted:#5e677b;            /* ≥4.5:1 (eski #727c91 = 4.2:1) */
     --line:#e2e6ee;
     --line-2:#cfd5e1;
 
@@ -612,6 +612,9 @@
     box-shadow:0 6px 16px var(--glow);
   }
   .btn-primary:hover{background:var(--primary-hover);box-shadow:0 10px 22px var(--glow)}
+  /* Koyu temada beyaz yazı #3b82f6 üstünde 3.7:1 kalıyordu; düğme bir ton koyu. */
+  html[data-theme="dark"] .btn-primary{background:#2563eb}
+  html[data-theme="dark"] .btn-primary:hover{background:#1d4ed8}
   .btn-primary:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;transform:none}
   .btn-ghost{background:var(--panel);color:var(--text);border-color:var(--line-2);box-shadow:var(--sh-1)}
   .btn-ghost:hover{background:var(--panel2);border-color:var(--primary)}
@@ -654,6 +657,15 @@
   }
 
   .grid{display:grid;gap:16px}
+  /* Izgara çocukları içerikten geniş olamaz; yoksa uzun dosya adı ya da metin
+     telefonda sayfayı yatay taşırıyordu (UX denetimi B05). */
+  .grid > *{min-width:0}
+  #detailBody p, #detailBody .comment, #detailBody .event b, .ml-sol, .ml-match b{overflow-wrap:anywhere}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .type-card:focus-within{outline:3px solid var(--focus-ring);outline-offset:2px}
+  .table tbody tr.row-link:focus-visible{outline:3px solid var(--focus-ring);outline-offset:-3px}
+  .notif-row{width:100%;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:var(--r-sm)}
+  .notif-row:hover,.notif-row:focus-visible{background:var(--panel2)}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:18px}
 
   .card{
@@ -893,7 +905,9 @@
   .attach-chip .ic,.file-link .ic{width:14px;height:14px;flex-shrink:0}
   .file-links{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
   a.file-link{text-decoration:none;color:var(--text-2);cursor:pointer;max-width:100%}
-  a.file-link .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+  a.file-link .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(260px,60vw);min-width:0}
+  a.file-link{min-width:0}
+  a.file-link .small{white-space:nowrap}
   a.file-link:hover{border-color:var(--b-400);color:var(--b-700)}
   /* Kaydı açanın kararını bekleyen kayıt (çözüldü → kapat / yeniden aç) */
   .await-me{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:13px 15px;border-radius:var(--r-sm);
@@ -1373,7 +1387,7 @@
       <div class="nav-section">Ana Menü</div>
       <button class="active" data-view="dashboard">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/></svg>
-        <span class="lbl">Dashboard</span></button>
+        <span class="lbl">Genel Bakış</span></button>
       <button data-view="new-ticket">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         <span class="lbl">Yeni Kayıt</span></button>
@@ -1429,9 +1443,9 @@
       <div class="actions">
         <div class="search">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
-          <input id="globalSearch" placeholder="Kayıt no, başlık veya departman ara..." />
+          <input id="globalSearch" placeholder="Kayıt no, başlık veya ekip ara..." />
         </div>
-        <button class="btn btn-ghost" id="bellBtn">
+        <button class="btn btn-ghost" id="bellBtn" aria-label="Bildirimler">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5A6 6 0 0 0 6 8.5c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></svg>
           <span id="bellCount">0</span></button>
         <button class="btn btn-primary" data-view="new-ticket">
@@ -1444,11 +1458,11 @@
       <div class="grid kpis" id="dashKpis"></div>
       <div class="grid dashboard-layout">
         <div class="card">
-          <div class="card-head"><h3>Departman Bazlı Dağılım</h3><span class="pill blue"><span class="dot"></span>Canlı görünüm</span></div>
+          <div class="card-head"><h3>Ekiplere Göre Dağılım</h3><span class="pill blue"><span class="dot"></span>Canlı görünüm</span></div>
           <div class="card-body" id="deptChart"></div>
         </div>
         <div class="card">
-          <div class="card-head"><h3>Öne Çıkan Metrikler</h3><span class="pill purple" id="metricPeriod">Bu dönem</span></div>
+          <div class="card-head"><h3>Öne Çıkan Metrikler</h3><span class="pill purple" id="metricPeriod">Görebildiğiniz kayıtlar</span></div>
           <div class="card-body" id="highlights"></div>
         </div>
       </div>
@@ -1456,7 +1470,7 @@
         <div class="card-head"><h3>Son Oluşturulan ve Öncelikli Kayıtlar</h3><button class="btn btn-soft" data-view="team-tickets">Ekibe Gelen Kayıtlara Git</button></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
             <tbody id="recentRows"></tbody>
           </table>
         </div>
@@ -1472,38 +1486,41 @@
 
           <div class="field">
             <label>Kayıt Türü</label>
-            <div class="type-cards" id="typeCards">
-              <div class="type-card" data-type="bilgi">
+            <!-- Klavyeyle seçilebilsin diye kartlar gerçek radio düğmesi taşır (UX denetimi B01) -->
+            <div class="type-cards" id="typeCards" role="radiogroup" aria-label="Kayıt türü">
+              <label class="type-card" data-type="bilgi">
+                <input type="radio" name="fType" value="bilgi" class="sr-only" />
                 <div class="ic-wrap">
                   <svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 16.5v-5M12 7.8h.01"/></svg>
                 </div>
                 <div><b>Bilgi</b><span>Bir bilgiye ihtiyacım var.</span></div>
-              </div>
-              <div class="type-card" data-type="oneri">
+              </label>
+              <label class="type-card" data-type="oneri">
+                <input type="radio" name="fType" value="oneri" class="sr-only" />
                 <div class="ic-wrap">
                   <svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21.5h3"/><path d="M15.1 14.2c.2-1.05.7-1.85 1.5-2.65A5 5 0 1 0 7.4 8.5c0 1.05.25 2.35 1.5 3.6.8.8 1.3 1.6 1.5 2.65"/></svg>
                 </div>
                 <div><b>Öneri</b><span>Bir fikrim var.</span></div>
-              </div>
+              </label>
             </div>
           </div>
 
-          <div class="field"><label>Başlık</label><input id="fTitle" placeholder="Lütfen başlığı giriniz" /></div>
-          <div class="field"><label>Açıklama</label><textarea id="fDesc" placeholder="Kaydınızı açık ve anlaşılır şekilde yazın..."></textarea>
+          <div class="field"><label for="fTitle">Başlık</label><input id="fTitle" placeholder="Lütfen başlığı giriniz" /></div>
+          <div class="field"><label for="fDesc">Açıklama</label><textarea id="fDesc" placeholder="Kaydınızı açık ve anlaşılır şekilde yazın..."></textarea>
             <p class="hint" style="margin-top:6px">Ne kadar detay verirseniz, akıllı çözüm önerileri o kadar isabetli olur.</p></div>
 
           <div class="grid" style="grid-template-columns:1fr 1fr">
-            <div class="field"><label>İlgili Ekip 1</label><select id="fDept1"></select></div>
-            <div class="field"><label>İlgili Ekip 2 (Opsiyonel)</label><select id="fDept2"></select>
+            <div class="field"><label for="fDept1">İlgili Ekip 1</label><select id="fDept1"></select></div>
+            <div class="field"><label for="fDept2">İlgili Ekip 2 (Opsiyonel)</label><select id="fDept2"></select>
               <p class="hint" style="margin-top:6px">Kayıt en fazla 2 ekibe yönlendirilebilir.</p></div>
           </div>
 
           <div class="grid" style="grid-template-columns:1fr 1fr">
-            <div class="field"><label>Öncelik</label><select id="fPrio"></select></div>
+            <div class="field"><label for="fPrio">Öncelik</label><select id="fPrio"></select></div>
             <!-- Dosya yükleme sunucuda henüz yok. Alan gösterilseydi seçilen dosya
                  sessizce kaybolurdu; dürüst bir not daha iyi. -->
             <div class="field"><label>Ek Dosya</label>
-              <p class="hint" style="margin:10px 0 0">Dosya ekleme yakında. Şimdilik belgeyi paylaşım bağlantısıyla açıklamaya ekleyebilirsiniz.</p>
+              <p class="hint" style="margin:10px 0 0">Dosyaları kayıt oluştuktan sonra, kayda güncelleme eklerken ekleyebilirsiniz.</p>
             </div>
           </div>
 
@@ -1547,7 +1564,7 @@
         <div class="card-head"><h3>Açtığım Kayıtlar</h3><span class="pill blue" id="myCount">0 kayıt</span></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Sahip</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th></tr></thead>
             <tbody id="myRows"></tbody>
           </table>
         </div>
@@ -1570,7 +1587,7 @@
         <div class="card-head"><h3>Üzerimdeki Kayıtlar</h3><span class="pill purple" id="ownedCount">0 aktif kayıt</span></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th><th>Aksiyon</th></tr></thead>
             <tbody id="ownedRows"></tbody>
           </table>
         </div>
@@ -1586,7 +1603,7 @@
         <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
           <input id="fltText" class="" placeholder="Ara..." style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:13px;padding:10px 13px" />
           <select id="fltType" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm türler</option></select>
-          <select id="fltDept" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm departmanlar</option></select>
+          <select id="fltDept" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm ekipler</option></select>
           <select id="fltStatus" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm durumlar</option></select>
         </div>
       </div>
@@ -1594,7 +1611,7 @@
         <div class="card-head"><h3>Kayıt Havuzu</h3><span class="pill gray" id="allCount">0 kayıt</span></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Departman</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
             <tbody id="allRows"></tbody>
           </table>
         </div>
@@ -1621,9 +1638,9 @@
     <!-- ---------- YÖNETİM ---------- -->
     <section id="management" class="view">
       <div class="card" style="margin-bottom:16px">
-        <div class="card-head"><h3>Departman ve Ekip Tanımları</h3><span class="pill blue" id="mgmtDeptCount">0 ekip</span></div>
+        <div class="card-head"><h3>Ekipler ve Üyeleri</h3><span class="pill blue" id="mgmtDeptCount">0 ekip</span></div>
         <div class="card-body table-wrap">
-          <table class="table"><thead><tr><th>Departman</th><th>Ekip Üyeleri</th><th>Açık Kayıt</th><th>Toplam</th></tr></thead><tbody id="mgmtDepts"></tbody></table>
+          <table class="table"><thead><tr><th>Ekip</th><th>Ekip Üyeleri</th><th>Açık Kayıt</th><th>Toplam</th></tr></thead><tbody id="mgmtDepts"></tbody></table>
         </div>
       </div>
       <div class="card" style="margin-bottom:16px">
@@ -1809,6 +1826,21 @@ function fmtDur(h){
   if(h<48) return h.toFixed(1)+' sa';
   return (h/24).toFixed(1)+' gün';
 }
+/* SLA uyumu — sunucudaki src/domain/sla-compliance.ts ile aynı tanım:
+   hedef dolmadan açık durumdan çıkan kayıt tuttu; süresi dolmuş açık kayıt
+   tutmadı; süresi dolmamış açık kayıt henüz sonuçlanmadı (orana girmez).
+   Eskiden kapanmış her kayıt "zamanında" sayılıyordu. */
+function slaMet(r){
+  const due = new Date(r.slaDueAt).getTime();
+  if (OPEN_STATUSES.includes(r.status)) return due > Date.now() ? null : false;
+  const fin = r.resolvedAt || r.closedAt;
+  return fin ? new Date(fin).getTime() <= due : true;
+}
+function slaPctOf(list){
+  const decided = list.map(slaMet).filter(x => x !== null);
+  return decided.length ? Math.round(decided.filter(Boolean).length / decided.length * 100) : null;
+}
+
 /* SLA rengi: yeşil normal, sarı yaklaşıyor (%70+), kırmızı gecikmiş */
 function slaLevel(r){
   if(!OPEN_STATUSES.includes(r.status)) return 'green';
@@ -2115,10 +2147,10 @@ function teamRecords(u){
    6) ROUTER
    ========================================================================= */
 const TITLES = {
-  'dashboard':     ['Dashboard','Kurum içi kayıtların genel durumu, gecikmeler ve ekip verimliliği.'],
+  'dashboard':     ['Genel Bakış','Görebildiğiniz kayıtların durumu, gecikmeler ve ekip verimliliği.'],
   'new-ticket':    ['Yeni Kayıt','Bilgi veya öneri kaydı oluşturun.'],
   'my-tickets':    ['Açtığım Kayıtlar','Oluşturduğunuz kayıtların durumunu ve geçmişini takip edin.'],
-  'team-tickets':  ['Ekibe Gelen Kayıtlar','Departmanınıza gelen kayıtları kanban görünümünde yönetin.'],
+  'team-tickets':  ['Ekibe Gelen Kayıtlar','Ekibinize gelen kayıtları kanban görünümünde yönetin.'],
   'owned-tickets': ['Üzerimdeki Kayıtlar','Üzerinize aldığınız kayıtları yönetin ve güncelleyin.'],
   'all-records':   ['Tüm Kayıtlar','Görme yetkiniz olan tüm kayıtları arayın ve filtreleyin.'],
   'reports':       ['Raporlar','Kayıt performansı, SLA ve yönlendirme metriklerini görüntüleyin.'],
@@ -2171,9 +2203,9 @@ function renderChrome(){
   const team = teamRecords(me).filter(r => !r.assignee && OPEN_STATUSES.includes(r.status)).length;
   const owned = recs.filter(r => r.assignee === me.id && OPEN_STATUSES.includes(r.status)).length;
   $('#bMy').textContent = mine; $('#bTeam').textContent = team; $('#bOwned').textContent = owned;
-  $('#bellCount').textContent = Notif.unread != null
+  setBell(Notif.unread != null
     ? Notif.unread
-    : teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length;
+    : teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length);
 }
 
 /* Bildirimler sunucudaki Notification tablosundan gelir (SLA ihlali vb.).
@@ -2188,7 +2220,7 @@ const Notif = {
       .then(d => { if (d) { this.unread = d.unread; this.items = d.items; this.paint(); } })
       .catch(() => {});
   },
-  paint(){ if (this.unread != null) $('#bellCount').textContent = this.unread; },
+  paint(){ if (this.unread != null) setBell(this.unread); },
   markAllRead(){
     if (!this.unread) return Promise.resolve();
     return fetch('/api/notifications/read', {
@@ -2198,6 +2230,12 @@ const Notif = {
   }
 };
 
+/* Zilde sayı tek başına okunuyordu ("1"); ekran okuyucu için anlamlı ad. */
+function setBell(n){
+  $('#bellCount').textContent = n;
+  $('#bellBtn').setAttribute('aria-label', 'Bildirimler, ' + n + ' okunmamış');
+}
+
 /* Zil penceresi: son bildirimler, okunmamışlar vurgulu. Pencere açılınca
    hepsi okundu sayılır. Kişi kaydı artık göremiyorsa (başka ekibe
    yönlendirilmiş) yalnızca kod görünür, tıklanmaz. */
@@ -2206,10 +2244,12 @@ function openNotifications(){
   const row = n => {
     const rec = n.record;
     const open = rec && rec.canOpen;
-    return '<div class="leader"' + (open ? ' style="cursor:pointer" data-open="'+esc(rec.code)+'"' : '') + '>'
-      + '<div class="avatar">' + (n.read ? '•' : '!') + '</div>'
+    const tag = open ? 'button' : 'div';
+    return '<' + tag + ' class="leader' + (open ? ' notif-row' : '') + '"'
+      + (open ? ' type="button" data-open="'+esc(rec.code)+'" aria-label="'+esc(rec.code + ': ' + (rec.title || n.text))+'"' : '') + '>'
+      + '<div class="avatar" aria-hidden="true">' + (n.read ? '•' : '!') + '</div>'
       + '<div><b' + (n.read ? ' style="font-weight:500"' : '') + '>' + esc(rec && rec.title ? rec.title : n.text) + '</b>'
-      + '<span>' + esc(n.text) + ' • ' + esc(fmtRel(n.createdAt)) + '</span></div></div>';
+      + '<span>' + esc(n.text) + ' • ' + esc(fmtRel(n.createdAt)) + '</span></div></' + tag + '>';
   };
   openModal('Bildirimler',
     items.length ? items.map(row).join('') : '<p class="hint">Henüz bildiriminiz yok.</p>',
@@ -2235,7 +2275,10 @@ function renderDashboard(){
     ['c1','chat',  'Açık Kayıtlar',   open.length,   (late.length ? late.length + ' tanesi gecikmiş' : 'Gecikme yok'), late.length ? 'down' : 'up'],
     ['c2','users', 'Üzerinde Çalışılan', owned,      'Sahiplenilmiş kayıtlar', 'up'],
     ['c3','clock', 'SLA\'sı Yaklaşan', open.filter(r => slaLevel(r) === 'yellow').length, 'Süre dolmak üzere', 'down'],
-    ['c4','check', 'Kapanan Kayıt',   closed.length, 'Toplam ' + recs.length + ' kayıt içinde', 'up'],
+    /* Çözüldü ile Kapatıldı ayrı söylenir: çözülen kayıt, açan onaylayana dek
+       kapanmış sayılmaz (UX denetimi B04). */
+    ['c4','check', 'Çözülen / Kapatılan', closed.length,
+      closed.filter(r => r.status === 'cozuldu').length + ' onay bekliyor · ' + closed.filter(r => r.status === 'kapatildi').length + ' kapatıldı', 'up'],
     ['c5','clock', 'Ort. İlk Dönüş',  fmtDur(avgResp), (avgResp != null && avgResp < 24) ? 'Hedef içinde' : 'İyileştirme alanı', (avgResp != null && avgResp < 24) ? 'up' : 'down'],
   ].map(k =>
     '<div class="card kpi"><div class="ico '+k[0]+'">'+icon(k[1],'ic')+'</div>'
@@ -2256,16 +2299,17 @@ function renderDashboard(){
   const perDept = DEPARTMENTS.map(d => {
     const all = recs.filter(r => r.department === d.id);
     const rs = all.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt)-new Date(r.createdAt))/HOUR);
-    const ontime = all.filter(r => !OPEN_STATUSES.includes(r.status) || slaLevel(r) !== 'red').length;
-    return { d, avg: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null, sla: all.length ? Math.round(ontime/all.length*100) : 0,
+    return { d, avg: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null, sla: slaPctOf(all),
              oneri: all.filter(r => r.type==='oneri' && r.status==='cozuldu').length };
   });
   const fastest = perDept.filter(x => x.avg != null).sort((a,b) => a.avg - b.avg)[0];
-  const bestSla = perDept.slice().sort((a,b) => b.sla - a.sla)[0];
+  const bestSla = perDept.filter(x => x.sla != null).sort((a,b) => b.sla - a.sla)[0];
   const topOneri = perDept.slice().sort((a,b) => b.oneri - a.oneri)[0];
 
+  /* Sıralamalar yalnızca kullanıcının görebildiği kayıtlardan; başlık kapsamı söyler (UX denetimi B11). */
   $('#highlights').innerHTML =
-    '<div class="leader"><div class="avatar">SLA</div><div><b>En Yüksek SLA Uyum Oranı</b><span>'+esc(bestSla.d.name)+' • %'+bestSla.sla+'</span></div></div>' +
+    '<p class="hint" style="margin:0 0 8px">Görebildiğiniz kayıtlardaki ekipler arasında.</p>' +
+    '<div class="leader"><div class="avatar">SLA</div><div><b>En Yüksek SLA Uyum Oranı</b><span>'+(bestSla ? esc(bestSla.d.name)+' • %'+bestSla.sla : 'Henüz sonuçlanmış kayıt yok')+'</span></div></div>' +
     '<div class="leader"><div class="avatar">AK</div><div><b>En Çok Aksiyona Dönüşen Öneri</b><span>'+esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri uygulamaya alındı</span></div></div>' +
     '<div class="leader"><div class="avatar">HIZ</div><div><b>En Hızlı İlk Geri Dönüş</b><span>'+(fastest ? esc(fastest.d.name)+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
 
@@ -2276,7 +2320,7 @@ function renderDashboard(){
 }
 
 function rowRecent(r){
-  return '<tr class="row-link" data-open="'+esc(r.code)+'">'
+  return '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
@@ -2301,7 +2345,7 @@ function renderMy(){
     : r.status === 'ek_bilgi' ? '<span class="pill attn">Sizden ek bilgi bekleniyor</span>'
     : statusPill(r.status);
   $('#myRows').innerHTML = rows.length ? rows.map(r =>
-    '<tr class="row-link" data-open="'+esc(r.code)+'">'
+    '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
@@ -2320,7 +2364,7 @@ function renderOwned(){
   const active = rows.filter(r => OPEN_STATUSES.includes(r.status)).length;
   $('#ownedCount').textContent = active + ' aktif / ' + rows.length + ' toplam';
   $('#ownedRows').innerHTML = rows.length ? rows.map(r =>
-    '<tr class="row-link" data-open="'+esc(r.code)+'">'
+    '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
@@ -2336,7 +2380,7 @@ function renderAll(){
   /* filtre seçeneklerini bir kez doldur */
   if (!$('#fltType').dataset.ready) {
     $('#fltType').innerHTML   = '<option value="">Tüm türler</option>' + TYPES.map(t=>'<option value="'+t.id+'">'+t.label+'</option>').join('');
-    $('#fltDept').innerHTML   = '<option value="">Tüm departmanlar</option>' + DEPARTMENTS.map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+    $('#fltDept').innerHTML   = '<option value="">Tüm ekipler</option>' + DEPARTMENTS.map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
     $('#fltStatus').innerHTML = '<option value="">Tüm durumlar</option>' + STATUSES.map(s=>'<option value="'+s.id+'">'+esc(s.label)+'</option>').join('');
     $('#fltType').dataset.ready = '1';
     ['#fltText','#fltType','#fltDept','#fltStatus'].forEach(sel => {
@@ -2489,7 +2533,7 @@ function renderDetail(){
         ).join('')
       + '</div>'
       + ((p.comment != null ? p.comment : (isCreator || inTeam))
-          ? '<div class="field" style="margin:18px 0 10px"><label>Yorum / Güncelleme</label>'
+          ? '<div class="field" style="margin:18px 0 10px"><label for="cmtInput">Yorum / Güncelleme</label>'
             + '<textarea id="cmtInput" placeholder="Durum güncellemesi veya yanıt yazın..."></textarea></div>'
             + (typeof attachPicker === 'function' ? attachPicker('comment') : '')
             + '<button class="btn btn-soft" data-act="comment">Güncelleme Ekle</button>'
@@ -2638,8 +2682,11 @@ function actComment(r){
    ========================================================================= */
 let form = { type:null, anon:false, files:[], mlDone:false, mlOk:false, matches:[], sig:null };
 
+/* Benzer kayıt kontrolünü geçersiz kılan yalnızca içerik: tür, başlık, açıklama.
+   Ekip ve öncelik seçimi kontrolü sıfırlamaz — "Son adım: ekibi seçin" diyip
+   seçince taramayı baştan istemek gereksiz bir döngüydü (UX denetimi B06). */
 function formSig(){
-  return [form.type, $('#fTitle').value, $('#fDesc').value, $('#fDept1').value, $('#fDept2').value, $('#fPrio').value].join('|');
+  return [form.type, $('#fTitle').value, $('#fDesc').value].join('|');
 }
 
 function resetForm(){
@@ -2647,6 +2694,7 @@ function resetForm(){
   $('#fTitle').value = ''; $('#fDesc').value = '';
   $('#fDept1').value = ''; $('#fDept2').value = ''; $('#fPrio').value = 'normal';
   $$('#typeCards .type-card').forEach(c => c.classList.remove('active'));
+  $$('#typeCards input[name="fType"]').forEach(i => { i.checked = false; });
   $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
   $('#mlStatus').innerHTML = 'Başlık ve açıklamayı yazdıktan sonra <b>ML ile Kontrol Et</b>\'e basın. Sistem geçmiş çözümleri tarayıp önerileri gösterir; onayladıktan sonra kaydı iletebilirsiniz.';
   updateSlaPreview(); syncCreateBtn();
@@ -2838,17 +2886,23 @@ const repAvg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : nu
 /* Kurum geneli özet. Yetki yoksa ya da uca erişilemiyorsa null döner;
    çağıran taraf yerel görünümde kalır. Hata yutuluyor çünkü 403 burada
    arıza değil, normal bir durum: ekip üyesi bu ucu göremez. */
+/* 403 (yetki yok) ile gerçek hata ayrı tutulur: yönetici kurum geneli raporu
+   alamadıysa bunu sessizce kendi kapsamındaki sayılarla geçiştirmek yanıltıcıydı. */
+let repFailed = false;
 function fetchReportSummary(){
   if (location.protocol === 'file:') return Promise.resolve(null);
   if (repCache && Date.now() - repCache.at < REP_TTL) return Promise.resolve(repCache.sum);
   return fetch('/api/reports/summary', { credentials:'same-origin' })
-    .then(res => (res.ok ? res.json() : null))
+    .then(res => {
+      repFailed = !res.ok && res.status !== 403;
+      return res.ok ? res.json() : null;
+    })
     .then(sum => {
       if (!sum || !sum.totals) return null;
       repCache = { at: Date.now(), sum };
       return sum;
     })
-    .catch(() => null);
+    .catch(() => { repFailed = true; return null; });
 }
 
 /* Gecikenler yalnızca kullanıcının görebildiği kayıtlardan listelenebilir:
@@ -2886,7 +2940,7 @@ function reportModelLocal(){
     scope: 'local',
     total: recs.length, open: open.length, late: late.length,
     anonPct:  recs.length ? repPct(anon, recs.length) : null,
-    slaPct:   recs.length ? repPct(recs.length - late.length, recs.length) : null,
+    slaPct:   slaPctOf(recs),
     oneriPct: oneri.length ? repPct(oneriOk, oneri.length) : null,
     avgResp: null, avgSolve: null,
     depts,
@@ -2917,7 +2971,12 @@ function reportModelServer(sum){
 
 function renderReports(){
   paintReports(reportModelLocal());
-  fetchReportSummary().then(sum => { if (sum) paintReports(reportModelServer(sum)); });
+  fetchReportSummary().then(sum => {
+    if (sum) paintReports(reportModelServer(sum));
+    else if (repFailed) paintReports(reportModelLocal());   // hata şeridi + "Tekrar dene"
+    const retry = $('#repRetry');
+    if (retry) retry.onclick = () => { repCache = null; renderReports(); };
+  });
 }
 
 function paintReports(m){
@@ -2966,7 +3025,7 @@ function paintReports(m){
           + '<b>'+r.n+'</b><em>%'+(r.n/dSum*100).toFixed(1)+'</em></li>').join('')
       + '</ul></div>'
       + (dSum > m.total
-          ? '<p class="hint">Dilimler '+dSum+' atama gösteriyor: ikincil ekibe de yönlendirilen kayıt iki departmanda birden sayılır. Ortadaki sayı gerçek kayıt adedi.</p>'
+          ? '<p class="hint">Dilimler '+dSum+' atama gösteriyor: ikincil ekibe de yönlendirilen kayıt iki ekipte birden sayılır. Ortadaki sayı gerçek kayıt adedi.</p>'
           : '')
     : '<p class="hint">Henüz kayıt yok.</p>';
 
@@ -2987,9 +3046,13 @@ function paintReports(m){
   /* Kapsam şeridi: tablonun neyi kapsadığı okunmadan görünsün. */
   const kapsam = m.scope === 'org'
     ? '<span class="pill blue">Kurum geneli</span>'
-      + '<span class="hint">Sayılar rapor ucundan geliyor; bütün departmanları kapsıyor.</span>'
-    : '<span class="pill gray">Görebildiğiniz kayıtlar</span>'
-      + '<span class="hint">Kurum geneli tablo için yönetici yetkisi gerekiyor. Buradaki sayılar yalnızca erişebildiğiniz kayıtları kapsar.</span>';
+      + '<span class="hint">Sayılar kurum geneli rapordan geliyor; bütün ekipleri kapsıyor.</span>'
+    : repFailed
+      ? '<span class="pill red">Kurum geneli rapor alınamadı</span>'
+        + '<span class="hint">Şimdilik yalnızca görebildiğiniz kayıtlar gösteriliyor.</span>'
+        + '<button class="mini-btn" type="button" id="repRetry">Tekrar dene</button>'
+      : '<span class="pill gray">Görebildiğiniz kayıtlar</span>'
+        + '<span class="hint">Kurum geneli tablo için yönetici yetkisi gerekiyor. Buradaki sayılar yalnızca erişebildiğiniz kayıtları kapsar.</span>';
   const ortalama = (m.avgResp != null || m.avgSolve != null)
     ? '<span class="hint">Ort. ilk yanıt <b>'+fmtDur(m.avgResp)+'</b> · ort. çözüm <b>'+fmtDur(m.avgSolve)+'</b></span>'
     : '';
@@ -3009,14 +3072,14 @@ function paintReports(m){
   $('#repCharts').innerHTML =
     '<div class="rep-scope">'+kapsam+ortalama+'</div>'
   + '<div class="rep-wide">'
-  +   card('Departman Bazlı Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
-  +   card('SLA Performansı','<span class="pill gray">'+(m.scope === 'org' ? 'Tüm departmanlar' : 'Kapsamınız')+'</span>', slaBlok)
+  +   card('Ekiplere Göre Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
+  +   card('SLA Performansı','<span class="pill gray">'+(m.scope === 'org' ? 'Tüm ekipler' : 'Kapsamınız')+'</span>', slaBlok)
   + '</div><div class="rep-mason">'
   + card('Kayıt Türü','<span class="pill yellow">Bilgi / Öneri</span>', barChart(m.types, v => v))
   + card('Durum Dağılımı','', barChart(m.statuses, v => v))
   + card('En Çok Gelen Konular','', barChart(m.topics, v => v))
-  + card('En Hızlı İlk Geri Dönüş','<span class="pill green">Departman</span>', barChart(respRows, fmtDur, 'g'))
-  + card('Ortalama Çözüm Süresi','<span class="pill yellow">Departman</span>', barChart(solveRows, fmtDur, 'o'))
+  + card('En Hızlı İlk Geri Dönüş','<span class="pill green">Ekip bazında</span>', barChart(respRows, fmtDur, 'g'))
+  + card('Ortalama Çözüm Süresi','<span class="pill yellow">Ekip bazında</span>', barChart(solveRows, fmtDur, 'o'))
   + card('Geciken Kayıtlar','<span class="pill red">'+m.late+'</span>', geciken)
   + '</div>';
 }
@@ -3074,11 +3137,15 @@ function renderManagement(){
 /* =========================================================================
    16) MODAL
    ========================================================================= */
+/* Erişilebilir pencere (UX denetimi B07): dialog rolü, açılışta odak içeri,
+   Tab pencere içinde döner, Escape kapatır, kapanınca odak tetikleyiciye döner. */
+let modalReturn = null;
 function openModal(title, bodyHtml, buttons){
   const root = $('#modalRoot');
+  if (root.hidden) modalReturn = document.activeElement;
   root.innerHTML =
-    '<div class="modal-bg" id="modalBg"><div class="modal">'
-    + '<div class="modal-h"><h3>'+esc(title)+'</h3><button id="mClose">'+icon('x')+'</button></div>'
+    '<div class="modal-bg" id="modalBg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">'
+    + '<div class="modal-h"><h3 id="mTitle">'+esc(title)+'</h3><button id="mClose" type="button" aria-label="Pencereyi kapat">'+icon('x')+'</button></div>'
     + '<div class="modal-b">'+bodyHtml+'</div>'
     + '<div class="modal-f" id="mFoot"></div>'
     + '</div></div>';
@@ -3093,8 +3160,26 @@ function openModal(title, bodyHtml, buttons){
   });
   $('#mClose').onclick = closeModal;
   $('#modalBg').onclick = e => { if (e.target.id === 'modalBg') closeModal(); };
+  const modal = root.querySelector('.modal');
+  const focusables = () => [...modal.querySelectorAll('button,[href],input:not([type="hidden"]):not([hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')]
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  modal.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+    if (e.key !== 'Tab') return;
+    const f = focusables(); if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+  /* İlk anlamlı alana odaklan: önce gövdedeki alan, yoksa ilk alt düğme */
+  const firstField = modal.querySelector('.modal-b input:not([hidden]),.modal-b select,.modal-b textarea,.modal-b button');
+  (firstField || modal.querySelector('#mFoot button') || $('#mClose')).focus();
 }
-function closeModal(){ const r = $('#modalRoot'); r.hidden = true; r.innerHTML = ''; }
+function closeModal(){
+  const r = $('#modalRoot'); r.hidden = true; r.innerHTML = '';
+  if (modalReturn && document.contains(modalReturn)) modalReturn.focus({ preventScroll:true });
+  modalReturn = null;
+}
 
 /* =========================================================================
    17) BAŞLANGIÇ / OLAY BAĞLAMA
@@ -3142,6 +3227,13 @@ function init(){
   $('#fDept2').innerHTML = '<option value="">Seçiniz (opsiyonel)</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
   $('#fPrio').innerHTML  = PRIORITIES.map(p => '<option value="'+p.id+'"'+(p.id==='normal'?' selected':'')+'>'+p.label+' — SLA '+p.sla+' sa</option>').join('');
 
+  /* Tablo satırı klavyeyle de açılır (Enter / Boşluk); düğme ve bağlantılar kendi davranışını korur */
+  document.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('tr[data-open]')) {
+      e.preventDefault(); show('detail', e.target.dataset.open);
+    }
+  });
+
   /* Menü / görünüm butonları (delegasyon) */
   document.addEventListener('click', e => {
     /* Dar ekran menüsü: satır içi onclick CSP (script-src-attr 'none') ile engelleniyor */
@@ -3173,12 +3265,12 @@ function init(){
     }
   });
 
-  /* Tür kartları */
-  $$('#typeCards .type-card').forEach(c => {
-    c.onclick = () => {
-      $$('#typeCards .type-card').forEach(x => x.classList.remove('active'));
-      c.classList.add('active'); form.type = c.dataset.type; invalidateMl();
-    };
+  /* Tür kartları: gerçek radio — fare, Tab ve ok tuşlarıyla seçilir */
+  $$('#typeCards input[name="fType"]').forEach(inp => {
+    inp.addEventListener('change', () => {
+      $$('#typeCards .type-card').forEach(x => x.classList.toggle('active', x.dataset.type === inp.value));
+      form.type = inp.value; invalidateMl();
+    });
   });
 
   /* Form değişimi → ML geçersiz */
@@ -3234,7 +3326,7 @@ function randomKpi(){
   const anon = recs.filter(r => r.anonymous).length;
   const oneri = recs.filter(r => r.type === 'oneri');
   const oneriOk = oneri.filter(r => r.status === 'cozuldu').length;
-  const ontime = recs.filter(r => !OPEN_STATUSES.includes(r.status) || slaLevel(r) !== 'red').length;
+  const slaUyum = slaPctOf(recs);
 
   const resp = recs.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt) - new Date(r.createdAt)) / HOUR);
   const avgResp = resp.length ? resp.reduce((a,b)=>a+b,0)/resp.length : null;
@@ -3252,12 +3344,12 @@ function randomKpi(){
   const pool = [
     { k:'Toplam Açık Kayıt', v:String(open.length), d: late.length ? late.length + ' tanesi SLA süresini aşmış durumda.' : 'Tamamı SLA hedefi içinde.' },
     { k:'Geciken Kayıt',     v:String(late.length), d: late.length ? 'Bu kayıtlar öncelikli aksiyon bekliyor.' : 'Şu an geciken kayıt yok.' },
-    { k:'Kapanan Kayıt',     v:String(closed.length), d:'Toplam ' + recs.length + ' kayıt içinde.' },
+    { k:'Çözülen / Kapatılan', v:String(closed.length), d: closed.filter(r => r.status === 'cozuldu').length + ' tanesi kaydı açanın onayını bekliyor.' },
     { k:'Ort. İlk Geri Dönüş', v:fmtDur(avgResp), d:(avgResp!=null && avgResp<24) ? 'Hedefin içinde ilerliyoruz.' : 'İyileştirilebilir bir alan.' },
     { k:'Ort. Çözüm Süresi', v:fmtDur(avgSolve), d:'Kayıt açılışından kapanışına kadar geçen ortalama süre.' },
-    { k:'SLA Uyumu',         v:'%' + Math.round(ontime/recs.length*100), d:'Hedef: %90 ve üzeri.' },
+    { k:'SLA Uyumu',         v: slaUyum == null ? '—' : '%' + slaUyum, d:'Sonuçlanmış kayıtlarda hedef süreyi tutanlar. Hedef: %90 ve üzeri.' },
     { k:'Öneri Kabul Oranı', v: oneri.length ? '%' + Math.round(oneriOk/oneri.length*100) : '—', d: oneriOk + ' öneri uygulamaya alındı.' },
-    { k:'En Yoğun Departman', v:busiest.d.name, d: busiest.total + ' kayıt ile listenin başında.' },
+    { k:'En Yoğun Ekip', v:busiest.d.name, d: busiest.total + ' kayıt ile listenin başında.' },
   ];
   if (fastest) pool.push({ k:'En Hızlı Geri Dönüş', v:fastest.d.name, d:fmtDur(fastest.resp) + ' ortalama ilk dönüş süresi.' });
 
@@ -3608,7 +3700,7 @@ const Chat = {
     const me = Store.me();
     const k = randomKpi();
     this.bot('Merhaba ' + esc(me.name.split(' ')[0]) + '. Ben Zümrüt Asistan.', 0);
-    this.bot('Raporlardan öne çıkan bir metrikle başlayayım:'
+    this.bot('Görebildiğiniz kayıtlardan öne çıkan bir metrik:'
       + '<div class="kpi-box"><div class="k">' + esc(k.k) + '</div>'
       + '<div class="v">' + esc(k.v) + '</div>'
       + '<div class="d">' + esc(k.d) + '</div></div>', 700);
@@ -3647,7 +3739,7 @@ const Chat = {
     const c = $('#chatChips'); if (!c) return;
     const items = [
       ['Geciken kayıtlar', 'geciken'],
-      ['Departman yoğunluğu', 'yogunluk'],
+      ['Ekip yoğunluğu', 'yogunluk'],
       ['Üzerimdekiler', 'uzerim'],
       ['Başka bir metrik', 'kpi'],
       ['Yeni kayıt aç', 'yeni'],
@@ -3739,7 +3831,7 @@ const Chat = {
       const per = DEPARTMENTS.map(d => ({ d, n: recs.filter(r => r.department === d.id).length }))
                              .sort((a,b) => b.n - a.n).slice(0,4);
       const list = per.map(x => '<li><b>'+esc(x.d.name)+'</b> — '+x.n+' kayıt</li>').join('');
-      return this.bot('Departman bazlı yoğunluk şöyle:<ul>'+list+'</ul>', 250);
+      return this.bot('Görebildiğiniz kayıtlarda ekip yoğunluğu:<ul>'+list+'</ul>', 250);
     }
 
     if (q === 'uzerim') {
@@ -3765,7 +3857,7 @@ const Chat = {
     if (q === 'tesekkur') return this.bot('Rica ederim. Başka bir konuda yardım gerekirse buradayım.', 250);
     if (q === 'selam')    return this.bot('Merhaba! Kayıtlar, SLA durumu veya raporlar hakkında soru sorabilirsiniz.', 250);
 
-    return this.bot('Sorunuzu birkaç kelimeyle anlatırsanız benzer çözülmüş kayıtları tarayıp doğru ekibi önerebilirim. Ayrıca geciken kayıtlar, departman yoğunluğu, üzerinizdeki kayıtlar ve rapor metrikleri hakkında yardımcı olabilirim.', 250);
+    return this.bot('Sorunuzu birkaç kelimeyle anlatırsanız benzer çözülmüş kayıtları tarayıp doğru ekibi önerebilirim. Ayrıca geciken kayıtlar, ekip yoğunluğu, üzerinizdeki kayıtlar ve rapor metrikleri hakkında yardımcı olabilirim.', 250);
   },
 };
 

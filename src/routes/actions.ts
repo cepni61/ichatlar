@@ -38,6 +38,8 @@ async function mutate(
     plan: (rec: {
       id: string;
       status: string;
+      departmentId: string;
+      department2Id: string | null;
       assigneeId: string | null;
       firstResponseAt: Date | null;
       createdById: string;
@@ -187,7 +189,8 @@ export default async function actionRoutes(app: FastifyInstance) {
 
     let text: string;
     let data: Prisma.RecordUpdateInput;
-    let nextStatus: RecordStatus;
+    let nextStatus: RecordStatus | ((current: string) => RecordStatus);
+    let mateDept: string | null = null;
 
     if (departmentId) {
       const dept = await prisma.department.findFirst({
@@ -210,12 +213,15 @@ export default async function actionRoutes(app: FastifyInstance) {
         select: { name: true, departmentId: true },
       });
       if (!mate) throw badRequest('Kişi bulunamadı.');
+      mateDept = mate.departmentId;
 
-      nextStatus = RecordStatus.UZERIME_ALINDI;
-      data = {
-        assignee: { connect: { id: assigneeId! } },
-        status: RecordStatus.UZERIME_ALINDI,
-      };
+      // Devir bir sahip değişikliğidir, durum değişikliği değil: yeni kayıt
+      // "Üzerime Alındı"ya geçer, üzerinde çalışılan kayıt durumunu korur.
+      // (Eskiden hep Üzerime Alındı'ya çekiliyordu; Çalışılıyor'dan geri
+      // geçiş olmadığı için çalışılan kayıt devredilemiyordu.)
+      nextStatus = (current) =>
+        current === RecordStatus.YENI ? RecordStatus.UZERIME_ALINDI : (current as RecordStatus);
+      data = { assignee: { connect: { id: assigneeId! } } };
       text = `Kayıt ${mate.name} kişisine atandı.`;
     }
 
@@ -228,14 +234,22 @@ export default async function actionRoutes(app: FastifyInstance) {
       actorDept: a.departmentId,
       action: 'forward',
       ip: req.ip,
-      plan: (r) => ({
-        nextStatus,
-        data: { ...data, ...stampFirstResponse(r) },
+      plan: (r) => {
+        // Kişiye devir yalnızca kaydın ekibindeki birine: aksi hâlde kayıt,
+        // görmemesi gereken birinin üzerine düşüp ona görünür olurdu.
+        if (assigneeId && (!mateDept || (mateDept !== r.departmentId && mateDept !== r.department2Id))) {
+          throw badRequest('Kayıt yalnızca ekipteki birine devredilebilir; başka ekibe göndermek için ekip seçin.');
+        }
+        const next = typeof nextStatus === 'function' ? nextStatus(r.status) : nextStatus;
+        return {
+        nextStatus: next,
+        data: { ...data, ...(assigneeId ? { status: next } : {}), ...stampFirstResponse(r) },
         event: { type: EventType.FORWARD, text, meta: { departmentId, assigneeId } },
         ...(assigneeId
           ? { notify: { userIds: [assigneeId], type: NotificationType.ASSIGNED, text: `${codeParam(req)} size atandı.` } }
           : {}),
-      }),
+        };
+      },
     });
 
     // Ekip değiştiyse bu, açılışta seçilen (ya da ML'in önerdiği) ekibin yanlış

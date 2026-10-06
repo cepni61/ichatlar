@@ -284,6 +284,10 @@ girişlerde ezilmez.
   sorgusu indeksten döner ve SLA gözcüsü ihlalleri bulabilir.
 - `slaBreachedAt` ihlalin **ne zaman** olduğunu saklar; bildirim ve gecikme
   raporu buna dayanır.
+- **SLA uyumu** (`src/domain/sla-compliance.ts`, arayüzde `slaMet`): kayıt hedef
+  süre dolmadan açık durumdan çıktıysa hedef tutulmuştur; süresi dolmuş açık
+  kayıt tutulmamıştır; süresi dolmamış açık kayıt henüz sonuçlanmadığı için
+  orana girmez. Hedefi aşıp sonradan çözülen kayıt uyumlu sayılmaz.
 - `SlaRule` tablosu: SLA hedefleri yönetim ekranından değiştirilebilir, kodda
   sabit değil.
 - `Suggestion`: kayıt açılırken gösterilen öneriler kaydedilir. Kullanıcı yine

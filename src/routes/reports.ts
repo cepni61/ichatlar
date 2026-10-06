@@ -1,3 +1,4 @@
+import { slaCompliancePct } from '../domain/sla-compliance.js';
 import type { FastifyInstance } from 'fastify';
 import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
@@ -41,6 +42,7 @@ async function gather() {
         updatedAt: true,
         firstResponseAt: true,
         resolvedAt: true,
+        closedAt: true,
         slaDueAt: true,
       },
     }),
@@ -56,7 +58,7 @@ async function gather() {
 type Row = Awaited<ReturnType<typeof gather>>['rows'][number];
 
 const breached = (r: Row, now: number) => isOpen(r.status) && r.slaDueAt.getTime() <= now;
-const onTime = (r: Row, now: number) => !breached(r, now);
+const slaPct = (rs: Row[], now: number) => slaCompliancePct(rs, (r) => isOpen(r.status), now);
 
 export default async function reportRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireUser);
@@ -102,9 +104,7 @@ export default async function reportRoutes(app: FastifyInstance) {
               .filter((r) => r.resolvedAt)
               .map((r) => (r.resolvedAt!.getTime() - r.createdAt.getTime()) / HOUR_MS),
           ),
-          slaPct: all.length
-            ? Math.round((all.filter((r) => onTime(r, now)).length / all.length) * 100)
-            : 0,
+          slaPct: slaPct(all, now),
           oneriSolved: all.filter((r) => r.type === 'ONERI' && r.status === 'COZULDU').length,
         };
       });
@@ -127,9 +127,7 @@ export default async function reportRoutes(app: FastifyInstance) {
           closed: closed.length,
           owned: rows.filter((r) => isOpen(r.status)).length,
           anonymousPct: rows.length ? Math.round((anon.length / rows.length) * 100) : 0,
-          slaPct: rows.length
-            ? Math.round((rows.filter((r) => onTime(r, now)).length / rows.length) * 100)
-            : 0,
+          slaPct: slaPct(rows, now),
           oneriAcceptPct: oneri.length ? Math.round((oneriOk.length / oneri.length) * 100) : null,
           oneriSolved: oneriOk.length,
           avgFirstResponseHours: avg(respHours),

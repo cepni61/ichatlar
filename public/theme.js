@@ -25,7 +25,7 @@
   var THEMES = [
     { id: 'light',    label: 'Aydınlık',  bg: '#f6f8fc', accent: '#2563eb' },
     { id: 'dark',     label: 'Koyu',      bg: '#151c2e', accent: '#3b82f6' },
-    { id: 'softdark', label: 'Soft dark', bg: '#1c2434', accent: '#eef1f6' },
+    { id: 'softdark', label: 'Yumuşak koyu', bg: '#1c2434', accent: '#eef1f6' },
     { id: 'zumrut',   label: 'Zümrüt',    bg: '#04372c', accent: '#10b981' },
   ];
   var IDS = THEMES.map(function (t) { return t.id; });

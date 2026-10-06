@@ -122,6 +122,45 @@ describe('aksiyon yetkileri', () => {
     expect((await prisma.record.findUniqueOrThrow({ where: { id: r.id } })).status).toBe(RecordStatus.KAPATILDI);
   });
 
+  // UX denetimi B02: çalışılan kayıt ekip arkadaşına devredilemiyordu.
+  it('çalışılan kayıt ekip arkadaşına devredilir; durum korunur, sahip değişir', async () => {
+    const w = await world();
+    const r = await createRecord({
+      createdById: w.opener.id, departmentId: w.ik.id, assigneeId: w.ikMember.id, status: RecordStatus.CALISILIYOR,
+    });
+
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${r.code}/forward`, ...as(await loginAs(app, w.ikMember.id)),
+      payload: { assigneeId: w.ikMember2.id, note: 'İzindeyim, devrediyorum.' },
+    });
+    expect(res.statusCode).toBe(200);
+    const after = await prisma.record.findUniqueOrThrow({ where: { id: r.id } });
+    expect(after.status).toBe(RecordStatus.CALISILIYOR);
+    expect(after.assigneeId).toBe(w.ikMember2.id);
+  });
+
+  it('yeni kayıt ekip arkadaşına devredilince "Üzerime Alındı" olur', async () => {
+    const w = await world();
+    const r = await createRecord({ createdById: w.opener.id, departmentId: w.ik.id });
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${r.code}/forward`, ...as(await loginAs(app, w.ikMember.id)),
+      payload: { assigneeId: w.ikMember2.id },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((await prisma.record.findUniqueOrThrow({ where: { id: r.id } })).status).toBe(RecordStatus.UZERIME_ALINDI);
+  });
+
+  it('kayıt başka ekipten birine kişi olarak devredilemez (400)', async () => {
+    const w = await world();
+    const r = await createRecord({ createdById: w.opener.id, departmentId: w.ik.id });
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${r.code}/forward`, ...as(await loginAs(app, w.ikMember.id)),
+      payload: { assigneeId: w.kaliteMember.id },
+    });
+    expect(res.statusCode).toBe(400);
+    expect((await prisma.record.findUniqueOrThrow({ where: { id: r.id } })).assigneeId).toBeNull();
+  });
+
   it('oturumsuz aksiyon 401', async () => {
     const w = await world();
     const r = await createRecord({ createdById: w.opener.id, departmentId: w.ik.id });
