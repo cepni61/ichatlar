@@ -30,7 +30,8 @@
     "db:local": "tsx scripts/local-db.ts start",
     "db:local:stop": "tsx scripts/local-db.ts stop",
     "db:local:status": "tsx scripts/local-db.ts status",
-    "setup": "tsx src/cli/setup.ts"
+    "setup": "tsx src/cli/setup.ts",
+    "ml:eval": "tsx scripts/ml-eval.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -59,7 +59,7 @@ export const DEFAULT_PARAMS: Params = {
  * Eğitim parmak izine girer: aksi hâlde veri aynı diye eski kurallarla
  * eğitilmiş model ML veritabanından geri yüklenirdi.
  */
-export const FEATURE_VERSION = 4;
+export const FEATURE_VERSION = 5;
 
 /** Güven bunun altındaysa öneri "emin değilim" diye sunulur. */
 export const LOW_CONFIDENCE = 0.5;
@@ -95,6 +95,19 @@ const GENERIC = new Set([
   // isabeti düşürdü (ilk-3: %75,6→%73,2 ve %81,3→%78,8) — bu yüzden listede yok.
 ]);
 
+/**
+ * Yokluk eki (-sız/-siz/-suz/-süz) kelimenin anlamını tersine çevirir:
+ * "reçetesiz" (OTC) ile "reçete" sabit önek köklemede aynı köke ("recet")
+ * düşüyor ve tüketici sağlığı ile geri ödeme kayıtları karışıyordu. Eki taşıyan
+ * kelime kökü + "~" olarak ayrı bir özellik olur. Katlanmış hâlde: sız→siz, süz→suz.
+ */
+const PRIVATIVE = /^(.{3,})(siz|suz)$/;
+
+const featureKey = (tok: string, n: number) => {
+  const m = PRIVATIVE.exec(tok);
+  return m ? `${stem(m[1]!, n)}~` : stem(tok, n);
+};
+
 export function featurize(title: string, description: string, p: Params = DEFAULT_PARAMS): Features {
   const weights = new Map<string, number>();
   const surface = new Map<string, string>();
@@ -107,7 +120,7 @@ export function featurize(title: string, description: string, p: Params = DEFAUL
     for (const raw of String(text ?? '').split(/[^\p{L}\p{N}]+/u)) {
       const tok = tokenize(raw)[0];
       if (!tok || GENERIC.has(tok)) continue;
-      const s = stem(tok, p.stemLength);
+      const s = featureKey(tok, p.stemLength);
       weights.set(s, (weights.get(s) ?? 0) + w);
       if (!surface.has(s)) surface.set(s, raw);
       total += w;

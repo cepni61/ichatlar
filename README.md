@@ -15,7 +15,7 @@ içindedir, kodda değil. **Sunucu kurulumu: [docs/KURULUM.md](docs/KURULUM.md).
 2. Depoyu indirin — GitHub'da **Code → Download ZIP**, ya da `git clone`.
    Klasörü **OneDrive dışında** kısa bir yola açın (ör. `C:\src\ichatlar`).
 3. **`baslat.cmd` dosyasına çift tıklayın.** İlk açılış birkaç dakika sürer
-   (bağımlılıklar, gömülü PostgreSQL, 100 demo kayıt). Tarayıcı kendiliğinden açılır.
+   (bağımlılıklar, gömülü PostgreSQL, 300 demo kayıt). Tarayıcı kendiliğinden açılır.
 
 Farklı rollerle denemek için: `http://localhost:3000/auth/dev-users` listesindeki
 e-postayla `http://localhost:3000/auth/dev-login?email=...` açın.
@@ -38,7 +38,7 @@ cp .env.example .env          # SESSION_SECRET'i doldurun:  openssl rand -base64
 npm install
 npm run db:local              # yerel PostgreSQL'i başlatır (localhost:5433, arka planda açık kalır)
 npm run db:migrate            # şemayı kurar
-npm run db:seed               # departmanlar, SLA kuralları, demo kullanıcılar, 100 demo kayıt
+npm run db:seed               # departmanlar, SLA kuralları, demo kullanıcılar, 300 demo kayıt
 npm run dev
 ```
 
@@ -46,6 +46,7 @@ npm run dev
 |---|---|
 | `npm run db:local` / `db:local:stop` / `db:local:status` | Yerel PostgreSQL'i başlat / durdur / durumu |
 | `npm run setup -- config/kurulus.json` | Kuruluşun departmanlarını ve SLA sürelerini işler |
+| `npm run db:seed -- --reset` | Demo verisini silip baştan kurar (canlıda ve demo dışı kullanıcı varken çalışmaz) |
 | `npm run build` → `npm start` | Derleyip sunucu kipinde çalıştırır (`dist/`) |
 
 **Yerel PostgreSQL nerede:** programlar ve veri proje klasöründe değil,
@@ -291,6 +292,15 @@ girişlerde ezilmez.
 
 ## ML: ekip önerisi ve ML veritabanı
 
+**İsabet nasıl okunmalı.** Eğitimde raporlanan birini-dışarıda-bırak isabeti demo
+verisinde yanıltıcı derecede yüksektir (%97+): demo kayıtları konu şablonlarından
+üretildiği için model test edilen kaydın benzerini zaten görmüştür. Gerçek ölçü
+`npm run ml:eval`: şablonlardan bağımsız yazılmış 26 talepte (Set B) ilk öneri
+%81, ilk 3 aday içinde %92 doğru (2026-10-06, 300 demo kayıt, 13 ünite). Demo
+verisinde model yanlış önerilerde de yüksek güven gösterebilir; güven ayarı
+gerçek kayıtlar biriktikçe düzelir. Yokluk eki (-sız/-siz) ayrı özellik olarak
+tutulur: "reçetesiz" ile "reçete" karışmaz.
+
 "ML ile Kontrol Et" artık iki iş yapar: benzer çözülmüş kayıtları bulur
 (eski davranış) **ve kaydın hangi ekiple ilgili olduğunu önerir** — ekip
 seçilmeden de. Arayüzde öneri, gerekçe kelimeleri ve ilk 3 aday görünür;
@@ -330,6 +340,7 @@ yönlendirilen, değilse seçilen. Anonim açılan kayıtta çalıştırmadaki
 kullanıcı kimliği silinir — ML veritabanı başka ekiplerce okunabilir.
 
 ```bash
+npm run ml:eval       # gerçek isabet: eğitimde hiç geçmeyen elle yazılmış taleplerle
 npm run ml:deploy     # ML tablolarını kur / güncelle
 npm run ml:studio     # ML veritabanını tarayıcıda incele (port 5556)
 npm run ml:reset      # ML veritabanını sıfırla (ana veriye dokunmaz)

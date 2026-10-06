@@ -1,11 +1,18 @@
 {
   "departments": [
-    { "id": "ik", "name": "İnsan Kaynakları", "short": "İK", "entraGroupId": "" },
-    { "id": "ki", "name": "Kurumsal İletişim", "short": "Kurumsal İlt." },
-    { "id": "idari", "name": "İdari İşler", "short": "İdari İşler" },
-    { "id": "fin", "name": "Finans", "short": "Finans" },
-    { "id": "sat", "name": "Satın Alma", "short": "Satın Alma" },
-    { "id": "kalite", "name": "Kalite", "short": "Kalite" }
+    { "id": "bt", "name": "Bilgi Teknolojileri", "short": "BT" },
+    { "id": "finans", "name": "Finans", "short": "Finans" },
+    { "id": "gm", "name": "Genel Müdürlük", "short": "Genel Müdürlük" },
+    { "id": "ik", "name": "İnsan Kaynakları", "short": "İK" },
+    { "id": "isgel", "name": "İş Geliştirme ve Uluslararası Pazarlar", "short": "İş Geliştirme" },
+    { "id": "ismuk", "name": "İş Mükemmelliği ve Ticari Operasyonlar", "short": "İş Mükemmelliği" },
+    { "id": "kalite", "name": "Kalite Güvence", "short": "Kalite Güvence" },
+    { "id": "kamu", "name": "Kamu İlişkileri ve Pazar Erişim", "short": "Kamu İlişkileri" },
+    { "id": "medikal", "name": "Medikal", "short": "Medikal" },
+    { "id": "spesifik", "name": "Spesifik Tedaviler Grubu", "short": "Spesifik Tedaviler" },
+    { "id": "tedarik", "name": "Tedarik Zinciri", "short": "Tedarik Zinciri" },
+    { "id": "temel", "name": "Temel Tedaviler ve Kişisel Bakım Grubu", "short": "Temel Tedaviler" },
+    { "id": "tuketici", "name": "Tüketici Sağlığı Grubu", "short": "Tüketici Sağlığı" }
   ],
   "sla": {
     "NORMAL": 48,
