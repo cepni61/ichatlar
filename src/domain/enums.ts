@@ -62,6 +62,12 @@ export const EventType = {
 } as const;
 export type EventType = (typeof EventType)[keyof typeof EventType];
 
+export const NotificationType = {
+  /** Kayıt SLA hedefini aştı. */
+  SLA_BREACH: 'SLA_BREACH',
+} as const;
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
 /* ------------------------------------------------------------------ doğrulama */
 
 const validator =

@@ -335,6 +335,42 @@ npm run ml:reset      # ML veritabanını sıfırla (ana veriye dokunmaz)
 PostgreSQL'de ayrı bir veritabanı olarak (`ichatlar_ml`) çalışır:
 `prisma/ml/schema.prisma` içindeki provider ve `ML_DATABASE_URL` değişir.
 
+## Bildirimler
+
+SLA gözcüsü (5 dakikada bir) hedefi aşan açık kaydı işaretlerken aynı
+işlemde `Notification` tablosuna kişi başına bir satır yazar. Zil bu
+tablodan beslenir, dakikada bir tazelenir; pencere açılınca bildirimler
+okundu sayılır.
+
+| Kayıt durumu | Kim bildirim alır |
+|---|---|
+| Kimsenin üzerinde değil | Ekibin tüm etkin üyeleri + ekip yöneticileri |
+| Birinin üzerinde | Sahibi + ekip yöneticileri |
+
+Pasif kullanıcılar ve kaydı açan kişi bildirim almaz. Aynı kişiye aynı kayıt
+için ikinci bildirim yazılmaz. Metne kayıt başlığı kopyalanmaz (KVKK: imhada
+unutulan bir kopyası kalmasın); başlık kayıttan okunur. Kayıt sonradan
+başka ekibe yönlendirildiyse eski alıcı yalnızca kayıt kodunu görür.
+
+## Testler
+
+```bash
+npm test                  # hepsi
+npm run test:unit         # tests/unit — veritabanısız iş kuralları
+npm run test:integration  # tests/integration — gerçek Fastify + var/test.db
+npm run test:watch        # değişiklikte yeniden çalıştır
+```
+
+Entegrasyon testleri her çalıştırmada `var/test.db` dosyasını sıfırdan kurar
+(göçler uygulanır, tohum yüklenmez); asıl veritabanına dokunmaz. Testler
+istekleri port açmadan `app.inject()` ile atar — bunun için uygulama kurulumu
+`src/app.ts` → `buildApp()` içindedir, `server.ts` yalnızca dinlemeyi ve
+zamanlanmış işleri başlatır. Oturum, gerçek girişle aynı imzalı çerezle
+üretilir (`tests/integration/helpers.ts` → `loginAs`).
+
+Yeni bir iş kuralı eklerken: kural `src/domain/` içindeyse birim testi,
+yetki veya sorgu kapsamına dokunuyorsa entegrasyon testi yazın.
+
 ## API
 
 | Uç | İş |
@@ -350,6 +386,8 @@ PostgreSQL'de ayrı bir veritabanı olarak (`ichatlar_ml`) çalışır:
 | `GET /api/reports/summary` | Toplu ölçümler (MANAGER/ADMIN) |
 | `GET /api/reports/export.csv` | CSV (MANAGER/ADMIN, denetim izine yazar) |
 | `GET /auth/login` · `/auth/callback` · `POST /auth/logout` | Kimlik |
+| `GET /api/notifications` | Kişinin son 30 bildirimi + okunmamış sayısı |
+| `POST /api/notifications/read` | Okundu işareti (`ids` boşsa hepsi) — yalnızca kişinin kendi bildirimleri |
 | `GET /health` | Sağlık kontrolü |
 
 ## Doğrulanan davranışlar
@@ -383,8 +421,7 @@ test edildi), PostgreSQL üzerinde çalışma, çok kullanıcılı eşzamanlı y
 | Konu | Durum |
 |---|---|
 | Dosya ekleri | Şema ve depolama arayüzü hazır; yükleme ucu yazılmadı. Yerel disk mi S3/Azure Blob mu — karar gerekiyor. |
-| Bildirimler | SLA ihlali kaydediliyor, bildirim gönderilmiyor. SMTP relay mi Graph API mi — BT kararı. `jobs/slaWatcher.ts` içinde işaretli. |
+| E-posta / Teams bildirimi | Uygulama içi bildirim (zil) çalışıyor. E-posta veya Teams eklenecekse kaynak `Notification` tablosu; kanal BT kararı. |
 | Yönetim ekranı yazma uçları | Departman/SLA/rol düzenleme API'si yok; şimdilik `prisma studio` veya SQL. |
 | Raporlar ekranı | Prototipin rapor görünümü hâlâ **yerel önbellekten** hesaplıyor; bu yüzden yalnızca kullanıcının görebildiği kayıtları kapsar. Kurum geneli sayılar için `/api/reports/summary` bağlanmalı. |
-| Otomatik testler | Yok. İlk sıraya durum makinesi ve yetki kuralları (`domain/`) alınmalı — en çok riski onlar taşıyor. |
 | KVKK | Anonimlik ve denetim izi hazır; saklama süresi ve silme politikası tanımlanmadı. |

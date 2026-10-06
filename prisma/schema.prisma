@@ -74,6 +74,7 @@ model User {
   attachments     Attachment[]
   sessions        Session[]
   auditLogs       AuditLog[]
+  notifications   Notification[]
 
   @@index([departmentId, active])
 }
@@ -147,8 +148,9 @@ model Record {
   slaDueAt      DateTime
   slaBreachedAt DateTime?
 
-  events      RecordEvent[]
-  attachments Attachment[]
+  events        RecordEvent[]
+  attachments   Attachment[]
+  notifications Notification[]
 
   /// Kayıt açılırken gösterilen benzer kayıt önerileri.
   suggestionsGiven    Suggestion[] @relation("suggestionSource")
@@ -268,4 +270,28 @@ model AuditLog {
 
   @@index([entity, entityId, at])
   @@index([actorId, at])
+}
+
+/// Uygulama içi bildirim (üst çubuktaki zil). Kişiye özeldir: aynı olay
+/// için her alıcıya ayrı satır yazılır, okundu bilgisi kişi başına tutulur.
+/// E-posta / Teams gibi kanallar eklenirse kaynak yine bu tablodur.
+model Notification {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  recordId String?
+  record   Record? @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  /// src/domain/enums.ts → NotificationType
+  type String
+  text String
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  /// Aynı kişiye aynı kayıt için aynı tür bildirim ikinci kez düşmez.
+  @@unique([userId, recordId, type])
+  @@index([userId, readAt, createdAt])
 }

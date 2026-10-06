@@ -23,7 +23,11 @@
     "ml:migrate": "prisma migrate dev --schema prisma/ml/schema.prisma",
     "ml:deploy": "prisma migrate deploy --schema prisma/ml/schema.prisma",
     "ml:studio": "prisma studio --schema prisma/ml/schema.prisma --port 5556",
-    "ml:reset": "prisma migrate reset --force --skip-seed --schema prisma/ml/schema.prisma"
+    "ml:reset": "prisma migrate reset --force --skip-seed --schema prisma/ml/schema.prisma",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:watch": "vitest"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -46,6 +50,7 @@
     "pino-pretty": "^13.0.0",
     "prisma": "^6.5.0",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.7"
   }
 }
