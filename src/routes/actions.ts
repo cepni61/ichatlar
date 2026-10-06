@@ -55,7 +55,7 @@ async function mutate(
 
   return prisma.$transaction(async (tx) => {
     // Eşzamanlı iki "üzerime al" isteğinden yalnızca biri kazanmalı.
-    // Kilit yöntemi lehçeye göre değişir (bkz. lib/dialect.ts).
+    // Satır kilidi: SELECT … FOR UPDATE (bkz. lib/dialect.ts).
     const locked = await lockRecordByCode(tx, opts.code);
     if (!locked) throw notFound();
 

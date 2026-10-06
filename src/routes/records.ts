@@ -17,7 +17,7 @@ import { logInference, recordOutcome, suggestDepartment } from '../ml/service.js
 import { nextRecordCode } from '../lib/code.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { serializeList, serializeRecord } from '../lib/serialize.js';
-import { containsFilter, containsVariants, toJsonText } from '../lib/dialect.js';
+import { containsFilter, toJsonText } from '../lib/dialect.js';
 
 /** Detay ve liste için ortak include — olay akışı ve ekler. */
 const withDetail = {
@@ -109,15 +109,12 @@ export default async function recordRoutes(app: FastifyInstance) {
       and.push(open ? { status: { in: OPEN_STATUSES } } : { status: { notIn: OPEN_STATUSES } });
     }
     if (q) {
-      // Harf duyarsızlık lehçeye göre değişiyor: PostgreSQL'de mode:'insensitive',
-      // SQLite'ta o argüman yok ve Türkçe harflerde LIKE duyarsız değil — bu
-      // yüzden yazılan hâli ve büyük/küçük varyantları birlikte denenir.
       and.push({
-        OR: containsVariants(q).flatMap((v) => [
-          { code: containsFilter(v) },
-          { title: containsFilter(v) },
-          { description: containsFilter(v) },
-        ]),
+        OR: [
+          { code: containsFilter(q) },
+          { title: containsFilter(q) },
+          { description: containsFilter(q) },
+        ],
       });
     }
 

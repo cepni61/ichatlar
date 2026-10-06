@@ -3,6 +3,7 @@ import { buildApp } from '../../src/app.js';
 import { prisma } from '../../src/db.js';
 import { createSession, SESSION_COOKIE } from '../../src/auth/session.js';
 import { Priority, RecordStatus, RecordType, Role } from '../../src/domain/enums.js';
+import { assertTestDatabase } from '../test-db.js';
 
 /** Log kapalı uygulama. Port açılmaz; istekler app.inject() ile gider. */
 export async function makeApp() {
@@ -17,8 +18,12 @@ export const silentLog = {
   child() { return silentLog; }, level: 'silent',
 } as never;
 
-/** Tabloları bağımlılık sırasıyla boşaltır. Her test dosyası temiz başlar. */
+/**
+ * Tabloları bağımlılık sırasıyla boşaltır. Her test temiz başlar.
+ * Önce bağlı olunan veritabanının test veritabanı olduğu doğrulanır.
+ */
 export async function resetDb() {
+  assertTestDatabase(process.env.DATABASE_URL);
   await prisma.notification.deleteMany();
   await prisma.suggestion.deleteMany();
   await prisma.attachment.deleteMany();

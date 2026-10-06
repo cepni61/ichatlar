@@ -440,6 +440,13 @@
       fill(PRIORITIES, boot.priorities);
       fill(STATUSES, boot.statuses);
 
+      // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
+      if (boot.org && boot.org.name) {
+        document.title = 'İç Hatlar — ' + boot.org.name;
+        const foot = document.querySelector('.side-foot');
+        if (foot) foot.textContent = '© ' + new Date().getFullYear() + ' ' + boot.org.name;
+      }
+
       Store.data.currentUserId = boot.me.id;
 
       // Oturum sahibi kullanıcı listesinde yoksa (departmansız yeni kullanıcı)

@@ -1,13 +1,9 @@
 /**
  * Sabit kümeler.
  *
- * Bunlar önce Prisma enum'larıydı. SQLite'ta Prisma enum desteklemediği için
- * veritabanında String kolon olarak tutuluyorlar ve tip güvenliği burada
- * sağlanıyor. Kullanım şekli enum'la aynı kaldı (`RecordStatus.YENI`), böylece
- * çağıran kod değişmedi.
- *
- * Yan fayda: şema artık lehçeden bağımsız. PostgreSQL'e geçerken tek
- * değişiklik `schema.prisma` içindeki provider satırı.
+ * Veritabanında PostgreSQL enum'u değil String kolon olarak tutulurlar; tip
+ * güvenliği burada sağlanır. Kullanım şekli enum'la aynı (`RecordStatus.YENI`).
+ * Yeni bir değer eklemek göç gerektirmez.
  *
  * Kolonlara yazılan değerin geçerliliği `parse*` yardımcılarıyla doğrulanır —
  * enum'un veritabanı seviyesinde verdiği garantinin karşılığı bu.

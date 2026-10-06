@@ -1,7 +1,10 @@
 @echo off
 REM ---------------------------------------------------------------------------
-REM İç Hatlar — yerel test sunucusunu başlatır.
-REM Bu dosyaya çift tıklamak yeterli. Kapatmak için pencereyi kapatın veya Ctrl+C.
+REM Ic Hatlar - yerel test sunucusunu baslatir (gomulu PostgreSQL ile).
+REM Bu dosyaya cift tiklamak yeterli. Kapatmak icin pencereyi kapatin veya Ctrl+C.
+REM Veritabani arka planda acik kalir; durdurmak icin: npm run db:local:stop
+REM
+REM Kurulus sunucusu icin bu dosya KULLANILMAZ - bkz. docs\KURULUM.md
 REM ---------------------------------------------------------------------------
 setlocal
 cd /d "%~dp0"
@@ -35,15 +38,18 @@ if not exist "node_modules" (
   echo.
 )
 
-if not exist "var\ichatlar.db" (
-  echo   Veritabani olusturuluyor...
-  call npx prisma migrate deploy
-  if errorlevel 1 goto :hata
-  echo   Demo verisi yukleniyor...
-  call npm run db:seed
-  if errorlevel 1 goto :hata
-  echo.
-)
+echo   Yerel PostgreSQL baslatiliyor...
+call npm run --silent db:local
+if errorlevel 1 goto :hata
+
+REM migrate deploy idempotent: yeni gocler varsa uygular, yoksa hicbir sey yapmaz.
+echo   Veritabani semasi guncelleniyor...
+call npx prisma migrate deploy >nul
+if errorlevel 1 goto :hata
+
+REM Tohum betigi idempotent: kayit varsa ornek kayit uretmez.
+call npm run --silent db:seed >nul
+if errorlevel 1 goto :hata
 
 REM ML veritabani ana veritabanindan ayri bir dosya: var\ichatlar-ml.db
 if not exist "node_modules\.prisma\ml-client" (
@@ -51,13 +57,13 @@ if not exist "node_modules\.prisma\ml-client" (
   call npm run ml:generate
   if errorlevel 1 goto :hata
 )
-REM migrate deploy idempotent: yeni ML tablolari eklendiyse uygular, yoksa hicbir sey yapmaz.
 call npx prisma migrate deploy --schema prisma/ml/schema.prisma >nul
 if errorlevel 1 (
   echo   [UYARI] ML veritabani kurulamadi. Uygulama calisir, ML kayitlari tutulmaz.
   echo.
 )
 
+echo.
 echo   Sunucu baslatiliyor...
 echo.
 echo   Tarayicida acin:

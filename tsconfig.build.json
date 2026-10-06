@@ -1,0 +1,12 @@
+{
+  // Sunucu derlemesi: yalnızca src/ → dist/ (dist/server.js, dist/cli/setup.js).
+  // rootDir src olmalı: app.ts arayüzü "../public" ile bulur; dist/app.js'ten
+  // bir üst klasör proje kökü olur.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "sourceMap": true
+  },
+  "include": ["src/**/*.ts"]
+}

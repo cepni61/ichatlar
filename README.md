@@ -4,56 +4,59 @@ Kurum içi bilgi ve öneri kayıt sistemi. `ichatlar4.html` prototipinin arkası
 gerçek bir sistem konulmuş hâli: PostgreSQL, Fastify API, Microsoft Entra ID ile
 kurumsal giriş.
 
+Bir **paket** olarak tasarlandı: her kuruluşa ayrı kurulur (kendi sunucusu,
+kendi PostgreSQL veritabanı, kendi Entra kaydı). Kuruluşa özgü her şey — ad,
+departmanlar, SLA süreleri, Entra grupları — `.env` ve `config/kurulus.json`
+içindedir, kodda değil. **Sunucu kurulumu: [docs/KURULUM.md](docs/KURULUM.md).**
+
 ## Test etmek isteyenler için (Windows, 3 adım)
 
 1. **Node.js LTS** kurun: https://nodejs.org (Node ≥ 20.12).
 2. Depoyu indirin — GitHub'da **Code → Download ZIP**, ya da `git clone`.
    Klasörü **OneDrive dışında** kısa bir yola açın (ör. `C:\src\ichatlar`).
 3. **`baslat.cmd` dosyasına çift tıklayın.** İlk açılış birkaç dakika sürer
-   (bağımlılıklar, veritabanları, 100 demo kayıt). Tarayıcı kendiliğinden açılır.
+   (bağımlılıklar, gömülü PostgreSQL, 100 demo kayıt). Tarayıcı kendiliğinden açılır.
 
 Farklı rollerle denemek için: `http://localhost:3000/auth/dev-users` listesindeki
 e-postayla `http://localhost:3000/auth/dev-login?email=...` açın.
 
-> Her test eden kişinin verisi **kendi bilgisayarındadır** (`var/` klasörü);
+> Her test eden kişinin verisi **kendi bilgisayarındadır** (`%LOCALAPPDATA%\ichatlar`);
 > başkasının açtığı kaydı görmez. Ortak test için uygulama tek bir makinede
 > çalıştırılıp diğerleri ona bağlanmalıdır.
 >
 > Geliştirme girişinde parola yoktur — yalnızca demo verisiyle kullanın.
 
-## Nasıl çalıştırılır
+## Nasıl çalıştırılır (geliştirme)
 
-Gerekli: **yalnızca Node ≥ 20.12.** Veritabanı SQLite — kurulum, sunucu ve
-yönetici yetkisi gerektirmez, `var/ichatlar.db` dosyasında durur.
+Gerekli: **yalnızca Node ≥ 20.12.** Veritabanı PostgreSQL 17 — yerelde
+**gömülü** çalışır: programlar npm paketinden gelir, kurulum, Docker ya da
+yönetici yetkisi gerekmez.
 
 ```bash
 cd ichatlar-app
 cp .env.example .env          # SESSION_SECRET'i doldurun:  openssl rand -base64 48
 npm install
-npm run db:migrate            # şemayı kurar (var/ichatlar.db)
-npm run db:seed               # departmanlar, SLA kuralları, 100 demo kayıt
+npm run db:local              # yerel PostgreSQL'i başlatır (localhost:5433, arka planda açık kalır)
+npm run db:migrate            # şemayı kurar
+npm run db:seed               # departmanlar, SLA kuralları, demo kullanıcılar, 100 demo kayıt
 npm run dev
 ```
 
-Tarayıcıda `http://localhost:3000` — ilk açılışta giriş ekranına gider.
+| Komut | İş |
+|---|---|
+| `npm run db:local` / `db:local:stop` / `db:local:status` | Yerel PostgreSQL'i başlat / durdur / durumu |
+| `npm run setup -- config/kurulus.json` | Kuruluşun departmanlarını ve SLA sürelerini işler |
+| `npm run build` → `npm start` | Derleyip sunucu kipinde çalıştırır (`dist/`) |
 
-### PostgreSQL'e geçiş
+**Yerel PostgreSQL nerede:** programlar ve veri proje klasöründe değil,
+`%LOCALAPPDATA%\ichatlar` altında (macOS/Linux: `~/.ichatlar`). İki neden:
+PostgreSQL'in Windows programları yolda Türkçe karakter ("Masaüstü",
+"Topluluğu") olunca kendi dosyalarını bulamıyor; ve çalışan bir veritabanının
+OneDrive gibi eşitlenen bir klasörde durması veri bozabilir. Veritabanı tr-TR
+ICU yerel ayarıyla kurulur — arama "İZİN" ile "izin"i eşleştirir.
 
-İki satır:
-
-1. `prisma/schema.prisma` → `provider = "postgresql"`
-2. `.env` → `DATABASE_URL=postgresql://ichatlar:ichatlar@localhost:5432/ichatlar?schema=public`
-
-Sonra `docker compose up -d` (dosya hazır) ve `npm run db:migrate`. Şema
-bilinçli olarak lehçeden bağımsız yazıldı: enum yok (sabitler
-`src/domain/enums.ts`), `@db.Text` yok, JSON alanlar metin. Lehçeye özgü iki
-davranış — harf duyarsız arama ve satır kilidi — `src/lib/dialect.ts` arkasında
-ve ikisini de zaten biliyor.
-
-**SQLite'ın bilinen sınırı:** yerleşik `LIKE` Türkçe harflerde duyarsız değil,
-bu yüzden arama kullanıcı girdisini birkaç varyantla dener. PostgreSQL'de
-`mode: 'insensitive'` bunu doğru şekilde halleder. Eşzamanlı yazma da SQLite'ta
-tek yazarla serileştirilir; çok kullanıcılı gerçek yük için PostgreSQL şart.
+Yalnızca PostgreSQL desteklenir. Lehçeye özgü iki davranış (harf duyarsız
+arama, `SELECT … FOR UPDATE` satır kilidi) `src/lib/dialect.ts` içinde.
 
 `http://localhost:3000` açılır. Entra ID henüz yapılandırılmadıysa geliştirme
 girişi kullanılır:
@@ -332,8 +335,8 @@ npm run ml:studio     # ML veritabanını tarayıcıda incele (port 5556)
 npm run ml:reset      # ML veritabanını sıfırla (ana veriye dokunmaz)
 ```
 
-PostgreSQL'de ayrı bir veritabanı olarak (`ichatlar_ml`) çalışır:
-`prisma/ml/schema.prisma` içindeki provider ve `ML_DATABASE_URL` değişir.
+ML veritabanı ana veritabanından ayrı bir SQLite dosyasıdır (`var/ichatlar-ml.db`);
+sunucuda `var/` klasörü yedeğe dahil edilmelidir.
 
 ## Bildirimler
 
@@ -357,12 +360,15 @@ başka ekibe yönlendirildiyse eski alıcı yalnızca kayıt kodunu görür.
 ```bash
 npm test                  # hepsi
 npm run test:unit         # tests/unit — veritabanısız iş kuralları
-npm run test:integration  # tests/integration — gerçek Fastify + var/test.db
+npm run test:integration  # tests/integration — gerçek Fastify + PostgreSQL (ichatlar_test)
 npm run test:watch        # değişiklikte yeniden çalıştır
 ```
 
-Entegrasyon testleri her çalıştırmada `var/test.db` dosyasını sıfırdan kurar
-(göçler uygulanır, tohum yüklenmez); asıl veritabanına dokunmaz. Testler
+Entegrasyon testleri yerel PostgreSQL'deki ayrı `ichatlar_test` veritabanını
+kullanır (kapalıysa açılır; göçler uygulanır, tohum yüklenmez) ve her testten
+önce tabloları boşaltır. Bu yüzden veritabanı adı `_test` ile bitmiyorsa testler
+çalışmayı reddeder — yanlış ayarla asıl veri silinemez. Başka bir sunucu için
+`TEST_DATABASE_URL` verin. Testler
 istekleri port açmadan `app.inject()` ile atar — bunun için uygulama kurulumu
 `src/app.ts` → `buildApp()` içindedir, `server.ts` yalnızca dinlemeyi ve
 zamanlanmış işleri başlatır. Oturum, gerçek girişle aynı imzalı çerezle
@@ -392,7 +398,9 @@ yetki veya sorgu kapsamına dokunuyorsa entegrasyon testi yazın.
 
 ## Doğrulanan davranışlar
 
-Aşağıdakiler çalışan sistem üzerinde denendi (SQLite, 51 kayıt):
+Aşağıdakiler ilk sürümde çalışan sistem üzerinde elle denendi (SQLite, 51 kayıt).
+Bugün bunların çoğu otomatik testlerle PostgreSQL üzerinde sürekli doğrulanıyor
+(`npm test`).
 
 | Test | Sonuç |
 |---|---|
@@ -414,7 +422,7 @@ karakter kullanılmadan yazılan metni yakalamıyordu (%22 → %47), ve prototip
 `init()` fonksiyonu bootstrap'tan önce çalışıp hata bandı açıyordu.
 
 **Doğrulanmayan:** Entra ID akışı (uygulama kaydı yok — geliştirme girişiyle
-test edildi), PostgreSQL üzerinde çalışma, çok kullanıcılı eşzamanlı yük.
+test edildi), BT'nin PostgreSQL sunucusunda çalışma, çok kullanıcılı eşzamanlı yük.
 
 ## Henüz yapılmayanlar
 
@@ -422,6 +430,5 @@ test edildi), PostgreSQL üzerinde çalışma, çok kullanıcılı eşzamanlı y
 |---|---|
 | Dosya ekleri | Şema ve depolama arayüzü hazır; yükleme ucu yazılmadı. Yerel disk mi S3/Azure Blob mu — karar gerekiyor. |
 | E-posta / Teams bildirimi | Uygulama içi bildirim (zil) çalışıyor. E-posta veya Teams eklenecekse kaynak `Notification` tablosu; kanal BT kararı. |
-| Yönetim ekranı yazma uçları | Departman/SLA/rol düzenleme API'si yok; şimdilik `prisma studio` veya SQL. |
-| Raporlar ekranı | Prototipin rapor görünümü hâlâ **yerel önbellekten** hesaplıyor; bu yüzden yalnızca kullanıcının görebildiği kayıtları kapsar. Kurum geneli sayılar için `/api/reports/summary` bağlanmalı. |
-| KVKK | Anonimlik ve denetim izi hazır; saklama süresi ve silme politikası tanımlanmadı. |
+| Yönetim ekranı yazma uçları | Departman/SLA/rol düzenleme API'si yok. Departman ve SLA şimdilik `config/kurulus.json` + `setup` ile, rol Entra yönetici grubuyla. |
+| KVKK | Anonimlik ve denetim izi hazır. Prosedür taslağı yazıldı; saklama/imha işi, aydınlatma ekranı ve log maskeleme kodda yok. |

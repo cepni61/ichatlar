@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
+import { envFlag } from './lib/flag.js';
 
 /**
  * .env dosyasını ek bağımlılık olmadan yükler (Node ≥ 20.12 yerleşik
@@ -37,10 +38,13 @@ const schema = z.object({
   ENTRA_TENANT_ID: z.string().default(''),
   ENTRA_CLIENT_ID: z.string().default(''),
   ENTRA_CLIENT_SECRET: z.string().default(''),
-  ENTRA_USE_GROUPS: z.coerce.boolean().default(false),
+  ENTRA_USE_GROUPS: envFlag(false),
   ENTRA_ADMIN_GROUP_ID: z.string().default(''),
 
-  DEV_AUTH_BYPASS: z.coerce.boolean().default(false),
+  DEV_AUTH_BYPASS: envFlag(false),
+
+  /** Kuruluşun adı — arayüzde başlıkta ve alt bilgide görünür. Boşsa yalnızca ürün adı. */
+  ORG_NAME: z.string().trim().max(80).default(''),
 
   /** Doluysa uygulamaya girmeden önce bu kod sorulur (internete açık test yayını). */
   ACCESS_CODE: z.string().trim().default(''),

@@ -231,7 +231,7 @@ async function main() {
 
   const existing = await prisma.record.count();
   if (existing > 0) {
-    console.log(`Zaten ${existing} kayıt var, örnek kayıt üretimi atlandı. Sıfırlamak için: npm run db:reset`);
+    console.log(`Zaten ${existing} kayıt var, örnek kayıt üretimi atlandı.`);
     return;
   }
 

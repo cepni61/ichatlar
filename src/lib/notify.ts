@@ -52,24 +52,15 @@ export async function notifySlaBreach(
   if (recipients.length === 0) return 0;
 
   // Benzersizlik (userId, recordId, type) üzerinde; gözcü aynı kaydı iki kez
-  // işlerse ikinci yazım sessizce atlanır. createMany + skipDuplicates SQLite'ta
-  // desteklenmediği için önce mevcutlar süzülür.
-  const existing = await tx.notification.findMany({
-    where: { recordId: rec.id, type: NotificationType.SLA_BREACH, userId: { in: recipients } },
-    select: { userId: true },
+  // işlerse ikinci yazım sessizce atlanır ve sayıya girmez.
+  const { count } = await tx.notification.createMany({
+    data: recipients.map((userId) => ({
+      userId,
+      recordId: rec.id,
+      type: NotificationType.SLA_BREACH,
+      text: `${rec.code} SLA hedefini aştı.`,
+    })),
+    skipDuplicates: true,
   });
-  const done = new Set(existing.map((n) => n.userId));
-  const fresh = recipients.filter((id) => !done.has(id));
-
-  for (const userId of fresh) {
-    await tx.notification.create({
-      data: {
-        userId,
-        recordId: rec.id,
-        type: NotificationType.SLA_BREACH,
-        text: `${rec.code} SLA hedefini aştı.`,
-      },
-    });
-  }
-  return fresh.length;
+  return count;
 }

@@ -10,3 +10,6 @@ var/
 prisma/var/
 *.db
 *.db-journal
+
+# Kuruluşun kendi yapılandırması (örnek: config/kurulus.example.json)
+config/kurulus.json

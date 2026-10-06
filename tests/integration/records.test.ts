@@ -62,6 +62,25 @@ describe('kayıt görünürlüğü', () => {
   });
 });
 
+describe('arama', () => {
+  beforeEach(resetDb);
+
+  // Veritabanı tr-TR ICU yerel ayarıyla kurulmadıysa bu test kırılır:
+  // C yerel ayarında "İ" ile "i" ILIKE'ta eşleşmez.
+  it('Türkçe büyük/küçük harf duyarsız: "İZİN", "izin" ve "Izın" olmayanı ayırır', async () => {
+    const w = await world();
+    const r = await createRecord({ createdById: w.opener.id, departmentId: w.ik.id, title: 'Yıllık İzin bakiyesi eksik' });
+    const h = await loginAs(app, w.ikMember.id);
+    const search = async (q: string) =>
+      JSON.stringify((await app.inject({ method: 'GET', url: `/api/records?q=${encodeURIComponent(q)}`, ...as(h) })).json());
+
+    expect(await search('izin')).toContain(r.code);
+    expect(await search('İZİN')).toContain(r.code);
+    expect(await search('YILLIK')).toContain(r.code);
+    expect(await search('bordro')).not.toContain(r.code);
+  });
+});
+
 describe('aksiyon yetkileri', () => {
   beforeEach(resetDb);
 

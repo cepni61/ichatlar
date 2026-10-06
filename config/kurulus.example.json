@@ -1,0 +1,16 @@
+{
+  "departments": [
+    { "id": "ik", "name": "İnsan Kaynakları", "short": "İK", "entraGroupId": "" },
+    { "id": "ki", "name": "Kurumsal İletişim", "short": "Kurumsal İlt." },
+    { "id": "idari", "name": "İdari İşler", "short": "İdari İşler" },
+    { "id": "fin", "name": "Finans", "short": "Finans" },
+    { "id": "sat", "name": "Satın Alma", "short": "Satın Alma" },
+    { "id": "kalite", "name": "Kalite", "short": "Kalite" }
+  ],
+  "sla": {
+    "NORMAL": 48,
+    "YUKSEK": 24,
+    "KRITIK": 8,
+    "warnRatio": 0.7
+  }
+}

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "postinstall": "prisma generate --schema prisma/ml/schema.prisma",
@@ -18,7 +18,6 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force",
     "ml:generate": "prisma generate --schema prisma/ml/schema.prisma",
     "ml:migrate": "prisma migrate dev --schema prisma/ml/schema.prisma",
     "ml:deploy": "prisma migrate deploy --schema prisma/ml/schema.prisma",
@@ -27,7 +26,11 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:local": "tsx scripts/local-db.ts start",
+    "db:local:stop": "tsx scripts/local-db.ts stop",
+    "db:local:status": "tsx scripts/local-db.ts status",
+    "setup": "tsx src/cli/setup.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -43,12 +46,13 @@
     "fastify": "^5.2.1",
     "openid-client": "^5.7.1",
     "pino": "^9.6.0",
+    "prisma": "^6.5.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "embedded-postgres": "17.10.0-beta.17",
     "pino-pretty": "^13.0.0",
-    "prisma": "^6.5.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "^3.2.7"

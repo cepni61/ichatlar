@@ -43,6 +43,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
     return {
       /** Arayüz kullanıcı seçiciyi yalnızca geliştirme girişinde gösterir. */
       devAuth: env.devAuth,
+      /** Kuruluş başına kurulum: ad .env'den (ORG_NAME). Boşsa arayüz ürün adıyla kalır. */
+      org: { name: env.ORG_NAME || null },
       me: {
         id: me.id,
         name: me.name,

@@ -2,24 +2,21 @@
 //
 // Prototipteki (ichatlar4.html) kayıt yapısı birebir karşılanır, üzerine
 // gerçek sistemin gerektirdiği alanlar eklenir: oturum, denetim izi, dosya
-// eki, SLA kuralları ve kayıt numarası sayacı.
+// eki, SLA kuralları, bildirimler ve kayıt numarası sayacı.
 //
-// LEHÇE NOTU
-// Şu an SQLite: kurulum ve yönetici yetkisi gerektirmiyor, dosya tabanlı.
-// Şema bilinçli olarak lehçeden bağımsız tutuldu:
-//   - enum yok           → sabit kümeler src/domain/enums.ts içinde, kolon String
-//   - @db.Text yok       → SQLite'ta karşılığı yok, PostgreSQL'de gerekmez
-//   - Json yok           → JSON alanlar String'e serileştirilir
-// PostgreSQL'e geçmek için tek değişiklik aşağıdaki provider satırı ve
-// DATABASE_URL. Lehçeye özgü iki davranış (harf duyarsız arama, satır kilidi)
-// src/lib/dialect.ts arkasında.
+// VERİTABANI: yalnızca PostgreSQL (≥ 15). Yerelde gömülü PostgreSQL
+// (scripts/local-db.ts), kuruluşta BT'nin sunucusu — ikisi de DATABASE_URL ile.
+//
+// Sabit kümeler (durum, rol, öncelik) PostgreSQL enum'u değil String kolon;
+// geçerlilik src/domain/enums.ts içinde denetlenir. Yeni bir durum eklemek
+// bu yüzden göç gerektirmez. JSON alanlar metin olarak saklanır.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
