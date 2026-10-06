@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
 import { requireUser } from '../auth/guard.js';
 import { env } from '../env.js';
+import { ALLOWED, MAX_FILES } from '../domain/attachments.js';
 import {
   PRIORITY_LABELS,
   PRIORITY_TO_SLUG,
@@ -45,6 +46,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
       devAuth: env.devAuth,
       /** Kuruluş başına kurulum: ad .env'den (ORG_NAME). Boşsa arayüz ürün adıyla kalır. */
       org: { name: env.ORG_NAME || null },
+      /** Ek dosya sınırları — arayüz seçimde uyarır; asıl denetim sunucuda. */
+      uploads: { maxMb: env.MAX_UPLOAD_MB, maxFiles: MAX_FILES, extensions: Object.keys(ALLOWED) },
       me: {
         id: me.id,
         name: me.name,

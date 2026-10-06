@@ -4,6 +4,7 @@ import { prisma } from '../db.js';
 import { OPEN_STATUSES } from '../domain/constants.js';
 import { pruneSessions } from '../auth/session.js';
 import { notifySlaBreach } from '../lib/notify.js';
+import { pruneDraftAttachments } from '../routes/attachments.js';
 
 /**
  * SLA gözcüsü. Hedefi aşmış açık kayıtları işaretler ve akışa bir olay düşer.
@@ -104,6 +105,9 @@ export function startJobs(log: FastifyBaseLogger) {
     pruneSessions()
       .then((n) => n && log.info({ removed: n }, 'süresi geçmiş oturumlar silindi'))
       .catch((err) => log.error({ err }, 'oturum temizliği hata verdi'));
+    pruneDraftAttachments()
+      .then((n) => n && log.info({ removed: n }, 'gönderilmemiş taslak ekler silindi'))
+      .catch((err) => log.error({ err }, 'taslak ek temizliği hata verdi'));
   }, DAILY);
 
   // Açılışta bir kez: önce yeni ihlaller, sonra eski ihlallerin eksik bildirimleri.

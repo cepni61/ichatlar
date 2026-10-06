@@ -380,6 +380,25 @@ için ikinci bildirim yazılmaz. Metne kayıt başlığı kopyalanmaz (KVKK: imh
 unutulan bir kopyası kalmasın); başlık kayıttan okunur. Kayıt sonradan
 başka ekibe yönlendirildiyse eski alıcı yalnızca kayıt kodunu görür.
 
+## Ek dosyalar
+
+Güncelleme ve çözüm yazılırken dosya eklenebilir. Dosya seçilince hemen
+yüklenir ve **taslak** olarak bekler (yalnızca yükleyen görür); güncelleme ya
+da çözüm gönderilince o olaya bağlanır ve zaman çizelgesinde onun altında
+görünür. 24 saat içinde gönderilmeyen taslaklar silinir.
+
+| Kural | Değer |
+|---|---|
+| Kim yükler / indirir | Kaydı görebilen herkes; taslağı yalnızca yükleyen |
+| Türler | PDF, Word/Excel/PowerPoint, PNG/JPG/GIF/WEBP, TXT/CSV, MSG/EML, ZIP — HTML/SVG/betik/çalıştırılabilir yok |
+| Boyut | Dosya başına `MAX_UPLOAD_MB` (10), istekte en fazla 5 dosya |
+| Saklama | `STORAGE_DIR` (varsayılan `var/uploads`), sunucunun ürettiği rastgele adla; kullanıcının dosya adı diske yazılmaz |
+| İndirme | Her zaman `attachment` (tarayıcıda açılmaz), `nosniff`, tür uzantıdan; görme yetkisi yoksa 404 |
+
+Virüs taraması yok; kurumda bir tarayıcı varsa `STORAGE_DIR` ona açılmalı.
+Kayıt silinirse ek satırları da silinir, diskteki dosya imha işinde temizlenmeli
+(KVKK prosedürü).
+
 ## Testler
 
 ```bash
@@ -453,7 +472,7 @@ test edildi), BT'nin PostgreSQL sunucusunda çalışma, çok kullanıcılı eşz
 
 | Konu | Durum |
 |---|---|
-| Dosya ekleri | Şema ve depolama arayüzü hazır; yükleme ucu yazılmadı. Yerel disk mi S3/Azure Blob mu — karar gerekiyor. |
+| Yeni kayıtta dosya eki | Ekler güncelleme ve çözümle birlikte eklenebiliyor; yeni kayıt formunda henüz yok (kayıt açılmadan yükleme yeri yok). |
 | E-posta / Teams bildirimi | Uygulama içi bildirim (zil) çalışıyor. E-posta veya Teams eklenecekse kaynak `Notification` tablosu; kanal BT kararı. |
 | Yönetim ekranı yazma uçları | Departman/SLA/rol düzenleme API'si yok. Departman ve SLA şimdilik `config/kurulus.json` + `setup` ile, rol Entra yönetici grubuyla. |
 | KVKK | Anonimlik ve denetim izi hazır. Prosedür taslağı yazıldı; saklama/imha işi, aydınlatma ekranı ve log maskeleme kodda yok. |

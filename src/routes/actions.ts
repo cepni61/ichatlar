@@ -7,18 +7,14 @@ import { actorOf, requireUser } from '../auth/guard.js';
 import { STATUS_FROM_SLUG, STATUS_LABELS, WORK_STATUSES } from '../domain/constants.js';
 import { can, canTransition, type Action } from '../domain/permissions.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
-import { serializeRecord } from '../lib/serialize.js';
+import { detailInclude, serializeRecord } from '../lib/serialize.js';
+import { MAX_FILES } from '../domain/attachments.js';
 import { lockRecordByCode, toJsonText } from '../lib/dialect.js';
 import { recordForward } from '../ml/service.js';
 import { notifyUsers } from '../lib/notify.js';
 
-const withDetail = {
-  events: {
-    orderBy: { at: 'asc' as const },
-    select: { type: true, text: true, at: true, byId: true },
-  },
-  attachments: { select: { id: true, name: true, size: true, mime: true } },
-};
+/** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
+const attachmentIds = z.array(z.string().min(1).max(64)).max(MAX_FILES).default([]);
 
 /**
  * Her aksiyon aynı iskeleti izler:
@@ -51,6 +47,8 @@ async function mutate(
       nextStatus?: RecordStatus;
       /** Aynı işlemde yazılacak bildirim. İşlemi yapan kişi kendine bildirim almaz. */
       notify?: { userIds: (string | null)[]; type: NotificationType; text: string };
+      /** Bu olaya bağlanacak taslak ekler (bu kayda, bu kişinin yüklediği, henüz gönderilmemiş). */
+      attachmentIds?: string[];
     };
   },
 ) {
@@ -89,21 +87,34 @@ async function mutate(
       );
     }
 
-    const updated = await tx.record.update({
-      where: { id: rec.id },
+    // updatedAt açıkça yazılır: yorum gibi alan değiştirmeyen aksiyonlar da
+    // kaydı "son güncellenen" yapmalı.
+    await tx.record.update({ where: { id: rec.id }, data: { ...planned.data, updatedAt: new Date() } });
+
+    // Olay ayrı oluşturulur ki kimliği eklere bağlanabilsin.
+    const event = await tx.recordEvent.create({
       data: {
-        ...planned.data,
-        events: {
-          create: {
-            type: planned.event.type,
-            text: planned.event.text,
-            byId: opts.actorId,
-            ...(planned.event.meta ? { meta: toJsonText(planned.event.meta) } : {}),
-          },
-        },
+        recordId: rec.id,
+        type: planned.event.type,
+        text: planned.event.text,
+        byId: opts.actorId,
+        ...(planned.event.meta ? { meta: toJsonText(planned.event.meta) } : {}),
       },
-      include: withDetail,
+      select: { id: true },
     });
+
+    const ids = [...new Set(planned.attachmentIds ?? [])];
+    if (ids.length) {
+      const { count } = await tx.attachment.updateMany({
+        where: { id: { in: ids }, recordId: rec.id, uploadedById: opts.actorId, eventId: null },
+        data: { eventId: event.id },
+      });
+      if (count !== ids.length) {
+        throw badRequest('Eklerden biri bulunamadı ya da zaten gönderilmiş. Sayfayı yenileyip tekrar deneyin.');
+      }
+    }
+
+    const updated = await tx.record.findUniqueOrThrow({ where: { id: rec.id }, include: detailInclude });
 
     if (planned.notify) {
       await notifyUsers(tx, { ...planned.notify, except: opts.actorId, recordId: rec.id });
@@ -281,7 +292,10 @@ export default async function actionRoutes(app: FastifyInstance) {
   app.post('/api/records/:code/resolve', async (req) => {
     const a = actorOf(req);
     const parsed = z
-      .object({ resolution: z.string().trim().min(10, 'Çözümü en az 10 karakter yazın.').max(5000) })
+      .object({
+        resolution: z.string().trim().min(10, 'Çözümü en az 10 karakter yazın.').max(5000),
+        attachmentIds,
+      })
       .safeParse(req.body);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
     const { resolution } = parsed.data;
@@ -302,6 +316,7 @@ export default async function actionRoutes(app: FastifyInstance) {
           ...stampFirstResponse(r),
         },
         event: { type: EventType.COMMENT, text: resolution },
+        attachmentIds: parsed.data.attachmentIds,
         notify: {
           userIds: [r.createdById],
           type: NotificationType.RESOLVED,
@@ -394,9 +409,12 @@ export default async function actionRoutes(app: FastifyInstance) {
   app.post('/api/records/:code/comments', async (req) => {
     const a = actorOf(req);
     const parsed = z
-      .object({ text: z.string().trim().min(1, 'Yorum boş olamaz.').max(4000) })
-      .safeParse(req.body);
+      .object({ text: z.string().trim().max(4000).default(''), attachmentIds })
+      .refine((v) => v.text.length > 0 || v.attachmentIds.length > 0, { message: 'Güncelleme boş olamaz: metin yazın ya da dosya ekleyin.' })
+      .safeParse(req.body ?? {});
     if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
+    const files = parsed.data.attachmentIds.length;
+    const text = parsed.data.text || (files === 1 ? 'Dosya eklendi.' : `${files} dosya eklendi.`);
 
     const rec = await mutate(app, {
       code: codeParam(req),
@@ -409,7 +427,8 @@ export default async function actionRoutes(app: FastifyInstance) {
         // Ekipten gelen ilk yorum da geri dönüş sayılır; kaydı açanın kendi
         // yorumu sayılmamalı.
         data: r.createdById === a.id ? {} : stampFirstResponse(r),
-        event: { type: EventType.COMMENT, text: parsed.data.text },
+        event: { type: EventType.COMMENT, text },
+        attachmentIds: parsed.data.attachmentIds,
         // Açan yazdıysa sahibine (ek bilgi yanıtı), ekipten biri yazdıysa açana.
         notify: {
           userIds: r.createdById === a.id ? [r.assigneeId] : [r.createdById],

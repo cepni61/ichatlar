@@ -179,6 +179,8 @@ model RecordEvent {
   /// Yapısal ek bilgi, JSON metni olarak (lehçe bağımsızlığı için).
   meta String?
 
+  attachments Attachment[]
+
   @@index([recordId, at])
 }
 
@@ -199,9 +201,16 @@ model Attachment {
   uploadedById String
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
 
+  /// Ekin eklendiği güncelleme / çözüm olayı. Boşsa dosya yüklenmiş ama
+  /// henüz gönderilmemiş bir taslaktır: yalnızca yükleyen görür, 24 saat
+  /// içinde gönderilmezse silinir (jobs/slaWatcher.ts).
+  eventId String?
+  event   RecordEvent? @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now())
 
   @@index([recordId])
+  @@index([eventId])
 }
 
 model Suggestion {

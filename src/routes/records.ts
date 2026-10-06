@@ -16,17 +16,10 @@ import { findSimilar } from '../domain/similarity.js';
 import { logInference, recordOutcome, suggestDepartment } from '../ml/service.js';
 import { nextRecordCode } from '../lib/code.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
-import { serializeList, serializeRecord } from '../lib/serialize.js';
+import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
 import { containsFilter, toJsonText } from '../lib/dialect.js';
 
-/** Detay ve liste için ortak include — olay akışı ve ekler. */
-const withDetail = {
-  events: {
-    orderBy: { at: 'asc' as const },
-    select: { type: true, text: true, at: true, byId: true },
-  },
-  attachments: { select: { id: true, name: true, size: true, mime: true } },
-};
+const withDetail = detailInclude;
 
 /**
  * Kapsam süzgeci veritabanı seviyesinde uygulanır. Tüm kayıtları çekip

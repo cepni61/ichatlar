@@ -10,10 +10,30 @@ import { slaStatus } from '../domain/sla.js';
 
 const openSlugs: string[] = OPEN_STATUSES.map((s) => STATUS_TO_SLUG[s] ?? s);
 
+type AttachmentView = Pick<Attachment, 'id' | 'name' | 'size' | 'mime'>;
+
 export type FullRecord = DbRecord & {
-  events?: Pick<RecordEvent, 'type' | 'text' | 'at' | 'byId'>[];
-  attachments?: Pick<Attachment, 'id' | 'name' | 'size' | 'mime'>[];
+  events?: (Pick<RecordEvent, 'type' | 'text' | 'at' | 'byId'> & { attachments?: AttachmentView[] })[];
+  attachments?: AttachmentView[];
 };
+
+const attachmentSelect = { select: { id: true, name: true, size: true, mime: true } } as const;
+
+/**
+ * Detay ve liste için ortak include — olay akışı ve ekler. Ekler hem kayıt
+ * düzeyinde (tüm gönderilmiş ekler) hem eklendikleri olayın altında gelir.
+ * Taslaklar (eventId boş, henüz gönderilmemiş) hiç dönmez: yalnızca yükleyen
+ * kişinin tarayıcısında durur.
+ */
+export const detailInclude = {
+  events: {
+    orderBy: { at: 'asc' as const },
+    select: { type: true, text: true, at: true, byId: true, attachments: attachmentSelect },
+  },
+  attachments: { where: { eventId: { not: null } }, ...attachmentSelect },
+};
+
+const viewAttachment = (a: AttachmentView) => ({ id: a.id, name: a.name, size: a.size, mime: a.mime });
 
 /**
  * Kaydı arayüzün beklediği şekle çevirir (prototipteki alan adları korunur)
@@ -61,14 +81,10 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
       // Anonim kaydın kendi olayları da kimliği sızdırmamalı.
       by: !showCreator && e.byId === rec.createdById ? null : e.byId,
       text: e.text,
+      attachments: (e.attachments ?? []).map(viewAttachment),
     })),
 
-    attachments: (rec.attachments ?? []).map((a) => ({
-      id: a.id,
-      name: a.name,
-      size: a.size,
-      mime: a.mime,
-    })),
+    attachments: (rec.attachments ?? []).map(viewAttachment),
 
     permissions: permissionsFor(rec, actor),
   };

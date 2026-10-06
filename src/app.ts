@@ -5,6 +5,7 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
+import multipart from '@fastify/multipart';
 import { env } from './env.js';
 import { attachUser } from './auth/guard.js';
 import { AppError } from './lib/errors.js';
@@ -15,6 +16,8 @@ import actionRoutes from './routes/actions.js';
 import reportRoutes from './routes/reports.js';
 import mlRoutes from './routes/ml.js';
 import notificationRoutes from './routes/notifications.js';
+import attachmentRoutes from './routes/attachments.js';
+import { MAX_FILES } from './domain/attachments.js';
 import gateRoutes, { gateHook } from './routes/gate.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +59,12 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
   });
 
   await app.register(cookie, { secret: env.SESSION_SECRET });
+
+  // Ek dosyalar akış olarak okunur (belleğe toplanmaz). Sınırlar aşılırsa
+  // istek reddedilir, yarım dosya diskte bırakılmaz (routes/attachments.ts).
+  await app.register(multipart, {
+    limits: { fileSize: env.maxUploadBytes, files: MAX_FILES, fields: 10, parts: MAX_FILES + 10 },
+  });
 
   await app.register(rateLimit, {
     max: 300,
@@ -99,6 +108,7 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
   await app.register(reportRoutes);
   await app.register(mlRoutes);
   await app.register(notificationRoutes);
+  await app.register(attachmentRoutes);
 
   /**
    * Arayüz kimlik istiyor. API istekleri 401 döner (arayüz kendisi yönlendirir),

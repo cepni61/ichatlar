@@ -878,6 +878,23 @@
   body[data-page="new-ticket"] .topbar [data-view="new-ticket"],
   body[data-page="new-ticket"] .mobile-top [data-view="new-ticket"]{display:none}
   .next-step b{color:var(--text-2);font-weight:700}
+  /* Ek dosyalar: seçici, taslak etiketleri, indirme bağlantıları */
+  .attach{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
+  .btn-attach{padding:7px 13px}
+  .attach-hint{font-size:11.5px;color:var(--muted)}
+  .attach-list{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+  .attach-list:empty{display:none}
+  .attach-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 10px;border-radius:999px;
+    background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--text-2);max-width:100%}
+  .attach-chip small{color:var(--muted)}
+  .attach-chip.busy{padding-right:10px;color:var(--muted)}
+  .attach-chip button{border:0;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;padding:2px;border-radius:999px}
+  .attach-chip button:hover{color:var(--danger);background:var(--panel)}
+  .attach-chip .ic,.file-link .ic{width:14px;height:14px;flex-shrink:0}
+  .file-links{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}
+  a.file-link{text-decoration:none;color:var(--text-2);cursor:pointer;max-width:100%}
+  a.file-link .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+  a.file-link:hover{border-color:var(--b-400);color:var(--b-700)}
   /* Kaydı açanın kararını bekleyen kayıt (çözüldü → kapat / yeniden aç) */
   .await-me{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:13px 15px;border-radius:var(--r-sm);
     background:var(--b-50);border:1px solid var(--b-200);color:var(--text-2);font-size:13px;line-height:1.5}
@@ -2383,6 +2400,13 @@ function renderKanban(){
 /* =========================================================================
    11) DETAY
    ========================================================================= */
+/* Ek dosya bağlantısı. Sunucu dosyayı her zaman indirme olarak verir. */
+function fileLink(a){
+  const size = typeof fmtSize === 'function' ? fmtSize(a.size) : '';
+  return '<a class="file-item file-link" href="/api/attachments/'+encodeURIComponent(a.id)+'" download>'
+    + icon('clip')+' <span class="fn">'+esc(a.name)+'</span> <span class="small">'+esc(size)+'</span></a>';
+}
+
 function renderDetail(){
   const r = Store.find(DETAIL_CODE);
   if (!r) { $('#detailBody').innerHTML = '<div class="card"><div class="empty">Kayıt bulunamadı.</div></div>'; return; }
@@ -2425,7 +2449,7 @@ function renderDetail(){
   const age = Date.now() - new Date(r.createdAt);
   const pct = Math.min(100, Math.round(age / limit * 100));
   const remain = limit - age;
-  const slaText = !isOpen ? 'Kayıt kapandı — SLA takibi durdu.'
+  const slaText = !isOpen ? (r.status === 'cozuldu' ? 'Kayıt çözüldü — SLA takibi durdu.' : r.status === 'reddedildi' ? 'Kayıt reddedildi — SLA takibi durdu.' : 'Kayıt kapandı — SLA takibi durdu.')
     : remain > 0 ? 'Süre aşımına ' + fmtDur(remain/HOUR) + ' kaldı.'
     : 'Süre ' + fmtDur(-remain/HOUR) + ' aşıldı.';
 
@@ -2448,7 +2472,7 @@ function renderDetail(){
       + '<p style="white-space:pre-wrap;line-height:1.6;margin:0">'+esc(r.description)+'</p>'
       + (r.attachments && r.attachments.length
           ? '<div style="margin-top:16px"><label style="font-size:13px;font-weight:800;display:block;margin-bottom:8px">Ek Dosyalar</label>'
-            + r.attachments.map(f => '<div class="file-item">'+icon('clip')+' '+esc(f.name)+' <span class="small">'+esc(f.size)+'</span></div>').join('') + '</div>'
+            + '<div class="file-links">' + r.attachments.map(fileLink).join('') + '</div></div>'
           : '')
       + (r.resolution ? '<div class="comment" style="margin-top:16px"><b>'+icon('check')+' Çözüm:</b> '+esc(r.resolution)+'</div>' : '')
       + awaitMe + ekBilgi
@@ -2460,12 +2484,14 @@ function renderDetail(){
       + '<div class="timeline">'
       + r.history.map(h =>
           '<div class="event '+esc(h.t)+'"><b>'+esc(h.text)+'</b>'
+          + (h.attachments && h.attachments.length ? '<div class="file-links">'+h.attachments.map(fileLink).join('')+'</div>' : '')
           + '<span>'+esc(fmtDate(h.at))+' • '+esc(h.by ? userName(h.by) : 'Sistem')+'</span></div>'
         ).join('')
       + '</div>'
-      + ((isCreator || inTeam)
+      + ((p.comment != null ? p.comment : (isCreator || inTeam))
           ? '<div class="field" style="margin:18px 0 10px"><label>Yorum / Güncelleme</label>'
             + '<textarea id="cmtInput" placeholder="Durum güncellemesi veya yanıt yazın..."></textarea></div>'
+            + (typeof attachPicker === 'function' ? attachPicker('comment') : '')
             + '<button class="btn btn-soft" data-act="comment">Güncelleme Ekle</button>'
           : '')
     + '</div>'

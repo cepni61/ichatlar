@@ -163,7 +163,9 @@ sınırı atlatılabilir.
   içerir — KVKK prosedürüne göre **30 gün** saklayın.
 - **Denetim izi** veritabanındadır (`AuditLog` tablosu).
 - **Yedek:** her gece `pg_dump -Fc ichatlar > ichatlar-YYYYMMDD.dump`, ayrıca
-  kurulum klasöründeki `var/` (ML veritabanı) ve `.env`. Yedekler şifreli ve
+  kurulum klasöründeki `var/` (ML veritabanı ve `var/uploads` ek dosyaları — ya da
+  `STORAGE_DIR` başka yerdeyse orası) ve `.env`. Veritabanı ve ek klasörü aynı
+  anda yedeklenmeli; biri olmadan diğeri eksik geri yüklenir. Yedekler şifreli ve
   30 gün dönüşümlü tutulur. Geri yüklemeyi en az bir kez deneyin.
 - **Sağlık kontrolü:** `GET /health` → 200 (veritabanına da bağlanır).
 

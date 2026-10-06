@@ -1,3 +1,5 @@
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { TEST_DATABASE_URL } from './tests/test-db.js';
 
@@ -23,6 +25,9 @@ const testEnv = {
   SESSION_SECRET: 'test-only-secret-test-only-secret-test-only-secret',
   DEV_AUTH_BYPASS: '',
   ACCESS_CODE: '',
+  // Ek dosyalar testte geçici klasöre yazılır, asıl var/uploads'a değil.
+  STORAGE_DIR: path.join(os.tmpdir(), 'ichatlar-test-uploads'),
+  MAX_UPLOAD_MB: '1',
   ENTRA_TENANT_ID: '',
   ENTRA_CLIENT_ID: '',
   ENTRA_CLIENT_SECRET: '',

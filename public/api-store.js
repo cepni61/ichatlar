@@ -27,11 +27,13 @@
   /* ---------------------------------------------------------------- HTTP */
 
   async function req(method, path, body) {
+    // FormData (dosya yükleme) olduğu gibi gider; tarayıcı sınır başlığını kendisi koyar.
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     const res = await fetch(path, {
       method,
       credentials: 'same-origin',
-      headers: body ? { 'content-type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
+      headers: body && !isForm ? { 'content-type': 'application/json' } : undefined,
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
 
     if (res.status === 401) {
@@ -58,6 +60,12 @@
     record: (code) => req('GET', '/api/records/' + encodeURIComponent(code)),
     create: (payload) => req('POST', '/api/records', payload),
     similar: (payload) => req('POST', '/api/similar', payload),
+    upload: (code, files) => {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append('file', f, f.name));
+      return req('POST', '/api/records/' + encodeURIComponent(code) + '/attachments', fd);
+    },
+    dropAttachment: (id) => req('DELETE', '/api/attachments/' + encodeURIComponent(id)),
     act: (code, action, payload) =>
       req('POST', '/api/records/' + encodeURIComponent(code) + '/' + action, payload || {}),
   };
@@ -198,6 +206,92 @@
     }
   }
 
+  /* ------------------------------------------------------ ek dosyalar */
+
+  /*
+   * Güncelleme ve çözümle birlikte dosya ekleme. Dosya seçilince hemen
+   * yüklenir (sunucuda "taslak"), etiket olarak listelenir; güncelleme/çözüm
+   * gönderilince kimlikleri birlikte gider ve o olaya bağlanır. Taslaklar
+   * kayıt + yuva (comment / resolve) bazında tutulur ki detay yeniden
+   * çizildiğinde kaybolmasın.
+   */
+  const Uploads = { maxMb: 10, maxFiles: 5, extensions: [] };
+  const Drafts = {};
+  const draftKey = (slot) => slot + ':' + DETAIL_CODE;
+  const drafts = (slot) => (Drafts[draftKey(slot)] = Drafts[draftKey(slot)] || []);
+
+  const fmtSize = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+  window.fmtSize = fmtSize;
+
+  function chipsHtml(slot) {
+    return drafts(slot).map((a) =>
+      '<span class="attach-chip">' + icon('clip') + ' ' + esc(a.name) + ' <small>' + fmtSize(a.size) + '</small>' +
+      '<button type="button" data-attach-rm="' + esc(a.id) + '" data-slot="' + slot + '" aria-label="Kaldır">' + icon('x') + '</button></span>',
+    ).join('');
+  }
+
+  /** index.html'deki detay ve çözüm penceresi bunu çağırır. */
+  window.attachPicker = function (slot) {
+    const accept = Uploads.extensions.map((e) => '.' + e).join(',');
+    return '<div class="attach" data-slot="' + slot + '">' +
+      '<button type="button" class="btn btn-ghost btn-attach" data-attach-pick="' + slot + '">' + icon('clip') + ' Dosya ekle</button>' +
+      '<input type="file" multiple hidden data-attach-input="' + slot + '" accept="' + accept + '">' +
+      '<span class="attach-hint">En fazla ' + Uploads.maxFiles + ' dosya, her biri ' + Uploads.maxMb + ' MB. PDF, Office, görsel, TXT/CSV, e-posta, ZIP.</span>' +
+      '<div class="attach-list" data-attach-list="' + slot + '">' + chipsHtml(slot) + '</div></div>';
+  };
+
+  function repaint(slot) {
+    document.querySelectorAll('[data-attach-list="' + slot + '"]').forEach((el) => { el.innerHTML = chipsHtml(slot); });
+  }
+
+  document.addEventListener('click', (e) => {
+    const pick = e.target.closest('[data-attach-pick]');
+    if (pick) {
+      const input = document.querySelector('[data-attach-input="' + pick.dataset.attachPick + '"]');
+      if (input) input.click();
+      return;
+    }
+    const rm = e.target.closest('[data-attach-rm]');
+    if (rm) {
+      const slot = rm.dataset.slot;
+      const id = rm.dataset.attachRm;
+      Api.dropAttachment(id).catch(() => {}); // sunucuda kalsa bile 24 saatte silinir
+      Drafts[draftKey(slot)] = drafts(slot).filter((a) => a.id !== id);
+      repaint(slot);
+    }
+  });
+
+  const extOf = (n) => ((/\.([a-z0-9]+)$/i.exec(n) || [])[1] || '').toLowerCase();
+
+  document.addEventListener('change', async (e) => {
+    const input = e.target.closest && e.target.closest('[data-attach-input]');
+    if (!input || !input.files || !input.files.length) return;
+    const slot = input.dataset.attachInput;
+    const files = Array.from(input.files);
+    input.value = '';
+
+    if (files.length > Uploads.maxFiles - drafts(slot).length) {
+      return toast('En fazla ' + Uploads.maxFiles + ' dosya ekleyebilirsiniz', 'err');
+    }
+    const big = files.find((f) => f.size > Uploads.maxMb * 1048576);
+    if (big) return toast('"' + big.name + '" ' + Uploads.maxMb + ' MB sınırını aşıyor', 'err');
+    const bad = files.find((f) => !Uploads.extensions.includes(extOf(f.name)));
+    if (bad) return toast('"' + bad.name + '" dosya türü desteklenmiyor', 'err');
+
+    const list = document.querySelector('[data-attach-list="' + slot + '"]');
+    if (list) list.insertAdjacentHTML('beforeend', '<span class="attach-chip busy">Yükleniyor…</span>');
+    try {
+      const out = await Api.upload(DETAIL_CODE, files);
+      drafts(slot).push(...out.attachments);
+    } catch (err) {
+      toast(err.message, 'err');
+    }
+    repaint(slot);
+  });
+
+  const takeDrafts = (slot) => drafts(slot).map((a) => a.id);
+  const clearDrafts = (slot) => { Drafts[draftKey(slot)] = []; repaint(slot); };
+
   /* ----------------------------------------------- aksiyonlar (override) */
 
   window.actClaim = function (r) {
@@ -269,7 +363,8 @@
       'Kaydı Çözüldü Yap',
       '<div class="field"><label>Çözüm Açıklaması</label>' +
         '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
-        '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>',
+        '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>' +
+        window.attachPicker('resolve'),
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
@@ -278,7 +373,8 @@
           run() {
             const t = ($('#resTxt').value || '').trim();
             if (t.length < 10) return toast('Çözüm açıklaması en az 10 karakter olmalı', 'err');
-            run(r.code, 'resolve', { resolution: t }, 'Kayıt çözüldü olarak işaretlendi').then(closeModal, () => {});
+            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve') }, 'Kayıt çözüldü olarak işaretlendi')
+              .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
       ],
@@ -344,8 +440,10 @@
   window.actComment = function (r) {
     const el = $('#cmtInput');
     const t = ((el && el.value) || '').trim();
-    if (!t) return toast('Boş güncelleme eklenemez', 'err');
-    run(r.code, 'comments', { text: t }, 'Güncelleme eklendi').then(() => {
+    const ids = takeDrafts('comment');
+    if (!t && !ids.length) return toast('Bir güncelleme yazın ya da dosya ekleyin', 'err');
+    run(r.code, 'comments', { text: t, attachmentIds: ids }, 'Güncelleme eklendi').then(() => {
+      clearDrafts('comment');
       const box = $('#cmtInput');
       if (box) box.value = '';
     }, () => {});
@@ -477,6 +575,8 @@
       fill(TYPES, boot.types);
       fill(PRIORITIES, boot.priorities);
       fill(STATUSES, boot.statuses);
+
+      if (boot.uploads) Object.assign(Uploads, boot.uploads);
 
       // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
       if (boot.org && boot.org.name) {
