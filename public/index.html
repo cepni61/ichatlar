@@ -1295,17 +1295,27 @@
 
   /* ---------- Responsive ---------- */
   @media(max-width:1080px){
-    .app{grid-template-columns:1fr}
-    .sidebar{display:none}
-    .sidebar.open{display:flex;position:fixed;left:0;top:0;width:274px;z-index:70}
-    .mobile-top{display:flex;gap:9px}
+    .app{grid-template-columns:220px 1fr}
     .main{padding:18px}
     .topbar{align-items:flex-start;flex-direction:column}
     .page-title h2{font-size:26px}
     .actions{width:100%;flex-wrap:wrap}
     .search{flex:1;min-width:220px}.search input{width:100%}
-    .kpis,.dashboard-layout,.form-layout,.detail-layout,.reports,.report-kpis,.settings-grid,.metric-list{grid-template-columns:1fr}
+    /* Özet kartları auto-fit ile 2-3 sütun kalır; tablette tek sütun çok yer harcıyordu */
+    .dashboard-layout,.form-layout,.detail-layout,.reports{grid-template-columns:1fr}
     .kanban{grid-template-columns:repeat(4,262px)}
+  }
+  /* Dikey tablet ve telefon: sol menü gizlenir, Menü butonuyla açılır.
+     Yatay tablette (1024px) menü sabit kalır. */
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .sidebar.open{display:flex;position:fixed;left:0;top:0;width:274px;z-index:70;
+      box-shadow:0 0 0 100vmax rgba(8,20,40,.38)}
+    .mobile-top{display:flex;gap:9px}
+    /* Yeni Kayıt zaten üst çubukta var; ikinci kopya gizlenir */
+    .mobile-top .btn-primary{display:none}
+    .settings-grid,.metric-list{grid-template-columns:1fr}
   }
   @media(max-width:640px){
     .main{padding:15px}
@@ -1374,7 +1384,7 @@
   <!-- ================= MAIN ================= -->
   <main class="main">
     <div class="mobile-top actions" style="margin-bottom:14px">
-      <button class="btn btn-ghost" onclick="document.getElementById('sidebar').classList.toggle('open')">
+      <button class="btn btn-ghost" data-menu-toggle>
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Menü</button>
       <button class="btn btn-primary" data-view="new-ticket">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Yeni Kayıt</button>
@@ -1450,14 +1460,6 @@
           <div class="field"><label>Başlık</label><input id="fTitle" placeholder="Lütfen başlığı giriniz" /></div>
           <div class="field"><label>Açıklama</label><textarea id="fDesc" placeholder="Kaydınızı açık ve anlaşılır şekilde yazın..."></textarea>
             <p class="hint" style="margin-top:6px">Ne kadar detay verirseniz, akıllı çözüm önerileri o kadar isabetli olur.</p></div>
-
-          <div class="field">
-            <label>Gönderim Tercihi</label>
-            <div class="toggle-row">
-              <button type="button" id="anonToggle" class="btn btn-soft toggle-btn">Anonim: Kapalı</button>
-              <span class="hint">Açıldığında kaydınız anonim olarak iletilir.</span>
-            </div>
-          </div>
 
           <div class="grid" style="grid-template-columns:1fr 1fr">
             <div class="field"><label>İlgili Ekip 1</label><select id="fDept1"></select></div>
@@ -2130,7 +2132,51 @@ function renderChrome(){
   const team = teamRecords(me).filter(r => !r.assignee && OPEN_STATUSES.includes(r.status)).length;
   const owned = recs.filter(r => r.assignee === me.id && OPEN_STATUSES.includes(r.status)).length;
   $('#bMy').textContent = mine; $('#bTeam').textContent = team; $('#bOwned').textContent = owned;
-  $('#bellCount').textContent = teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length;
+  $('#bellCount').textContent = Notif.unread != null
+    ? Notif.unread
+    : teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length;
+}
+
+/* Bildirimler sunucudaki Notification tablosundan gelir (SLA ihlali vb.).
+   Sayfa dosya olarak açılırsa ya da uç yanıt vermezse unread null kalır ve
+   zil eski davranışla ekibin gecikmiş kayıtlarını sayar. */
+const Notif = {
+  unread: null, items: [],
+  load(){
+    if (location.protocol === 'file:') return Promise.resolve();
+    return fetch('/api/notifications', { credentials:'same-origin' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(d => { if (d) { this.unread = d.unread; this.items = d.items; this.paint(); } })
+      .catch(() => {});
+  },
+  paint(){ if (this.unread != null) $('#bellCount').textContent = this.unread; },
+  markAllRead(){
+    if (!this.unread) return Promise.resolve();
+    return fetch('/api/notifications/read', {
+      method:'POST', credentials:'same-origin',
+      headers:{ 'content-type':'application/json' }, body:'{}'
+    }).then(res => { if (res.ok) { this.unread = 0; this.items.forEach(i => { i.read = true; }); this.paint(); } }).catch(() => {});
+  }
+};
+
+/* Zil penceresi: son bildirimler, okunmamışlar vurgulu. Pencere açılınca
+   hepsi okundu sayılır. Kişi kaydı artık göremiyorsa (başka ekibe
+   yönlendirilmiş) yalnızca kod görünür, tıklanmaz. */
+function openNotifications(){
+  const items = Notif.items;
+  const row = n => {
+    const rec = n.record;
+    const open = rec && rec.canOpen;
+    return '<div class="leader"' + (open ? ' style="cursor:pointer" data-open="'+esc(rec.code)+'"' : '') + '>'
+      + '<div class="avatar">' + (n.read ? '•' : '!') + '</div>'
+      + '<div><b' + (n.read ? ' style="font-weight:500"' : '') + '>' + esc(rec && rec.title ? rec.title : n.text) + '</b>'
+      + '<span>' + esc(n.text) + ' • ' + esc(fmtRel(n.createdAt)) + '</span></div></div>';
+  };
+  openModal('Bildirimler',
+    items.length ? items.map(row).join('') : '<p class="hint">Henüz bildiriminiz yok.</p>',
+    [{ label:'Kapat', cls:'btn-ghost' }]);
+  $$('#modalRoot [data-open]').forEach(el => el.addEventListener('click', closeModal));
+  Notif.markAllRead();
 }
 
 /* =========================================================================
@@ -2534,7 +2580,6 @@ function resetForm(){
   $('#fTitle').value = ''; $('#fDesc').value = '';
   $('#fDept1').value = ''; $('#fDept2').value = ''; $('#fPrio').value = 'normal';
   $$('#typeCards .type-card').forEach(c => c.classList.remove('active'));
-  $('#anonToggle').textContent = 'Anonim: Kapalı'; $('#anonToggle').classList.remove('active');
   $('#fileList').innerHTML = '';
   $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
   $('#mlStatus').innerHTML = 'Başlık ve açıklamayı yazdıktan sonra <b>ML ile Kontrol Et</b>\'e basın. Sistem geçmiş çözümleri tarayıp önerileri gösterir; onayladıktan sonra kaydı iletebilirsiniz.';
@@ -2997,6 +3042,13 @@ function init(){
 
   /* Menü / görünüm butonları (delegasyon) */
   document.addEventListener('click', e => {
+    /* Dar ekran menüsü: satır içi onclick CSP (script-src-attr 'none') ile engelleniyor */
+    if (e.target.closest('[data-menu-toggle]')) { $('#sidebar').classList.toggle('open'); return; }
+    /* Menü açıkken dışarı dokunmak yalnızca menüyü kapatır, alttaki öğeye tıklamaz */
+    if (!e.target.closest('#sidebar') && $('#sidebar').classList.contains('open')) {
+      e.preventDefault(); $('#sidebar').classList.remove('open'); return;
+    }
+
     const v = e.target.closest('[data-view]');
     if (v) { e.preventDefault(); show(v.dataset.view); return; }
 
@@ -3025,13 +3077,6 @@ function init(){
       c.classList.add('active'); form.type = c.dataset.type; invalidateMl();
     };
   });
-
-  /* Anonim */
-  $('#anonToggle').onclick = () => {
-    form.anon = !form.anon;
-    $('#anonToggle').textContent = 'Anonim: ' + (form.anon ? 'Açık' : 'Kapalı');
-    $('#anonToggle').classList.toggle('active', form.anon);
-  };
 
   /* Dosya */
   $('#dropzone').onclick = () => $('#fFiles').click();
@@ -3065,7 +3110,10 @@ function init(){
   });
 
   /* Bildirim zili */
+  Notif.load();
+  setInterval(() => Notif.load(), 60000);
   $('#bellBtn').onclick = () => {
+    if (Notif.unread != null) return openNotifications();
     const me = Store.me();
     const list = teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
     openModal('Gecikmiş Kayıtlar — ' + deptName(me.dept),

@@ -88,7 +88,9 @@
       veil.querySelector('style').outerHTML +
       '<b>Bağlantı kurulamadı</b>' +
       '<span>' + String(message).replace(/[<>&]/g, '') + '</span>' +
-      '<button onclick="location.reload()">Yeniden dene</button>';
+      '<button type="button">Yeniden dene</button>';
+    // Satır içi onclick CSP (script-src-attr 'none') ile engellenir
+    veil.querySelector('button').addEventListener('click', () => location.reload());
   }
 
   const hideVeil = () => veil.remove();
