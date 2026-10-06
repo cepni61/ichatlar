@@ -722,6 +722,8 @@
   .table tbody tr:last-child td{border-bottom:0}
   .table tbody tr{transition:background .14s var(--ease)}
   .table tbody tr:hover{background:var(--panel2)}
+  /* Satırın tamamı kaydı açar (tıklama yönlendiricisi [data-open]) */
+  .table tbody tr.row-link{cursor:pointer}
   .table th{
     color:var(--muted);font-size:10.5px;text-transform:uppercase;
     letter-spacing:var(--ls-wide);font-weight:600;
@@ -873,8 +875,8 @@
   /* Yeni kayıt formunda sıradaki adım */
   .next-step{margin:12px 0 0;font-size:12.5px;color:var(--muted)}
   /* Yeni Kayıt sayfasındayken üstteki "Yeni Kayıt" düğmesi gereksiz */
-  body[data-view="new-ticket"] .topbar [data-view="new-ticket"],
-  body[data-view="new-ticket"] .mobile-top [data-view="new-ticket"]{display:none}
+  body[data-page="new-ticket"] .topbar [data-view="new-ticket"],
+  body[data-page="new-ticket"] .mobile-top [data-view="new-ticket"]{display:none}
   .next-step b{color:var(--text-2);font-weight:700}
   /* Kaydı açanın kararını bekleyen kayıt (çözüldü → kapat / yeniden aç) */
   .await-me{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:13px 15px;border-radius:var(--r-sm);
@@ -2113,7 +2115,10 @@ let CURRENT = 'dashboard', DETAIL_CODE = null, LAST_VIEW = 'dashboard';
 function show(id, param){
   if (id === 'detail') { if (CURRENT !== 'detail') LAST_VIEW = CURRENT; DETAIL_CODE = param || DETAIL_CODE; }
   CURRENT = id;
-  document.body.dataset.view = id;   /* sayfaya özel CSS için (ör. Yeni Kayıt'ta üstteki düğme) */
+  /* Sayfaya özel CSS için (ör. Yeni Kayıt'ta üstteki düğme). Adı bilerek
+     data-view DEĞİL: tıklama yönlendiricisi en yakın [data-view] öğesini arar,
+     body'de olsaydı her tıklama bulunulan sayfayı yeniden açardı. */
+  document.body.dataset.page = id;
   $$('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(id); if (el) el.classList.add('active');
   $$('.nav button').forEach(b => b.classList.toggle('active', b.dataset.view === id));
@@ -2254,7 +2259,7 @@ function renderDashboard(){
 }
 
 function rowRecent(r){
-  return '<tr>'
+  return '<tr class="row-link" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
@@ -2279,7 +2284,7 @@ function renderMy(){
     : r.status === 'ek_bilgi' ? '<span class="pill attn">Sizden ek bilgi bekleniyor</span>'
     : statusPill(r.status);
   $('#myRows').innerHTML = rows.length ? rows.map(r =>
-    '<tr>'
+    '<tr class="row-link" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
@@ -2289,7 +2294,6 @@ function renderMy(){
     + '<td>'+slaPill(r)+'</td>'
     + '</tr>'
   ).join('') : '<tr><td colspan="7" class="empty">Henüz kayıt açmadınız. “Yeni Kayıt” ile başlayabilirsiniz.</td></tr>';
-  $$('#myRows tr').forEach((tr,i) => { if(rows[i]) tr.onclick = () => show('detail', rows[i].code); });
 }
 
 function renderOwned(){
@@ -2299,7 +2303,7 @@ function renderOwned(){
   const active = rows.filter(r => OPEN_STATUSES.includes(r.status)).length;
   $('#ownedCount').textContent = active + ' aktif / ' + rows.length + ' toplam';
   $('#ownedRows').innerHTML = rows.length ? rows.map(r =>
-    '<tr>'
+    '<tr class="row-link" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
