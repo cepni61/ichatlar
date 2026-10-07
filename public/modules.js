@@ -364,24 +364,30 @@
       ]);
   }
 
-  async function loadEditors() {
-    // Yöneticiler kendi ekiplerinde zaten yetkili; listede yalnızca ekip üyeleri.
-    // Liste yeniden çizilse de yapılmış seçim korunur.
+  /* Kişi seçimi: yalnızca ekip üyeleri (yöneticiler kendi ekiplerinde zaten
+     yetkili) ve henüz yetkisi olmayanlar. Liste yeniden çizilse de yapılmış
+     seçim korunur. */
+  function fillGrantUsers(granted) {
     const keep = $('#kbGrantUser').value;
     $('#kbGrantUser').innerHTML = '<option value="">Kişi seçin…</option>'
-      + USERS.filter((u) => u.dept && u.role !== 'Yönetici' && u.role !== 'Sistem Yöneticisi')
+      + USERS.filter((u) => u.dept && u.role !== 'Yönetici' && u.role !== 'Sistem Yöneticisi' && !granted.has(u.id))
         .map((u) => '<option value="' + esc(u.id) + '"' + (u.id === keep ? ' selected' : '') + '>' + esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>').join('');
+  }
+
+  async function loadEditors() {
     $('#kbEditors').innerHTML = LOADING;
     try {
       const out = await api('GET', '/api/kb/editors');
+      fillGrantUsers(new Set(out.items.map((x) => x.user.id)));
       $('#kbEditors').innerHTML = out.items.length
         ? out.items.map((x) =>
             '<div class="leader"><div class="avatar" aria-hidden="true">' + esc(initials(x.user.name)) + '</div>'
             + '<div style="flex:1;min-width:0"><b>' + esc(x.user.name) + '</b><span>' + esc(x.department.name) + ' maddeleri'
             + (x.grantedBy ? ' · veren: ' + esc(x.grantedBy) : '') + ' · ' + esc(fmtRel(x.createdAt)) + '</span></div>'
-            + '<button class="mini-btn" type="button" data-kb-revoke="' + esc(x.id) + '" aria-label="' + esc(x.user.name + ' için yetkiyi kaldır') + '">Kaldır</button></div>').join('')
+            + '<button class="mini-btn" type="button" data-kb-revoke="' + esc(x.id) + '" aria-label="' + esc(x.user.name + ' kişisinden yetkiyi al') + '">Yetkiyi al</button></div>').join('')
         : '<p class="hint" style="margin:0">Ek yetki verilmedi.</p>';
     } catch (err) {
+      fillGrantUsers(new Set());
       $('#kbEditors').innerHTML = '<p class="hint">Yetkiler yüklenemedi: ' + esc(err.message) + '</p>';
     }
   }
@@ -392,6 +398,7 @@
     try {
       await api('POST', '/api/kb/editors', { userId });
       toast('Yetki verildi', 'ok');
+      $('#kbGrantUser').value = '';
       loadEditors();
     } catch (err) { toast(err.message, 'err'); }
   }
@@ -399,7 +406,7 @@
   async function revokeEditor(id) {
     try {
       await api('DELETE', '/api/kb/editors/' + encodeURIComponent(id));
-      toast('Yetki kaldırıldı', 'ok');
+      toast('Yetki alındı', 'ok');
       loadEditors();
     } catch (err) { toast(err.message, 'err'); }
   }
