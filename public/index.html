@@ -822,6 +822,74 @@
     border-top:1px solid var(--chrome-line);margin-top:14px;padding:12px 8px 2px;
     font-size:10.5px;color:var(--chrome-foot);line-height:1.5;
   }
+  /* Uygulama geri bildirimi: telif satırının üstünde küçük bağlantı */
+  .fb-link{
+    display:block;border:0;background:none;padding:0 0 6px;margin:0;cursor:pointer;
+    font:inherit;font-size:11px;font-weight:600;color:var(--chrome-text);text-decoration:underline;
+    text-underline-offset:2px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
+  }
+  .fb-link:hover,.fb-link:focus-visible{color:var(--chrome-text-hi)}
+
+  /* ---------- Yeni modüller: SSS, Arama, Bilgi Bankası ---------- */
+  .faq-item{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-bottom:10px;box-shadow:var(--sh-1)}
+  .faq-item > summary{
+    list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:14px 16px;
+  }
+  .faq-item > summary::-webkit-details-marker{display:none}
+  .faq-item > summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:var(--r)}
+  .faq-item .faq-n{
+    flex-shrink:0;min-width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
+    background:var(--primary2);color:var(--on-soft);font-weight:800;font-size:15px;line-height:1;text-align:center;
+  }
+  .faq-item .faq-n small{display:block;font-size:9px;font-weight:600;letter-spacing:.04em;margin-top:2px}
+  .faq-item .faq-q{flex:1;min-width:0}
+  .faq-item .faq-q b{display:block;font-size:14px}
+  .faq-item .faq-q span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .faq-item .chev{transition:transform .2s var(--ease);color:var(--muted)}
+  .faq-item[open] .chev{transform:rotate(180deg)}
+  .faq-a{padding:0 16px 16px 72px}
+  .faq-a p{margin:0 0 10px;white-space:pre-wrap;line-height:1.6}
+  .faq-a .inline-actions{gap:8px}
+  @media(max-width:640px){ .faq-a{padding:0 14px 14px} }
+  .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--successbg);color:var(--success)}
+  .src-badge.kb{background:var(--primary2);color:var(--on-soft)}
+  .src-badge.plain{background:var(--slatebg);color:var(--slate)}
+  .ext-link{font-weight:600;color:var(--b-700);overflow-wrap:anywhere}
+
+  .search-grid{grid-template-columns:1fr 1fr;align-items:start}
+  @media(max-width:1080px){ .search-grid{grid-template-columns:1fr} }
+  .search-card{padding:20px}
+  .search-card h3{margin:0 0 4px;font-size:17px}
+  .search-card .hint{margin:0 0 12px}
+  .search-box{
+    width:100%;border:1px solid var(--line-2);border-radius:999px;padding:11px 16px;font-size:14px;
+    background:var(--panel);color:var(--text);
+  }
+  .search-box:focus{outline:none;border-color:var(--b-500);box-shadow:0 0 0 3.5px var(--focus-ring)}
+  .res-head{font-size:11px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+  .person,.resource{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);margin-bottom:8px}
+  .person b,.resource b{display:block;font-size:13.5px}
+  .person .meta,.resource .meta{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .person .why{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:600;color:var(--on-soft);background:var(--primary2);padding:2px 8px;border-radius:999px}
+  .person a{font-size:12px;color:var(--b-700)}
+  .resource p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--text-2)}
+
+  .table .owned-grp th{background:var(--panel2);font-size:14px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--text);padding:12px;border-bottom-color:var(--line-2)}
+  .table .owned-grp th .small{font-weight:500}
+  .owned-sub td{padding:8px 12px 6px;font-size:11px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+
+  /* Değerlendirme sonucu seçimi */
+  .outcome-set{border:0;padding:0;margin:0 0 14px;display:grid;gap:8px}
+  .outcome-set legend{padding:0;margin-bottom:8px;font-size:11px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2)}
+  .outcome{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border:1.5px solid var(--line-2);border-radius:var(--r-sm);cursor:pointer;background:var(--panel)}
+  .outcome:has(input:checked){border-color:var(--primary);background:var(--b-50)}
+  .outcome:has(input:focus-visible){outline:2px solid var(--primary);outline-offset:2px}
+  .outcome input{margin-top:3px;accent-color:var(--primary)}
+  .outcome b{display:block;font-size:13.5px}
+  .outcome span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+  .learn-toggle{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:11px 13px;border:1px dashed var(--line-2);border-radius:var(--r-sm);cursor:pointer;font-size:13px}
+  .learn-toggle input{margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0}
+  .learn-toggle span{color:var(--muted);display:block;font-size:12px;margin-top:2px}
 
   /* ---------- Main ---------- */
   /* --main-layer: soft dark temada ustteki koyu bant. Sabit degil,
@@ -1728,9 +1796,19 @@
       <button data-view="all-records">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="5" rx="1.6"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9M10 13.5h4"/></svg>
         <span class="lbl">Tüm Kayıtlar</span></button>
+      <button data-view="faq">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.4-2.6 4M12 17.3h.01"/></svg>
+        <span class="lbl">Sık Sorulanlar</span></button>
+      <button data-view="search">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="lbl">Arama</span></button>
       <button data-view="reports">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 20V9.5M12 20V4M5.5 20v-6.5"/></svg>
         <span class="lbl">Raporlar</span></button>
+      <!-- Bilgi Bankası: yöneticiler ve sistem yöneticisinin yetki verdiği kişiler (modules.js açar) -->
+      <button data-view="kb" data-kb-gate hidden>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M9 7h7M9 11h5"/></svg>
+        <span class="lbl">Bilgi Bankası</span></button>
       <!-- Yönetim yalnızca yönetici ve sistem yöneticisine görünür (api-store.js) -->
       <div class="nav-section" data-role-min="manager">Sistem</div>
       <button data-view="management" data-role-min="manager">
@@ -1748,7 +1826,7 @@
       <div class="switch-lbl">Kullanıcı olarak görüntüle</div>
       <select id="userSwitch"></select>
     </div>
-    <div class="side-foot">© 2026 İç Hatlar<br>Tüm hakları saklıdır.</div>
+    <div class="side-foot"><button type="button" class="fb-link" id="fbOpen">Uygulama için geri bildirim</button><span class="copy">© 2026 İç Hatlar<br>Tüm hakları saklıdır.</span></div>
   </aside>
 
   <!-- ================= MAIN ================= -->
@@ -1937,7 +2015,7 @@
     <section id="team-tickets" class="view">
       <div class="kanban">
         <div class="kcolumn"><h4>Yeni <span id="cnt-new">0</span></h4><div id="col-new"></div></div>
-        <div class="kcolumn"><h4>Üzerime Alındı <span id="cnt-owned">0</span></h4><div id="col-owned"></div></div>
+        <div class="kcolumn"><h4>Üzerine Alındı <span id="cnt-owned">0</span></h4><div id="col-owned"></div></div>
         <div class="kcolumn"><h4>Çalışılıyor <span id="cnt-working">0</span></h4><div id="col-working"></div></div>
         <div class="kcolumn"><h4>Ek Bilgi / Geciken <span id="cnt-risk">0</span></h4><div id="col-risk"></div></div>
       </div>
@@ -2005,8 +2083,79 @@
       </div>
     </section>
 
+    <!-- ---------- SIK SORULANLAR ---------- -->
+    <section id="faq" class="view">
+      <div class="card rep-filter">
+        <label for="faqDept">Ekip</label>
+        <select id="faqDept"><option value="">Tüm ekipler</option></select>
+        <input id="faqQ" class="search-box" type="search" style="flex:1;min-width:200px;width:auto" placeholder="Sorularda ara… (ör. izin, VPN, bordro)" aria-label="Sık sorulanlarda ara" />
+      </div>
+      <div id="faqList" aria-live="polite"></div>
+      <div id="faqReady"></div>
+    </section>
+
+    <!-- ---------- ARAMA ----------
+         İki ayrı arama: kişiler (ML ile konuyla ilgili kişiler) ve kurumsal
+         uygulama / süreç / bilgi (Bilgi Bankası, çözülmüş kayıtlar, Cortex). -->
+    <section id="search" class="view">
+      <div class="grid search-grid">
+        <div class="card search-card">
+          <h3>Kişi ara</h3>
+          <p class="hint">Ad, unvan ya da konu yazın. Konu yazarsanız ML o işi yapan ekibi ve benzer talepleri çözen kişileri öne çıkarır.</p>
+          <input id="peopleQ" class="search-box" type="search" placeholder="ör. bordro, SAP yetkisi, Ayşe" aria-label="Kişi ara" autocomplete="off" />
+          <div id="peopleRes" aria-live="polite"></div>
+        </div>
+        <div class="card search-card">
+          <h3>Uygulama / Süreç / Bilgi ara</h3>
+          <p class="hint">Kurumsal uygulamalar, süreç sayfaları ve daha önce çözülmüş talepler.</p>
+          <input id="resQ" class="search-box" type="search" placeholder="ör. bordro, SAP, izin talebi" aria-label="Uygulama, süreç ya da bilgi ara" autocomplete="off" />
+          <div id="resRes" aria-live="polite"></div>
+          <p class="hint" id="cortexNote" style="margin-top:12px"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- BİLGİ BANKASI ---------- -->
+    <section id="kb" class="view">
+      <div class="card rep-filter">
+        <label for="kbDept">Ekip</label>
+        <select id="kbDept"><option value="">Tüm ekipler</option></select>
+        <label for="kbKind">Tür</label>
+        <select id="kbKind"><option value="">Tüm türler</option></select>
+        <input id="kbQ" class="search-box" type="search" style="flex:1;min-width:180px;width:auto" placeholder="Maddelerde ara…" aria-label="Bilgi Bankası maddelerinde ara" />
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Maddeler <span class="pill blue" id="kbCount" style="margin-left:6px">0 madde</span></h3>
+          <button class="btn btn-primary" type="button" id="kbNew">Yeni madde</button></div>
+        <div class="card-body table-wrap">
+          <table class="table">
+            <thead><tr><th>Madde</th><th>Tür</th><th>Ekip</th><th>Son güncelleme</th><th>Aksiyon</th></tr></thead>
+            <tbody id="kbRows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card" id="kbEditorsCard" style="margin-top:16px" hidden>
+        <div class="card-head"><h3>Düzenleme yetkileri</h3><span class="pill gray">Sistem yöneticisi</span></div>
+        <div class="card-body">
+          <p class="hint" style="margin:0 0 12px">Departman yöneticileri kendi ekiplerinin maddelerini zaten yönetir. Burada başka kişilere belirli bir ekip için yetki verebilirsiniz.</p>
+          <div class="inline-actions" style="margin-bottom:12px">
+            <select id="kbGrantUser" aria-label="Kişi"></select>
+            <select id="kbGrantDept" aria-label="Ekip"></select>
+            <button class="btn btn-soft" type="button" id="kbGrant">Yetki ver</button>
+          </div>
+          <div id="kbEditors"></div>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:14px">Maddeler departman ML modelini, yeni kayıttaki benzer çözüm önerilerini, Sık Sorulanları, Aramayı ve asistanı besler. Değişiklikten sonra model arka planda yeniden eğitilir.</p>
+    </section>
+
     <!-- ---------- YÖNETİM ---------- -->
     <section id="management" class="view">
+      <!-- Uygulama geri bildirimleri: yalnızca sistem yöneticisi (modules.js) -->
+      <div class="card" id="fbAdminCard" style="margin-bottom:16px" hidden>
+        <div class="card-head"><h3>Uygulama Geri Bildirimleri</h3><span class="pill blue" id="fbAdminCount">0</span></div>
+        <div class="card-body" id="fbAdminList"></div>
+      </div>
       <div class="card" style="margin-bottom:16px">
         <div class="card-head"><h3>Ekipler ve Üyeleri</h3><span class="pill blue" id="mgmtDeptCount">0 ekip</span></div>
         <div class="card-body table-wrap">
@@ -2167,9 +2316,18 @@ const STATUSES = [
   { id:'cozuldu',        label:'Çözüldü',             cls:'green'  },
   { id:'kapatildi',      label:'Kapatıldı',           cls:'gray'   },
   { id:'reddedildi',     label:'Reddedildi',          cls:'red'    },
+  { id:'degerlendiriliyor', label:'Değerlendiriliyor', cls:'blue'   },
+  { id:'degerlendirildi',   label:'Değerlendirildi',   cls:'teal'   },
+  { id:'fayda_sagladi',     label:'Fayda Sağladı',     cls:'green'  },
+  { id:'uygun_bulunmadi',   label:'Uygun Bulunmadı',   cls:'gray'   },
 ];
 
-const OPEN_STATUSES = ['yeni','uzerime_alindi','inceleniyor','calisiliyor','ek_bilgi'];
+const OPEN_STATUSES = ['yeni','uzerime_alindi','inceleniyor','calisiliyor','ek_bilgi','degerlendiriliyor'];
+/* Öneri değerlendirmesinin son durumları; "sonuçlanan" = çözülen + kapatılan + bunlar. */
+const ONERI_DONE    = ['degerlendirildi','fayda_sagladi','uygun_bulunmadi'];
+const DONE_STATUSES = ['cozuldu','kapatildi'].concat(ONERI_DONE);
+/* Öneri kabulü: yeni akışta "Fayda Sağladı" (eski kayıtlarda çözülen öneri). */
+const oneriAccepted = r => r.type === 'oneri' && ['fayda_sagladi','cozuldu','kapatildi'].includes(r.status);
 
 /* =========================================================================
    2) YARDIMCILAR
@@ -2545,7 +2703,10 @@ const TITLES = {
   'owned-tickets': ['Üzerimdeki Kayıtlar','Üzerinize aldığınız kayıtları yönetin ve güncelleyin.'],
   'all-records':   ['Tüm Kayıtlar','Görme yetkiniz olan tüm kayıtları arayın ve filtreleyin.'],
   'reports':       ['Raporlar','Kayıt performansı, SLA ve yönlendirme metriklerini görüntüleyin.'],
-  'management':    ['Yönetim','Ekipler, ekip üyeleri ve SLA hedefleri.'],
+  'management':    ['Yönetim','Ekipler, ekip üyeleri, SLA hedefleri ve uygulama geri bildirimleri.'],
+  'faq':           ['Sık Sorulanlar','En sık gelen talepler ve çözümleri — kayıt açmadan önce bakın.'],
+  'search':        ['Arama','Kişileri ve kurumsal uygulama, süreç, bilgi kaynaklarını arayın.'],
+  'kb':            ['Bilgi Bankası','Ekiplerin hazır yanıtları ve uygulama bağlantıları.'],
   'login':         ['Login','Kurumsal giriş ekranı önizlemesi.'],
   'detail':        ['Kayıt Detay','Kayıt geçmişi, yönlendirme ve sahiplenme aksiyonları.'],
 };
@@ -2580,6 +2741,11 @@ function renderView(id){
   if (id === 'detail')        renderDetail();
   if (id === 'reports')       renderReports();
   if (id === 'management')    renderManagement();
+  /* Yeni modüller modules.js içinde (API'ye bağlı) */
+  if (id === 'faq'    && typeof renderFaq === 'function')    renderFaq();
+  if (id === 'search' && typeof renderSearch === 'function') renderSearch();
+  if (id === 'kb'     && typeof renderKb === 'function')     renderKb();
+  if (id === 'management' && typeof renderFeedbackAdmin === 'function') renderFeedbackAdmin();
   renderChrome();
 }
 
@@ -2637,9 +2803,11 @@ function openNotifications(){
   const row = n => {
     const rec = n.record;
     const open = rec && rec.canOpen;
-    const tag = open ? 'button' : 'div';
-    return '<' + tag + ' class="leader' + (open ? ' notif-row' : '') + '"'
-      + (open ? ' type="button" data-open="'+esc(rec.code)+'" aria-label="'+esc(rec.code + ': ' + (rec.title || n.text))+'"' : '') + '>'
+    const view = !rec && n.view;   // ör. geri bildirim → Yönetim
+    const tag = open || view ? 'button' : 'div';
+    return '<' + tag + ' class="leader' + (open || view ? ' notif-row' : '') + '"'
+      + (open ? ' type="button" data-open="'+esc(rec.code)+'" aria-label="'+esc(rec.code + ': ' + (rec.title || n.text))+'"' : '')
+      + (view ? ' type="button" data-view="'+esc(view)+'"' : '') + '>'
       + '<div class="avatar" aria-hidden="true">' + (n.read ? '•' : '!') + '</div>'
       + '<div><b' + (n.read ? ' style="font-weight:500"' : '') + '>' + esc(rec && rec.title ? rec.title : n.text) + '</b>'
       + '<span>' + esc(n.text) + ' • ' + esc(fmtRel(n.createdAt)) + '</span></div></' + tag + '>';
@@ -2647,7 +2815,7 @@ function openNotifications(){
   openModal('Bildirimler',
     items.length ? items.map(row).join('') : '<p class="hint">Henüz bildiriminiz yok.</p>',
     [{ label:'Kapat', cls:'btn-ghost' }]);
-  $$('#modalRoot [data-open]').forEach(el => el.addEventListener('click', closeModal));
+  $$('#modalRoot [data-open], #modalRoot [data-view]').forEach(el => el.addEventListener('click', closeModal));
   Notif.markAllRead();
 }
 
@@ -2658,7 +2826,7 @@ function renderDashboard(){
   const recs = Store.data.records;
   const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
   const late = open.filter(r => slaLevel(r) === 'red');
-  const closed = recs.filter(r => ['cozuldu','kapatildi'].includes(r.status));
+  const closed = recs.filter(r => DONE_STATUSES.includes(r.status));
 
   const resp = recs.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt) - new Date(r.createdAt)) / HOUR);
   const avgResp = resp.length ? resp.reduce((a,b)=>a+b,0)/resp.length : null;
@@ -2671,7 +2839,7 @@ function renderDashboard(){
     /* Çözüldü ile Kapatıldı ayrı söylenir: çözülen kayıt, açan onaylayana dek
        kapanmış sayılmaz (UX denetimi B04). */
     ['c4','check', 'Çözülen / Kapatılan', closed.length,
-      closed.filter(r => r.status === 'cozuldu').length + ' onay bekliyor · ' + closed.filter(r => r.status === 'kapatildi').length + ' kapatıldı', 'up'],
+      closed.filter(r => r.status === 'cozuldu').length + ' onay bekliyor · ' + closed.filter(r => r.status !== 'cozuldu').length + ' sonuçlandı', 'up'],
     ['c5','clock', 'Ort. İlk Dönüş',  fmtDur(avgResp), (avgResp != null && avgResp < 24) ? 'Hedef içinde' : 'İyileştirme alanı', (avgResp != null && avgResp < 24) ? 'up' : 'down'],
   ].map(k =>
     '<div class="card kpi"><div class="ico '+k[0]+'">'+icon(k[1],'ic')+'</div>'
@@ -2693,7 +2861,7 @@ function renderDashboard(){
     const all = recs.filter(r => r.department === d.id);
     const rs = all.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt)-new Date(r.createdAt))/HOUR);
     return { d, avg: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null, sla: slaPctOf(all),
-             oneri: all.filter(r => r.type==='oneri' && r.status==='cozuldu').length };
+             oneri: all.filter(oneriAccepted).length };
   });
   const fastest = perDept.filter(x => x.avg != null).sort((a,b) => a.avg - b.avg)[0];
   const bestSla = perDept.filter(x => x.sla != null).sort((a,b) => b.sla - a.sla)[0];
@@ -2703,7 +2871,7 @@ function renderDashboard(){
   $('#highlights').innerHTML =
     '<p class="hint" style="margin:0 0 8px">Görebildiğiniz kayıtlardaki ekipler arasında.</p>' +
     '<div class="leader"><div class="avatar">SLA</div><div><b>En Yüksek SLA Uyum Oranı</b><span>'+(bestSla ? esc(bestSla.d.name)+' • %'+bestSla.sla : 'Henüz sonuçlanmış kayıt yok')+'</span></div></div>' +
-    '<div class="leader"><div class="avatar">AK</div><div><b>En Çok Aksiyona Dönüşen Öneri</b><span>'+esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri uygulamaya alındı</span></div></div>' +
+    '<div class="leader"><div class="avatar">AK</div><div><b>En Çok Aksiyona Dönüşen Öneri</b><span>'+esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri fayda sağladı</span></div></div>' +
     '<div class="leader"><div class="avatar">HIZ</div><div><b>En Hızlı İlk Geri Dönüş</b><span>'+(fastest ? esc(fastest.d.name)+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
 
   /* Son kayıtlar */
@@ -2750,13 +2918,21 @@ function renderMy(){
   ).join('') : '<tr><td colspan="7" class="empty">Henüz kayıt açmadınız. “Yeni Kayıt” ile başlayabilirsiniz.</td></tr>';
 }
 
+/* Üzerimdekiler: önce tür (Bilgi talepleri / Öneriler), içinde durumlara
+   göre kümeler. Açık durumlar önce, sonuçlananlar sonda. */
+const OWNED_ORDER = ['yeni','uzerime_alindi','inceleniyor','calisiliyor','degerlendiriliyor','ek_bilgi',
+                     'cozuldu','kapatildi','fayda_sagladi','degerlendirildi','uygun_bulunmadi','reddedildi'];
 function renderOwned(){
   const me = Store.me();
   const rows = Store.data.records.filter(r => r.assignee === me.id)
                 .sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   const active = rows.filter(r => OPEN_STATUSES.includes(r.status)).length;
   $('#ownedCount').textContent = active + ' aktif / ' + rows.length + ' toplam';
-  $('#ownedRows').innerHTML = rows.length ? rows.map(r =>
+  if (!rows.length) {
+    $('#ownedRows').innerHTML = '<tr><td colspan="7" class="empty">Üzerinize aldığınız kayıt yok. “Ekibe Gelen Kayıtlar”dan sahiplenebilirsiniz.</td></tr>';
+    return;
+  }
+  const row = r =>
     '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
     + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
@@ -2765,8 +2941,23 @@ function renderOwned(){
     + '<td class="small">'+esc(fmtRel(r.updatedAt))+'</td>'
     + '<td>'+slaPill(r)+'</td>'
     + '<td><button class="mini-btn" data-open="'+esc(r.code)+'">Aç</button></td>'
-    + '</tr>'
-  ).join('') : '<tr><td colspan="7" class="empty">Üzerinize aldığınız kayıt yok. “Ekibe Gelen Kayıtlar”dan sahiplenebilirsiniz.</td></tr>';
+    + '</tr>';
+  const rank = s => { const i = OWNED_ORDER.indexOf(s); return i < 0 ? 99 : i; };
+  let html = '';
+  [['bilgi','Bilgi Talepleri'], ['oneri','Öneriler']].forEach(([type, title]) => {
+    const list = rows.filter(r => r.type === type);
+    if (!list.length) return;
+    const open = list.filter(r => OPEN_STATUSES.includes(r.status)).length;
+    html += '<tr class="owned-grp"><th colspan="7" scope="colgroup">'+typeIcon(type)+' '+esc(title)
+         +  ' <span class="small">· '+open+' aktif / '+list.length+'</span></th></tr>';
+    const statuses = [...new Set(list.map(r => r.status))].sort((a,b) => rank(a) - rank(b));
+    statuses.forEach(st => {
+      const grp = list.filter(r => r.status === st);
+      html += '<tr class="owned-sub"><td colspan="7">'+esc(statusObj(st).label)+' · '+grp.length+'</td></tr>';
+      html += grp.map(row).join('');
+    });
+  });
+  $('#ownedRows').innerHTML = html;
 }
 
 function renderAll(){
@@ -2805,7 +2996,7 @@ function renderAll(){
    ========================================================================= */
 function ticketCard(r){
   return '<div class="ticket" data-open="'+esc(r.code)+'">'
-    + '<div class="tt">'+slaPill(r)+typePill(r.type)+'</div>'
+    + '<div class="tt">'+slaPill(r)+typePill(r.type)+(r.type === 'oneri' && r.status !== 'yeni' ? statusPill(r.status) : '')+'</div>'
     + '<b>'+esc(r.title)+'</b>'
     + '<p>'+esc(r.code)+' • '+esc(deptName(r.department))+' • '+esc(prioObj(r.priority).label)+'</p>'
     + '<div class="ticket-foot"><span class="small">'+(r.assignee ? 'Sahip: '+esc(userName(r.assignee)) : 'Atanmadı')+'</span>'
@@ -2823,7 +3014,7 @@ function renderKanban(){
 
   const cols = {
     'new':     rest.filter(r => !r.assignee),
-    'owned':   rest.filter(r => r.assignee && ['uzerime_alindi','inceleniyor'].includes(r.status)),
+    'owned':   rest.filter(r => r.assignee && ['uzerime_alindi','inceleniyor','degerlendiriliyor'].includes(r.status)),
     'working': rest.filter(r => r.assignee && r.status === 'calisiliyor'),
     'risk':    risk,
   };
@@ -2868,6 +3059,7 @@ function renderDetail(){
   if (p.forward) acts.push('<button class="btn btn-ghost" data-act="forward">Kaydı Yönlendir</button>');
   if (p.status)  acts.push('<button class="btn btn-soft" data-act="status">Durum Güncelle</button>');
   if (p.resolve) acts.push('<button class="btn btn-success" data-act="resolve">'+(isOneri ? 'Sonuçlandır' : 'Çözüldü')+'</button>');
+  if (p.evaluate) acts.push('<button class="btn btn-success" data-act="evaluate">Değerlendirmeyi Bitir</button>');
   if (p.reject)  acts.push('<button class="btn btn-danger" data-act="reject">Reddet</button>');
   if (p.close)   acts.push('<button class="btn btn-primary" data-act="close">'+(isOneri ? 'Sonucu Onayla ve Kapat' : 'Çözümü Onayla ve Kapat')+'</button>');
   if (p.reopen)  acts.push('<button class="btn btn-ghost" data-act="reopen">'+(isOneri ? 'Yeniden Değerlendirilsin' : 'Çözüm İşe Yaramadı')+'</button>');
@@ -2880,6 +3072,11 @@ function renderDetail(){
       : '<div class="await-me">'+icon('check')+'<div><b>Bu kayıt çözüldü ve sizin kararınızı bekliyor.</b><br>'
         + 'Çözüm işinizi gördüyse kaydı kapatın; görmediyse “Çözüm İşe Yaramadı” ile nedenini yazıp ekibe geri gönderin.</div></div>')
     : '';
+  /* Öneri sahibine akışın neresinde olduğu */
+  const oneriInfo = isOneri && isCreator && r.status === 'degerlendiriliyor'
+    ? '<div class="await-me">'+icon('clock')+'<div><b>Öneriniz değerlendiriliyor.</b><br>'
+      + esc(r.assignee ? userName(r.assignee) : deptName(r.department)) + ' önerinizi inceliyor; sonuç size bildirilecek.</div></div>'
+    : '';
   const ekBilgi = r.status === 'ek_bilgi' && isCreator
     ? '<div class="await-me">'+icon('info')+'<div><b>Ekip sizden ek bilgi bekliyor.</b><br>'
       + 'Aşağıdaki “Güncelleme Ekle” alanından yanıt yazın; kaydın sahibine bildirim gider.</div></div>'
@@ -2890,7 +3087,8 @@ function renderDetail(){
   const age = Date.now() - new Date(r.createdAt);
   const pct = Math.min(100, Math.round(age / limit * 100));
   const remain = limit - age;
-  const slaText = !isOpen ? (r.status === 'cozuldu' ? (isOneri ? 'Öneri sonuçlandı — süre takibi durdu.' : 'Kayıt çözüldü — SLA takibi durdu.') : r.status === 'reddedildi' ? 'Kayıt reddedildi — SLA takibi durdu.' : 'Kayıt kapandı — SLA takibi durdu.')
+  const slaText = !isOpen ? (ONERI_DONE.includes(r.status) ? 'Öneri değerlendirildi (' + statusObj(r.status).label + ') — süre takibi durdu.'
+    : r.status === 'cozuldu' ? (isOneri ? 'Öneri sonuçlandı — süre takibi durdu.' : 'Kayıt çözüldü — SLA takibi durdu.') : r.status === 'reddedildi' ? 'Kayıt reddedildi — SLA takibi durdu.' : 'Kayıt kapandı — SLA takibi durdu.')
     : remain > 0 ? 'Süre aşımına ' + fmtDur(remain/HOUR) + ' kaldı.'
     : 'Süre ' + fmtDur(-remain/HOUR) + ' aşıldı.';
 
@@ -2911,6 +3109,7 @@ function renderDetail(){
       + '<button class="btn btn-ghost btn-back" data-act="back">'+icon('back')+' Geri</button>'
       + '<div style="min-width:0">'
         + '<div class="inline-actions" style="margin-bottom:8px">'+(isOpen ? slaPill(r) : '')+typePill(r.type)+statusPill(r.status)
+          + (r.renewed ? '<span class="pill teal" title="Çözüm ML hafızasında">'+icon('spark')+' Yenilenen kayıt</span>' : '')
           + (isOneri ? '' : '<span class="pill gray">'+esc(prioObj(r.priority).label)+'</span>')+'</div>'
         + '<h3 style="margin:0 0 6px">'+esc(r.title)+'</h3>'
         + '<p class="hint">'+esc(r.code)+' • Kaydı açan: '+esc(openerName)+' • Ekip: '+esc(deptName(r.department))
@@ -2926,7 +3125,11 @@ function renderDetail(){
             + '<div class="file-links">' + ownFiles.map(fileLink).join('') + '</div></div>'
           : '')
       + (r.resolution ? '<div class="comment" style="margin-top:16px"><b>'+icon('check')+(isOneri ? ' Değerlendirme sonucu:' : ' Çözüm:')+'</b> '+esc(r.resolution)+'</div>' : '')
-      + awaitMe + ekBilgi
+      + (p.learn
+          ? '<label class="learn-toggle"><input type="checkbox" data-learn'+(r.renewed ? ' checked' : '')+' />'
+            + '<div><b>Yenilenen kayıt</b><span>Bu çözüm ML hafızasına eklensin: benzer taleplerde onaylı çözüm olarak önerilir, ekip tahmini bu kayıttan daha güçlü öğrenir.</span></div></label>'
+          : '')
+      + awaitMe + oneriInfo + ekBilgi
       + (acts.length ? '<div class="inline-actions" style="margin-top:18px">'+acts.join('')+'</div>' : '')
     + '</div>'
 
@@ -3303,7 +3506,11 @@ function runMl(){
         '<div class="ml-match">'
         + '<div class="mh"><b>'+typeIcon(m.record.type)+' '+esc(m.record.title)+'</b>'
         + '<span class="pill '+(m.percent>=35?'green':m.percent>=20?'blue':'yellow')+'">%'+m.percent+'</span></div>'
-        + '<div class="ml-sol"><b>Önerilen çözüm:</b> '+esc(m.record.resolution)+'</div>'
+        + (m.record.source === 'kb' ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span> '
+            : m.record.verified ? '<span class="src-badge">'+icon('check')+' Onaylı çözüm</span> ' : '')
+        + '<div class="ml-sol"><b>Önerilen çözüm:</b> '+esc(m.record.resolution)
+        + (m.record.url ? ' <a class="ext-link" href="'+esc(m.record.url)+'" target="_blank" rel="noopener noreferrer">Bağlantıya git</a>' : '')
+        + '</div>'
         + '<div class="ml-meta"><span>'+esc(m.record.code)+'</span><span>'+esc(deptName(m.record.department))+'</span>'
         + '<span>'+esc(fmtRel(m.record.resolvedAt || m.record.updatedAt))+'</span>'
         + m.keywords.map(k => '<span class="kw">'+esc(k)+'</span>').join('')
@@ -3428,7 +3635,8 @@ function reportModelLocal(dept){
   const late = repVisibleLate(dept);
   const anon = recs.filter(r => r.anonymous).length;
   const oneri = recs.filter(r => r.type === 'oneri');
-  const oneriOk = oneri.filter(r => r.status === 'cozuldu').length;
+  const oneriOk = oneri.filter(oneriAccepted).length;
+  const oneriDone = oneri.filter(r => !OPEN_STATUSES.includes(r.status)).length;
 
   /* İkincil ekip de sayılır — özet ucu da öyle sayıyor. İki görünüm
      arasında gidip gelirken sayılar zıplamasın. */
@@ -3452,7 +3660,7 @@ function reportModelLocal(dept){
     total: recs.length, open: open.length, late: late.length,
     anonPct:  recs.length ? repPct(anon, recs.length) : null,
     slaPct:   slaPctOf(recs),
-    oneriPct: oneri.length ? repPct(oneriOk, oneri.length) : null,
+    oneriPct: oneriDone ? repPct(oneriOk, oneriDone) : null,
     avgResp: null, avgSolve: null,
     depts,
     types:    TYPES.map(t => ({ label:t.label, n:recs.filter(r => r.type === t.id).length })),
@@ -3798,8 +4006,20 @@ function init(){
       if (act === 'close')   return actClose(r);
       if (act === 'reopen' && typeof actReopen === 'function') return actReopen(r);
       if (act === 'comment') return actComment(r);
+      if (act === 'evaluate' && typeof actEvaluate === 'function') return actEvaluate(r);
     }
   });
+
+  /* "Yenilenen kayıt" kutucuğu (detay) */
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (!t.matches || !t.matches('input[data-learn]')) return;
+    const r = Store.find(DETAIL_CODE);
+    if (r && typeof actLearn === 'function') actLearn(r, t.checked);
+  });
+
+  /* Uygulama geri bildirimi (kenar çubuğu) */
+  $('#fbOpen').addEventListener('click', () => { if (typeof openFeedback === 'function') openFeedback(); });
 
   /* Tür kartları: gerçek radio — fare, Tab ve ok tuşlarıyla seçilir */
   $$('#typeCards input[name="fType"]').forEach(inp => {
@@ -3868,10 +4088,10 @@ function randomKpi(){
   const recs = Store.data.records;
   const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
   const late = open.filter(r => slaLevel(r) === 'red');
-  const closed = recs.filter(r => ['cozuldu','kapatildi'].includes(r.status));
+  const closed = recs.filter(r => DONE_STATUSES.includes(r.status));
   const anon = recs.filter(r => r.anonymous).length;
   const oneri = recs.filter(r => r.type === 'oneri');
-  const oneriOk = oneri.filter(r => r.status === 'cozuldu').length;
+  const oneriOk = oneri.filter(oneriAccepted).length;
   const slaUyum = slaPctOf(recs);
 
   const resp = recs.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt) - new Date(r.createdAt)) / HOUR);
@@ -4477,7 +4697,8 @@ const Chat = {
 
   slaText(r){
     const isOpen = OPEN_STATUSES.includes(r.status);
-    if (!isOpen) return r.status === 'cozuldu' ? 'Çözüldü — süre takibi durdu.'
+    if (!isOpen) return ONERI_DONE.includes(r.status) ? 'Değerlendirildi (' + esc(statusObj(r.status).label) + ') — süre takibi durdu.'
+      : r.status === 'cozuldu' ? 'Çözüldü — süre takibi durdu.'
       : r.status === 'reddedildi' ? 'Reddedildi — süre takibi durdu.' : 'Kapandı — süre takibi durdu.';
     const remain = prioObj(r.priority).sla * HOUR - (Date.now() - new Date(r.createdAt));
     return remain > 0 ? 'Süre aşımına <b>' + fmtDur(remain / HOUR) + '</b> kaldı.'
@@ -4640,6 +4861,7 @@ document.addEventListener('DOMContentLoaded', init);
 <!-- Veri katmanı köprüsü: localStorage yerine API. Prototipin yukarıdaki
      kodunda hiçbir değişiklik yok; Store ve aksiyonlar burada devralınır. -->
 <script src="/api-store.js"></script>
+<script src="/modules.js"></script>
 <script src="/theme.js"></script>
 </body>
 </html>

@@ -56,7 +56,8 @@ export default async function faqRoutes(app: FastifyInstance) {
         },
       }),
       prisma.kbArticle.findMany({
-        where: { active: true, kind: 'BILGI', ...(dept ? { departmentId: dept } : {}) },
+        // Her tür: süreç / uygulama maddesi bağlantısıyla en iyi SSS yanıtıdır.
+        where: { active: true, ...(dept ? { departmentId: dept } : {}) },
         select: {
           seq: true, title: true, keywords: true, answer: true, url: true,
           departmentId: true, department: { select: { name: true } },

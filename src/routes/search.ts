@@ -54,13 +54,21 @@ export default async function searchRoutes(app: FastifyInstance) {
     const fq = fold(q);
     const qTokens = new Set(tokenize(q));
 
-    // ML 1: sorgu hangi ekibin işi?
+    // ML 1: sorgu hangi ekibin işi? Tek kelimelik sorgu model için "düşük
+    // güvenli" sayılır; olasılık yine de belirginse (≥ %50) kullanılır.
     const sug = suggestDepartment(q, '');
     const prob = new Map<string, number>();
-    if (sug && !sug.lowConfidence) for (const c of sug.candidates) prob.set(c.departmentId, c.probability);
+    if (sug) {
+      for (const c of sug.candidates) {
+        if (!sug.lowConfidence || c.probability >= 0.5) prob.set(c.departmentId, c.probability);
+      }
+    }
 
-    // ML 2: benzer kayıtları kim çözdü?
-    const similar = (await findSimilar({ title: q, description: '' }, 10)).filter((m) => m.source === 'kayit');
+    // ML 2: benzer kayıtları kim çözdü? Bilgi Bankası eşleşmesi de konunun
+    // hangi ekibe ait olduğunu söyler.
+    const matches = await findSimilar({ title: q, description: '' }, 10);
+    const kbDept = new Set(matches.filter((m) => m.source === 'kb').map((m) => m.departmentId));
+    const similar = matches.filter((m) => m.source === 'kayit');
     const solvers = new Map<string, number>();
     if (similar.length) {
       const recs = await prisma.record.findMany({
@@ -85,6 +93,7 @@ export default async function searchRoutes(app: FastifyInstance) {
 
       const pr = prob.get(u.department!.id) ?? 0;
       if (pr >= 0.2) { score += 3 * pr; if (!deptHits) why.push(`Konu ${u.department!.name} ekibinin işi (%${Math.round(pr * 100)})`); }
+      else if (kbDept.has(u.department!.id)) { score += 1.2; if (!deptHits) why.push(`Bilgi Bankası: ${u.department!.name} konusu`); }
 
       const solved = solvers.get(u.id) ?? 0;
       if (solved) { score += 1.5 * solved; why.push(`Benzer ${solved} kaydı çözdü`); }
@@ -151,8 +160,16 @@ export default async function searchRoutes(app: FastifyInstance) {
       findSimilar({ title: q, description: '' }, 3),
       cortexSearch(q, req.log),
     ]);
+    // Aynı soru farklı kişilerden gelmiş olabilir: başlık + çözüm aynıysa tek sonuç.
+    const seen = new Set(kbHits.map((k) => fold(k.title)));
     const recordHits = similar
       .filter((m) => m.source === 'kayit')
+      .filter((m) => {
+        const key = fold(m.title) + '|' + fold(m.resolution);
+        if (seen.has(key) || seen.has(fold(m.title))) return false;
+        seen.add(key);
+        return true;
+      })
       .map((m) => ({
         source: 'kayit' as const,
         kind: 'KAYIT',

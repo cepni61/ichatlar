@@ -77,6 +77,14 @@ yalnızca yerel geliştirmede kullanılan gömülü PostgreSQL'i (~100 MB) de si
 | `ENTRA_USE_GROUPS` | `true` → departman Entra grubundan atanır; `false` → yönetici elle atar |
 | `ENTRA_ADMIN_GROUP_ID` | Bu gruptakiler sistem yöneticisi olur |
 | `ACCESS_CODE` | **Boş** — yalnızca internete açık geçici test yayını içindir |
+| `CORTEX_URL`, `CORTEX_TOKEN` | Kurumsal arama kaynağı (Cortex). Boşsa Arama yalnızca Bilgi Bankası ve çözülmüş kayıtlarla çalışır; sözleşme `src/lib/cortex.ts` |
+
+**Bilgi Bankası ve geri bildirim.** Bilgi Bankası'nı departman yöneticileri
+(kendi ekipleri için) ve sistem yöneticisinin yetki verdiği kişiler yönetir;
+yetki uygulamadan, Bilgi Bankası ekranındaki "Düzenleme yetkileri" kartından
+verilir. Kenar çubuğundaki "Uygulama için geri bildirim" metinleri `Feedback`
+tablosuna yazılır ve yalnızca sistem yöneticileri Yönetim ekranında görür —
+serbest metin olduğu için kişisel veri içerebilir, KVKK envanterine ekleyin.
 
 `NODE_ENV=production` iken geliştirme girişi (`DEV_AUTH_BYPASS`) kod tarafından
 kapatılır; Entra ayarları eksikse sunucu hiç başlamaz.

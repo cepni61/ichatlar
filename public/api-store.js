@@ -70,6 +70,8 @@
     dropAttachment: (id) => req('DELETE', '/api/attachments/' + encodeURIComponent(id)),
     act: (code, action, payload) =>
       req('POST', '/api/records/' + encodeURIComponent(code) + '/' + action, payload || {}),
+    /** Yeni modüller (modules.js) için genel istek. */
+    req,
   };
 
   /* ------------------------------------------------------ açılış katmanı */
@@ -433,7 +435,9 @@
   };
 
   window.actStatus = function (r) {
-    const opts = STATUSES.filter((s) => ['inceleniyor', 'calisiliyor', 'ek_bilgi'].includes(s.id));
+    // Öneri kendi akışında: Değerlendiriliyor ya da Ek Bilgi.
+    const ids = r.type === 'oneri' ? ['degerlendiriliyor', 'ek_bilgi'] : ['inceleniyor', 'calisiliyor', 'ek_bilgi'];
+    const opts = STATUSES.filter((s) => ids.includes(s.id));
     openModal(
       'Durum Güncelle',
       '<div class="field"><label for="stSel">Yeni durum</label><select id="stSel">' +
@@ -469,7 +473,11 @@
         : '<div class="field"><label for="resTxt">Çözüm açıklaması</label>' +
           '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
           '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>') +
-        window.attachPicker('resolve'),
+        window.attachPicker('resolve') +
+        (oneri ? '' :
+          '<label class="learn-toggle"><input type="checkbox" id="resLearn" />' +
+          '<div><b>Yenilenen kayıt olarak işaretle</b><span>Çözüm ML hafızasına eklenir: benzer taleplerde onaylı çözüm olarak önerilir, ' +
+          'ekip tahmini bu kayıttan daha güçlü öğrenir.</span></div></label>'),
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
@@ -478,13 +486,59 @@
           run() {
             const t = ($('#resTxt').value || '').trim();
             if (t.length < 10) return toast((oneri ? 'Değerlendirme sonucu' : 'Çözüm açıklaması') + ' en az 10 karakter olmalı', 'err');
-            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve') },
+            const learnBox = $('#resLearn');
+            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve'), learn: !!(learnBox && learnBox.checked) },
               oneri ? 'Öneri sonuçlandırıldı' : 'Kayıt çözüldü olarak işaretlendi')
               .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
       ],
     );
+  };
+
+  /*
+   * Öneri değerlendirmesi: değerlendiren sonucu seçer. Üçü de son durumdur;
+   * öneri sahibine bildirim gider.
+   */
+  window.actEvaluate = function (r) {
+    const opt = (id, title, desc, checked) =>
+      '<label class="outcome"><input type="radio" name="evOutcome" value="' + id + '"' + (checked ? ' checked' : '') + ' />' +
+      '<div><b>' + title + '</b><span>' + desc + '</span></div></label>';
+    openModal(
+      'Değerlendirmeyi Bitir',
+      '<fieldset class="outcome-set"><legend>Sonuç</legend>' +
+        opt('fayda_sagladi', 'Fayda Sağladı', 'Öneri uygulamaya alındı ya da alınacak; beklenen fayda görüldü.', false) +
+        opt('degerlendirildi', 'Değerlendirildi', 'Öneri incelendi; şimdilik uygulamaya alınmıyor ama kayıt altında.', true) +
+        opt('uygun_bulunmadi', 'Uygun Bulunmadı', 'Öneri bu hâliyle uygulanabilir değil; gerekçeyi yazın.', false) +
+      '</fieldset>' +
+      '<div class="field"><label for="evNote">Değerlendirme notu</label>' +
+        '<textarea id="evNote" placeholder="Karar, gerekçesi ve varsa sonraki adımlar. Bu not öneri sahibine görünür; teşekkür etmeyi unutmayın."></textarea></div>' +
+      window.attachPicker('resolve'),
+      [
+        { label: 'İptal', cls: 'btn-ghost' },
+        {
+          label: 'Değerlendirmeyi Bitir',
+          cls: 'btn-success',
+          run() {
+            const sel = document.querySelector('input[name="evOutcome"]:checked');
+            const t = ($('#evNote').value || '').trim();
+            if (!sel) return toast('Bir sonuç seçin', 'err');
+            if (t.length < 10) return toast('Değerlendirme notunu en az 10 karakter yazın', 'err');
+            const label = sel.closest('.outcome').querySelector('b').textContent;
+            run(r.code, 'evaluate', { outcome: sel.value, note: t, attachmentIds: takeDrafts('resolve') },
+              'Değerlendirme tamamlandı: ' + label)
+              .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
+          },
+        },
+      ],
+    );
+  };
+
+  /** Detaydaki "Yenilenen kayıt" kutucuğu. */
+  window.actLearn = function (r, on) {
+    run(r.code, 'learn', { on: !!on },
+      on ? 'Yenilenen kayıt: çözüm ML hafızasına eklendi' : 'Yenilenen kayıt işareti kaldırıldı')
+      .catch(() => { if (typeof renderDetail === 'function') renderDetail(); });
   };
 
   window.actReject = function (r) {
@@ -610,6 +664,9 @@
             resolution: m.resolution,
             resolvedAt: m.resolvedAt || null,
             department: m.departmentId,
+            verified: !!m.verified,
+            source: m.source || 'kayit',
+            url: m.url || null,
           },
           percent: m.percent,
           keywords: m.terms,
@@ -787,6 +844,8 @@
       const isManager = boot.me.role === 'MANAGER' || boot.me.role === 'ADMIN';
       document.querySelectorAll('[data-role-min="manager"]').forEach((el) => { el.hidden = !isManager; });
       document.body.dataset.role = boot.me.role;
+      window.IH_KB = boot.kb || { view: false, admin: false, edit: [] };
+      document.querySelectorAll('[data-kb-gate]').forEach((el) => { el.hidden = !window.IH_KB.view; });
 
       Store.data.currentUserId = boot.me.id;
 
