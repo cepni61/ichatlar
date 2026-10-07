@@ -27,6 +27,7 @@
     { id: 'dark',     label: 'Koyu',      bg: '#151c2e', accent: '#3b82f6' },
     { id: 'softdark', label: 'Yumuşak koyu', bg: '#1c2434', accent: '#eef1f6' },
     { id: 'zumrut',   label: 'Zümrüt',    bg: '#04372c', accent: '#10b981' },
+    { id: 'santral',  label: 'Santral',   bg: '#2a2019', accent: '#e9ac45' },
   ];
   var IDS = THEMES.map(function (t) { return t.id; });
 

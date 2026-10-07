@@ -6,14 +6,14 @@
 <title>İç Hatlar — Bilgi ve Öneri Sistemi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&family=Fraunces:SOFT,WONK,opsz,wght@0,0,9..144,500;0,0,9..144,600;0,0,9..144,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&family=Fraunces:SOFT,WONK,opsz,wght@0,0,9..144,500;0,0,9..144,600;0,0,9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <!-- Temayi ilk boyamadan ONCE uygula: aksi halde aydinlik tema bir kare
      gorunur ve koyu temaya gecerken goz alan bir sicrama olur. -->
 <script>
   (function () {
     try {
       var t = localStorage.getItem('ih_theme');
-      if (t === 'dark' || t === 'softdark' || t === 'zumrut') document.documentElement.dataset.theme = t;
+      if (t === 'dark' || t === 'softdark' || t === 'zumrut' || t === 'santral') document.documentElement.dataset.theme = t;
     } catch (e) { /* localStorage kapali olabilir; aydinlik temada kal */ }
   })();
 </script>
@@ -212,14 +212,17 @@
     --em-600:#059669; --em-500:#10b981; --em-400:#34d399; --em-300:#6ee7b7;
     --em-200:#a7f3d0; --em-100:#d1fae5; --em-50:#ecfdf5;
 
-    --bg:#ffffff;
-    --panel:#ffffff;
-    --panel2:#f1f7f4;
-    --panel3:#e8f3ee;
+    /* İç yüzeyler bembeyaz değil, çok açık krem (kullanıcı isteği): göz
+       yormuyor, zümrüt gradyanla sıcak bir geçiş kuruyor. Soluk metin her
+       krem tonda ≥4.5:1 (panel 5.4, panel2 5.0, panel3 4.9). */
+    --bg:#f6f2e6;
+    --panel:#fdfaf2;
+    --panel2:#f6f0e2;
+    --panel3:#f2ecde;
 
     --text:#0d2620;
     --text-2:#3f5b53;
-    --muted:#57706a;            /* ≥4.5:1 (eski #6f8880 = 3.8:1) */
+    --muted:#536b65;
     --line:rgba(6,95,70,.11);
     --line-2:rgba(6,95,70,.20);
 
@@ -246,14 +249,14 @@
     --danger:#b91c1c;  --dangerbg:#fbeaea;
     --violet:#6d28d9;  --violetbg:#efe9fb;
     --slate:#475569;   --slatebg:#eef2f1;
-    --teal:#0d9488;    --tealbg:#ddf3f0;
+    --teal:#0f766e;    --tealbg:#ddf3f0;   /* rozet metni 4.7:1 (eski #0d9488 = 3.2:1) */
 
     /* Referansin yumusak yaricap skalasi */
     --r-sm:12px; --r:18px; --r-lg:26px;
 
-    /* Iki katmanli, zumrut tonlu golgeler */
-    --sh-1:0 1px 2px rgba(4,55,44,.05), 0 1px 1px rgba(4,55,44,.03);
-    --sh-2:0 10px 30px rgba(4,55,44,.08), 0 2px 6px rgba(4,55,44,.05);
+    /* Iki katmanli golgeler: zumrut tonu + krem yuzeyi oturtan sicak golge */
+    --sh-1:0 1px 2px rgba(4,55,44,.06), 0 1px 1px rgba(70,52,14,.04);
+    --sh-2:0 12px 32px rgba(4,55,44,.10), 0 2px 6px rgba(70,52,14,.07);
     --sh-3:0 24px 60px rgba(4,55,44,.14), 0 6px 16px rgba(4,55,44,.07);
 
     /* Referansin tipografisi: display icin Fraunces (serif) */
@@ -263,8 +266,8 @@
     /* — Sayfa katmanlari: capraz zumrut→beyaz + iki isik huzmesi — */
     --page-layer:linear-gradient(157deg,
       #032b21 0%, #04372c 9%, #065f46 19%, #08725a 28%, #0e8f70 37%,
-      #1fac89 46%, #4ec6a6 55%, #83dcc3 64%, #b2ebdb 73%, #d5f4ea 81%,
-      #eafaf5 89%, #f7fdfb 95%, #ffffff 100%);
+      #1fac89 46%, #4ec6a6 55%, #83dcc3 64%, #b2ebdb 73%, #d3f1e3 81%,
+      #e6f3e6 89%, #f1f0e3 95%, #f6f2e6 100%);   /* dip beyaz değil, krem */
     --page-glow:
       radial-gradient(760px 420px at 12% 4%,  rgba(255,255,255,.16), transparent 62%),
       radial-gradient(620px 380px at 92% 30%, rgba(255,255,255,.12), transparent 60%);
@@ -314,6 +317,9 @@
   html[data-theme="zumrut"] h4{font-family:var(--f-display)}
   html[data-theme="zumrut"] .page-title h2{text-shadow:0 1px 20px rgba(3,33,26,.28)}
   html[data-theme="zumrut"] .kpi{overflow:hidden}
+  /* Krem kartın üst kenarında ince ışık: düz beyaz levha yerine hafif kabarık yüzey */
+  html[data-theme="zumrut"] .card,
+  html[data-theme="zumrut"] .modal{box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.7)}
   html[data-theme="zumrut"] .kpi::after{
     content:'';position:absolute;left:0;right:0;top:0;height:2px;
     background:var(--grad);opacity:.9;
@@ -397,6 +403,206 @@
     border-color:rgba(255,255,255,.18);box-shadow:none;
   }
   html[data-theme="softdark"] .topbar .btn-ghost:hover{background:rgba(255,255,255,.18)}
+
+  /* ---------- Santral tema ----------
+     Adın kendisinden: "iç hatlar" eski manuel telefon santralinin hatları.
+     Kenar çubuğu bakalit kasa (kahveye çalan sıcak siyah), içerik alanı
+     kemik / porselen tonu (zümrütteki sarı kremden daha gri, ama bembeyaz
+     değil), birincil düğmeler de bakalit. Pirinç yalnızca küçük ayrıntıda:
+     menü bölüm etiketleri (kasadaki pirinç plaka), odak halkası, profil
+     rozeti ve süre ölçüleri.
+
+     Renk yalnızca ANLAM taşır: arayüzün geri kalanı nötr, renk görünen yer
+     durum ve SLA. İmza öğe "sinyal lambası": SLA rozetindeki nokta yanan bir
+     santral lambası gibi çizilir (yeşil zamanında, kehribar yaklaşıyor,
+     kırmızı aşıldı) ve kenar çubuğunda bulunduğunuz hattın lambası yanar.
+     Petrol mavisi "bağlı hat" demek (Bilgi türü, Üzerime Alındı,
+     İnceleniyor); pirinç-zeytin Öneri türü; mor Çalışılıyor; gri sönük lamba
+     (Yeni, Kapatıldı).
+
+     Açık yüzeyli bir tema olduğu için --b-* skalası ÇEVRİLMEZ: --b-700 metin,
+     --b-50 zemin olarak aydınlık temadaki yönüyle kullanılır (bakalit → kemik).
+
+     Yazı: IBM Plex Sans gövde, IBM Plex Sans Condensed başlık ve sayı —
+     santral etiket şeridinin dar, mühendislik yazısı. Türkçe karakter
+     desteği tam. <link> değişikliği theme-entry.txt içinde; font dosyaları
+     yalnızca bu tema seçiliyken indirilir. */
+  html[data-theme="santral"]{
+    color-scheme:light;
+
+    /* — Malzeme — */
+    --bakalit:#2a2019;
+    --pirinc:#c7a35e;                       /* koyu kasada pirinç (metin) */
+    --pirinc-koyu:#8a6a2c;                  /* açık zeminde pirinç (grafik) */
+
+    /* — Yüzeyler: kemik / porselen — */
+    --bg:#ebe7e0;
+    --panel:#faf8f4;
+    --panel2:#f3f0ea;
+    --panel3:#e4dfd6;                       /* kanban: gömülü jak alanı */
+
+    --text:#211a15;
+    --text-2:#4a4038;
+    --muted:#62584f;                        /* en koyu yüzeyde (panel3) 5.2:1 */
+    --line:rgba(42,32,25,.11);
+    --line-2:rgba(42,32,25,.20);
+
+    --brand-navy:#211a15;
+
+    /* KPI ikon daireleri anlam taşır: açık kayıt bakalit, sahiplenilmiş
+       petrol (bağlı hat), SLA'sı yaklaşan kehribar, çözülen yeşil, süre
+       ölçüsü pirinç. */
+    --brand-blue:var(--bakalit);
+    --brand-teal:#2c6272;
+    --brand-orange:#a8650a;
+    --brand-green:#2b7240;
+    --brand-purple:var(--pirinc-koyu);
+
+    /* Bakalit → kemik skalası; yönü aydınlık temayla aynı */
+    --b-900:#1e1712; --b-800:#2a2019; --b-700:#4e3f33; --b-600:#6c5847;
+    --b-500:#927c69; --b-400:#b4a392; --b-300:#d0c4b6; --b-200:#e2d9cd;
+    --b-100:#ece5db; --b-50:#f4f0e9;
+
+    --primary:var(--bakalit);
+    --primary-hover:#15100c;
+    --primary2:#e0eaec;                     /* petrol: "bağlı hat" */
+    --on-soft:#235260;
+    --grad:linear-gradient(135deg,#3a2d24 0%,#1e1712 100%);
+    --focus-ring:rgba(176,132,56,.30);      /* pirinç odak halkası */
+    --glow:rgba(30,23,18,.24);
+    --hair:rgba(42,32,25,.10);
+
+    /* Durum renkleri. Metin tonu koyu tutuldu (rozet üzerinde ≥4.5:1);
+       lambanın parlak rengi aşağıda --lamp ile ayrıca verilir. */
+    --success:#24683a; --successbg:#e2eee1;
+    --warn:#954a00;    --warnbg:#fbe6cb;
+    --danger:#a52a1f;  --dangerbg:#f6e1dc;
+    --violet:#5c3d8c;  --violetbg:#ebe5f0;
+    --slate:#5a524b;   --slatebg:#e8e4de;
+    --teal:#13665f;    --tealbg:#dcebe7;
+    /* Öneri: kehribar sinyalle karışmasın diye pirinç-zeytin */
+    --idea:#5c5216;    --ideabg:#ebe6cf;
+
+    /* Makine işi, biraz daha sıkı yarıçap */
+    --r-sm:9px; --r:13px; --r-lg:18px;
+
+    /* Sıcak, kahve tonlu yumuşak gölgeler */
+    --sh-1:0 1px 2px rgba(40,28,18,.06);
+    --sh-2:0 1px 2px rgba(40,28,18,.05), 0 8px 22px rgba(40,28,18,.07);
+    --sh-3:0 24px 56px rgba(30,20,12,.20), 0 6px 16px rgba(30,20,12,.09);
+
+    --f-sans:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --f-display:'IBM Plex Sans Condensed','IBM Plex Sans','Arial Narrow',sans-serif;
+    --f-num:var(--f-display);
+    /* Plex, Inter'den geniş: -.008em ile "Ekibime Gelenler" 220px kenar
+       çubuğunda (yatay tablet) kalın hâlde de sığıyor. */
+    --ls-tight:-.012em; --ls-snug:-.008em; --ls-wide:.075em;
+
+    /* Sayfa: porselenin üstüne düşen hafif ışık */
+    --page-glow:radial-gradient(1100px 420px at 62% -8%, rgba(255,255,255,.55), transparent 70%);
+
+    /* — Chrome: bakalit kasa — */
+    --chrome-bg:linear-gradient(180deg,#2a2019 0%,#211913 46%,#1b1410 100%);
+    --chrome-blur:none;
+    --chrome-line:rgba(255,236,205,.07);
+    --chrome-brand:#f5ecdc;
+    --chrome-brand-2:rgba(228,212,186,.66);
+    --chrome-section:var(--pirinc);
+    --chrome-text:rgba(238,228,212,.78);
+    --chrome-text-hi:#fbf5e9;
+    --chrome-hover:rgba(255,240,215,.06);
+    --chrome-active-bg:rgba(255,236,200,.10);
+    --chrome-active-fg:#fff7e8;
+    --chrome-active-shadow:inset 0 0 0 1px rgba(255,236,200,.07);
+    --chrome-active-mark:radial-gradient(circle at 38% 32%,#fffaf0 0 1px,#ffe2a6 2px,#e9ac45 4px);
+    --chrome-badge-bg:rgba(199,163,94,.18);
+    --chrome-badge-fg:#e8cd97;
+    --chrome-badge-on-bg:var(--pirinc);
+    --chrome-badge-on-fg:#1e1712;
+    --chrome-card:rgba(255,240,215,.05);
+    --chrome-card-line:rgba(255,240,215,.09);
+    --chrome-name:#fbf5e9;
+    --chrome-role:rgba(222,204,176,.74);
+    --chrome-input-bg:rgba(8,5,3,.32);
+    --chrome-input-fg:#f3eadb;
+    --chrome-input-line:rgba(255,236,205,.15);
+    --chrome-foot:rgba(214,196,168,.70);
+    --chrome-menu-bg:#2b221b;
+    --chrome-menu-line:rgba(255,236,205,.16);
+
+    /* Üst bant açık kalır: başlık bakalit mürekkep, porselen zeminde */
+    --head-title:var(--text);
+    --head-sub:var(--muted);
+    --head-icon:#7a6e64;
+    --head-input-bg:var(--panel);
+    --head-input-fg:var(--text);
+    --head-input-line:var(--line-2);
+    --head-shadow:var(--sh-1);
+  }
+
+  /* — İmza öğe: sinyal lambası —
+     Rozetteki nokta, bakalit çerçeveye oturmuş yanan bir lamba olur: üstte
+     küçük ışık yansıması, koyu çerçeve, dışta hafif hale. Lamba rengi rozet
+     metninden parlaktır (metin okunsun diye koyu, lamba ışık olsun diye
+     açık); çerçeve sayesinde en açık lamba (kehribar) bile zemininden
+     ≥3:1 ayrılır. Yalnızca --lamp tanımlanır; .red / .green başka bir yerde
+     de kullanılsa etkisi sadece .dot içinde görünür. Lamba yanıp sönmez:
+     uzun oturumda dikkat dağıtırdı. */
+  html[data-theme="santral"] .green{--lamp:#2f9a4c}
+  html[data-theme="santral"] .yellow{--lamp:#e0920f}
+  html[data-theme="santral"] .red{--lamp:#dc3a2a}
+  html[data-theme="santral"] .blue{--lamp:#3c8ba1}
+  html[data-theme="santral"] .pill .dot{
+    width:7px;height:7px;
+    background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.85) 0 .8px,var(--lamp,currentColor) 2px);
+    box-shadow:0 0 0 1.5px rgba(42,32,25,.55),
+               0 0 6px 1.5px color-mix(in srgb,var(--lamp,currentColor) 50%,transparent);
+  }
+
+  /* Kenar çubuğunda hat lambaları: her satırın solunda sönük bir lamba,
+     bulunduğunuz hattın lambası yanar (varsayılan dikey çubuğun yerine). */
+  html[data-theme="santral"] .nav button{gap:9px}
+  html[data-theme="santral"] .nav button::before{
+    content:'';position:absolute;left:-10px;top:50%;width:7px;height:7px;
+    margin-top:-3.5px;border-radius:50%;
+    background:#120d0a;
+    box-shadow:inset 0 1px 1px rgba(0,0,0,.7), 0 0 0 1px rgba(255,236,205,.07);
+  }
+  html[data-theme="santral"] .nav button.active::before{
+    top:50%;bottom:auto;width:7px;height:7px;border-radius:50%;
+    background:var(--chrome-active-mark);
+    box-shadow:0 0 0 2px rgba(255,214,140,.14), 0 0 10px 2px rgba(255,190,90,.42);
+  }
+
+  /* Tür rozetinde Öneri "yellow" sınıfıyla geliyor ve SLA'nın "süre
+     yaklaşıyor" rozetiyle aynı görünüyordu. İkonlu sarı rozet = tür rozeti:
+     pirinç-zeytin Öneri rengine geçer. SLA rozetinde ikon değil .dot var. */
+  html[data-theme="santral"] .pill.yellow:has(> .ic){background:var(--ideabg);color:var(--idea)}
+
+  /* Raporlarda süre çubukları sabit yeşil/turuncuydu; turuncu bu temada
+     "yaklaşıyor" sinyali. Süre ölçüsü = pirinç (KPI'daki Ort. İlk Dönüş gibi). */
+  html[data-theme="santral"] .bar span.g,
+  html[data-theme="santral"] .bar span.o{background:var(--pirinc-koyu)}
+  /* Donut ve SLA halkası renkleri JS'te sabit (#2563eb vb.); doygunluğu
+     kısılarak paletle uyumlanır, kategoriler yine ayırt edilir. */
+  html[data-theme="santral"] .donut,
+  html[data-theme="santral"] .donut-legend i,
+  html[data-theme="santral"] .ring-c{filter:saturate(.62)}
+  /* Halka etiketi satır içi renkle geliyor (ör. #2f9e44 = 3.2:1, 12px).
+     Rengi halkanın kendisi taşıyor; etiket metin rengine iner. */
+  html[data-theme="santral"] .ring b{color:var(--text) !important}
+
+  /* Bakalit üzerinde bakalit avatar kaybolurdu: profil rozeti pirinç plaka */
+  html[data-theme="santral"] .profile .avatar.grad{
+    background:var(--pirinc);color:#1e1712;box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+  }
+
+  /* Varsayılan bildirim ve modal karartması zümrüt tonda sabit; bu temada
+     bakalit. Başarı / hata bildirimleri olduğu gibi kalır. */
+  html[data-theme="santral"] #toast{background:linear-gradient(140deg,#2a2019,#15100c);border-color:rgba(255,236,205,.10)}
+  html[data-theme="santral"] .modal-bg{background:rgba(24,17,12,.48)}
+  /* btn-soft zemini petrol, hover'ı --b-200 (kemik) — renk değişmesin */
+  html[data-theme="santral"] .btn-soft:hover{background:#d2e1e4}
 
   /* Tema secici — kapali dururken yalnizca mevcut temayi gosterir, tiklanınca
      acilir. Kenar cubugunda durdugu icin ICERIK degil CHROME token'larini
@@ -567,7 +773,7 @@
     border:1px solid var(--chrome-input-line);font-size:12px;font-weight:500;
   }
   .profile .switch-lbl{
-    font-size:10px;color:var(--muted);margin-bottom:6px;
+    font-size:10px;color:var(--chrome-role);margin-bottom:6px;
     font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
   }
   .side-foot{
@@ -1701,10 +1907,10 @@
     <section id="all-records" class="view">
       <div class="card" style="margin-bottom:16px">
         <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
-          <input id="fltText" class="" placeholder="Ara..." style="flex:1;min-width:200px;border:1px solid var(--line);border-radius:13px;padding:10px 13px" />
-          <select id="fltType" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm türler</option></select>
-          <select id="fltDept" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm ekipler</option></select>
-          <select id="fltStatus" style="border:1px solid var(--line);border-radius:13px;padding:10px 13px"><option value="">Tüm durumlar</option></select>
+          <input id="fltText" class="" placeholder="Ara..." style="flex:1;min-width:200px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px" />
+          <select id="fltType" style="border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px"><option value="">Tüm türler</option></select>
+          <select id="fltDept" style="border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px"><option value="">Tüm ekipler</option></select>
+          <select id="fltStatus" style="border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px"><option value="">Tüm durumlar</option></select>
         </div>
       </div>
       <div class="card">
@@ -1912,7 +2118,9 @@ const deptName  = id => (DEPARTMENTS.find(d=>d.id===id)||{}).name || '—';
 const userById  = id => USERS.find(u=>u.id===id);
 const userName  = id => (userById(id)||{}).name || '—';
 const typeLabel = id => (TYPES.find(t=>t.id===id)||{}).label || id;
-const typeIcon  = id => icon(((TYPES.find(t=>t.id===id)||{}).icon) || 'info');
+/* Sunucudan gelen TYPES ikon alanı taşımıyor; öneri "i" ile çiziliyordu. */
+const TYPE_ICON = { bilgi:'info', oneri:'bulb' };
+const typeIcon  = id => icon(((TYPES.find(t=>t.id===id)||{}).icon) || TYPE_ICON[id] || 'info');
 const prioObj   = id => PRIORITIES.find(p=>p.id===id) || PRIORITIES[0];
 const statusObj = id => STATUSES.find(s=>s.id===id) || STATUSES[0];
 const initials  = n => { const p=String(n||'?').split(' '); return ((p[0]||'?')[0] + (p[1]?p[1][0]:'')).toUpperCase(); };
