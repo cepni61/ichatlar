@@ -59,7 +59,7 @@ export default async function faqRoutes(app: FastifyInstance) {
         // Her tür: süreç / uygulama maddesi bağlantısıyla en iyi SSS yanıtıdır.
         where: { active: true, ...(dept ? { departmentId: dept } : {}) },
         select: {
-          seq: true, title: true, keywords: true, answer: true, url: true,
+          id: true, seq: true, kind: true, title: true, keywords: true, answer: true, url: true,
           departmentId: true, department: { select: { name: true } },
         },
       }),
@@ -92,6 +92,12 @@ export default async function faqRoutes(app: FastifyInstance) {
       if (rank(cand) > rank(home.best)) home.best = cand;
     }
 
+    // Yanıtın Bilgi Bankası maddesi — arayüzde "Yanıtı düzenle" bunu açar.
+    const kbRef = (a: (typeof kb)[number]) => ({
+      id: a.id, code: `BB-${a.seq}`, kind: a.kind, title: a.title, keywords: a.keywords,
+      department: { id: a.departmentId, name: a.department.name },
+    });
+
     // Bilgi Bankası karşılığı olan kümede hazır yanıt öne çıkar.
     const kbTokens = kb.map((a) => ({ a, tokens: new Set(tokenize(`${a.title} ${a.keywords ?? ''}`)) }));
     const usedKb = new Set<number>();
@@ -102,10 +108,18 @@ export default async function faqRoutes(app: FastifyInstance) {
       .slice(0, 25)
       .map((c) => {
         const title = [...c.titles.entries()].sort((x, y) => y[1] - x[1] || x[0].length - y[0].length)[0]![0];
+        // Eşleşme ölçütü: sorunun köklerinin ne kadarı maddede geçiyor (madde
+        // başlığı + anahtar kelimeler). Jaccard uzun anahtar kelime listesini
+        // cezalandırıyordu: "Şifre sıfırlama ve hesap kilidi" kendi maddesini
+        // bulamıyordu. En az 2 ortak kök ve sorunun %60'ı.
         const match = kbTokens
-          .map((k) => ({ k, sim: jaccard(c.tokens, k.tokens) }))
-          .filter((x) => x.sim >= 0.34)
-          .sort((x, y) => y.sim - x.sim)[0];
+          .map((k) => {
+            let hit = 0;
+            for (const t of c.tokens) if (k.tokens.has(t)) hit++;
+            return { k, hit, cover: hit / c.tokens.size, sim: jaccard(c.tokens, k.tokens) };
+          })
+          .filter((x) => x.hit >= Math.min(2, c.tokens.size) && x.cover >= 0.6)
+          .sort((x, y) => y.cover - x.cover || y.sim - x.sim)[0];
         if (match) usedKb.add(match.k.a.seq);
         return {
           title,
@@ -115,6 +129,7 @@ export default async function faqRoutes(app: FastifyInstance) {
           source: match ? 'kb' : 'kayit',
           verified: Boolean(match) || c.best.renewed,
           url: match?.k.a.url ?? null,
+          kb: match ? kbRef(match.k.a) : null,
           lastAt: c.lastAt ? new Date(c.lastAt).toISOString() : null,
         };
       });
@@ -127,6 +142,7 @@ export default async function faqRoutes(app: FastifyInstance) {
         department: { id: a.departmentId, name: a.department.name },
         answer: a.answer,
         url: a.url,
+        kb: kbRef(a),
       }));
 
     return { items, ready };

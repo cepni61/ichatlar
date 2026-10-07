@@ -850,6 +850,7 @@
   .faq-a{padding:0 16px 16px 72px}
   .faq-a p{margin:0 0 10px;white-space:pre-wrap;line-height:1.6}
   .faq-a .inline-actions{gap:8px}
+  .faq-edit{margin-top:4px;padding-top:12px;border-top:1px dashed var(--line-2)}
   @media(max-width:640px){ .faq-a{padding:0 14px 14px} }
   .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--successbg);color:var(--success)}
   .src-badge.kb{background:var(--primary2);color:var(--on-soft)}
@@ -2169,10 +2170,9 @@
       <div class="card" id="kbEditorsCard" style="margin-top:16px" hidden>
         <div class="card-head"><h3>Düzenleme yetkileri</h3><span class="pill gray">Sistem yöneticisi</span></div>
         <div class="card-body">
-          <p class="hint" style="margin:0 0 12px">Departman yöneticileri kendi ekiplerinin maddelerini zaten yönetir. Burada başka kişilere belirli bir ekip için yetki verebilirsiniz.</p>
+          <p class="hint" style="margin:0 0 12px">Departman yöneticileri kendi ekiplerinin maddelerini zaten yönetir. Yetki verdiğiniz kişi kendi ekibinin maddelerini ekleyip düzenleyebilir.</p>
           <div class="inline-actions" style="margin-bottom:12px">
-            <select id="kbGrantUser" aria-label="Kişi"></select>
-            <select id="kbGrantDept" aria-label="Ekip"></select>
+            <select id="kbGrantUser" aria-label="Yetki verilecek kişi"></select>
             <button class="btn btn-soft" type="button" id="kbGrant">Yetki ver</button>
           </div>
           <div id="kbEditors"></div>

@@ -183,13 +183,16 @@ export default async function kbRoutes(app: FastifyInstance) {
 
   app.post('/api/kb/editors', { preHandler: requireRole(Role.ADMIN) }, async (req, reply) => {
     const actor = actorOf(req);
+    // Ekip verilmezse yetki kişinin kendi ekibi için verilir (arayüz böyle kullanır).
     const parsed = z
-      .object({ userId: z.string().min(1).max(64), departmentId: z.string().min(1).max(64) })
+      .object({ userId: z.string().min(1).max(64), departmentId: z.string().min(1).max(64).optional() })
       .safeParse(req.body);
-    if (!parsed.success) throw badRequest('Kişi ve ekip seçin.');
-    const { userId, departmentId } = parsed.data;
-    const user = await prisma.user.findFirst({ where: { id: userId, active: true }, select: { id: true } });
+    if (!parsed.success) throw badRequest('Kişi seçin.');
+    const { userId } = parsed.data;
+    const user = await prisma.user.findFirst({ where: { id: userId, active: true }, select: { id: true, departmentId: true } });
     if (!user) throw badRequest('Kişi bulunamadı.');
+    const departmentId = parsed.data.departmentId ?? user.departmentId;
+    if (!departmentId) throw badRequest('Kişinin bir ekibi yok; önce ekibe atanmalı.');
     await activeDept(departmentId);
 
     const row = await prisma.kbEditor.upsert({

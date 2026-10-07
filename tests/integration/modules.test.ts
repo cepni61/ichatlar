@@ -137,7 +137,8 @@ describe('Bilgi Bankası', () => {
 
     // Sistem yöneticisi BT üyesine BT için yetki verir.
     expect((await post(w.btMember.id, '/api/kb', article(w.bt.id))).statusCode).toBe(403);
-    expect((await post(w.admin.id, '/api/kb/editors', { userId: w.btMember.id, departmentId: w.bt.id })).statusCode).toBe(201);
+    // Ekip seçilmez: yetki kişinin kendi ekibi (BT) için verilir.
+    expect((await post(w.admin.id, '/api/kb/editors', { userId: w.btMember.id })).statusCode).toBe(201);
     expect((await post(w.btMember.id, '/api/kb', article(w.bt.id, { title: 'SAP erişimi' }))).statusCode).toBe(201);
     const boot = (await get(w.btMember.id, '/api/bootstrap')).json();
     expect(boot.kb).toMatchObject({ view: true, admin: false, edit: [w.bt.id] });
@@ -175,6 +176,24 @@ describe('Sık Sorulanlar', () => {
     const faq = (await get(w.opener.id, '/api/faq')).json();
     expect(faq.items).toHaveLength(1);
     expect(faq.items[0]).toMatchObject({ count: 2, department: { name: 'Bilgi Teknolojileri' }, source: 'kayit' });
+  });
+
+  it('kümenin Bilgi Bankası karşılığı varsa yanıt ve madde kimliği ondan gelir', async () => {
+    const w = await world();
+    for (const t of ['VPN bağlantısı sürekli kopuyor', 'VPN bağlantısı kopuyor']) {
+      await createRecord({
+        createdById: w.opener.id, departmentId: w.bt.id, assigneeId: w.btMember.id,
+        status: RecordStatus.KAPATILDI, title: t, resolution: 'İstemci güncellendi.',
+      });
+    }
+    expect((await post(w.admin.id, '/api/kb', {
+      kind: 'BILGI', departmentId: w.bt.id, title: 'VPN bağlantısı kopuyor',
+      answer: 'VPN istemcisini güncelleyip profili yeniden indirin.',
+    })).statusCode).toBe(201);
+    const faq = (await get(w.opener.id, '/api/faq')).json();
+    expect(faq.items[0]).toMatchObject({ source: 'kb', answer: 'VPN istemcisini güncelleyip profili yeniden indirin.' });
+    expect(faq.items[0].kb).toMatchObject({ code: 'BB-' + faq.items[0].kb.code.slice(3), department: { id: w.bt.id } });
+    expect(faq.ready).toHaveLength(0);
   });
 });
 

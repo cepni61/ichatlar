@@ -37,6 +37,7 @@
 
   let faqData = null;
   let faqDept = '';
+  let faqShown = [];
   let faqBound = false;
 
   window.renderFaq = async function () {
@@ -45,6 +46,10 @@
       faqBound = true;
       sel.addEventListener('change', () => { faqDept = sel.value; faqData = null; window.renderFaq(); });
       $('#faqQ').addEventListener('input', debounce(paintFaq, 150));
+      $('#faq').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-faq-kb]');
+        if (b) editFaqAnswer(faqShown[+b.dataset.faqKb]);
+      });
     }
     sel.innerHTML = deptOptions('Tüm ekipler', faqDept);
     if (!faqData) {
@@ -60,7 +65,46 @@
     paintFaq();
   };
 
-  function faqItem(x, opened) {
+  /*
+   * "Yanıtı düzenle / Sık sorulanlara ekle": yalnızca yöneticiler ve Bilgi
+   * Bankası yetkilileri, yalnızca düzenleyebildikleri ekiplerin sorularında
+   * görür. Yanıt Bilgi Bankası maddesi olarak kaydedilir; SSS onu resmi
+   * yanıt olarak gösterir. (Yetkiyi sunucu da ayrıca denetler.)
+   */
+  const canEditDept = (id) => {
+    const a = kbAccess();
+    return a.edit === 'all' || (a.edit || []).includes(id);
+  };
+  function faqAction(x, i) {
+    const own = x.kb ? x.kb.department.id : x.department.id;
+    if (!canEditDept(own)) return '';
+    return '<div class="faq-edit"><button class="btn btn-soft" type="button" data-faq-kb="' + i + '">'
+      + (x.kb ? 'Yanıtı düzenle' : 'Sık sorulanlara ekle') + '</button></div>';
+  }
+
+  function editFaqAnswer(x) {
+    if (!x) return;
+    const reload = () => { faqData = null; window.renderFaq(); };
+    if (x.kb) {
+      openKbEditor({
+        id: x.kb.id, code: x.kb.code, kind: x.kb.kind, department: x.kb.department,
+        title: x.kb.title, keywords: x.kb.keywords, answer: x.answer, url: x.url,
+      }, {
+        title: 'Yanıtı düzenle · ' + x.kb.code,
+        intro: 'Bu yanıt Bilgi Bankası maddesidir; değişiklik Sık Sorulanlar’da, Aramada ve ML önerilerinde de görünür.',
+        onDone: reload,
+      });
+    } else {
+      openKbEditor(null, {
+        prefill: { kind: 'BILGI', department: x.department, title: x.title, keywords: '', answer: x.answer, url: '' },
+        title: 'Sık sorulanlara ekle',
+        intro: 'Kaydedince bu yanıt Bilgi Bankası’na eklenir ve bu sorunun resmi yanıtı olur. Çalışanın anlayacağı şekilde düzenleyebilirsiniz.',
+        onDone: reload,
+      });
+    }
+  }
+
+  function faqItem(x, i, opened) {
     const badge = x.source === 'kb'
       ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span>'
       : x.verified ? '<span class="src-badge">' + icon('check') + ' Onaylı çözüm</span>'
@@ -78,6 +122,7 @@
       +   '<p style="margin-bottom:8px">' + badge + '</p>'
       +   '<p>' + esc(x.answer) + '</p>'
       +   (x.url ? '<p>Bağlantı: ' + linkHtml(x.url) + '</p>' : '')
+      +   faqAction(x, i)
       + '</div></details>';
   }
 
@@ -88,15 +133,16 @@
     const items = faqData.items.filter(match);
     // Hazır yanıtlar Bilgi Bankası maddesidir (sunucu kaynak alanı göndermiyor).
     const ready = faqData.ready.filter(match).map((x) => Object.assign({ source: 'kb' }, x));
+    faqShown = items.concat(ready);
 
     $('#faqList').innerHTML =
       '<div class="res-head" style="margin-top:4px">En sık sorulan talepler · ' + items.length + '</div>'
       + (items.length
-          ? items.map((x, i) => faqItem(x, i === 0 && !q)).join('')
+          ? items.map((x, i) => faqItem(x, i, i === 0 && !q)).join('')
           : '<p class="hint">' + (q ? 'Aramanıza uyan sık sorulan talep yok.' : 'Henüz tekrar eden talep yok.') + '</p>');
     $('#faqReady').innerHTML = ready.length
       ? '<div class="res-head">Ekiplerin hazır yanıtları · ' + ready.length + '</div>'
-        + ready.map((x) => faqItem(x, false)).join('')
+        + ready.map((x, k) => faqItem(x, items.length + k, false)).join('')
       : '';
   }
 
@@ -242,15 +288,22 @@
       : '<tr><td colspan="5" class="empty">Madde yok.' + (kbEditable().length ? ' “Yeni madde” ile ekleyebilirsiniz.' : '') + '</td></tr>';
   }
 
-  function openKbEditor(item) {
+  /*
+   * opts (Sık Sorulanlar'dan açılınca): prefill — dolu yeni madde, title /
+   * intro — pencere başlığı ve açıklaması, onDone — kayıt / silme sonrası
+   * yenilenecek ekran (varsayılan: Bilgi Bankası listesi).
+   */
+  function openKbEditor(item, opts) {
+    opts = opts || {};
     const depts = kbEditable();
     if (!depts.length) return toast('Madde ekleme yetkiniz yok', 'err');
-    const v = item || { kind: 'BILGI', department: { id: depts.includes(Store.me().dept) ? Store.me().dept : depts[0] }, title: '', keywords: '', answer: '', url: '' };
+    const v = item || opts.prefill || { kind: 'BILGI', department: { id: depts.includes(Store.me().dept) ? Store.me().dept : depts[0] }, title: '', keywords: '', answer: '', url: '' };
     const buttons = [{ label: 'İptal', cls: 'btn-ghost' }];
-    if (item) buttons.push({ label: 'Kaldır', cls: 'btn-danger', run: () => confirmKbDelete(item) });
-    buttons.push({ label: 'Kaydet', cls: 'btn-primary', run: () => saveKb(item) });
-    openModal(item ? 'Maddeyi düzenle · ' + item.code : 'Yeni Bilgi Bankası maddesi',
-      '<div class="grid two-col">'
+    if (item) buttons.push({ label: 'Kaldır', cls: 'btn-danger', run: () => confirmKbDelete(item, opts) });
+    buttons.push({ label: 'Kaydet', cls: 'btn-primary', run: () => saveKb(item, opts) });
+    openModal(opts.title || (item ? 'Maddeyi düzenle · ' + item.code : 'Yeni Bilgi Bankası maddesi'),
+      (opts.intro ? '<p class="hint" style="margin:0 0 14px">' + esc(opts.intro) + '</p>' : '')
+      + '<div class="grid two-col">'
       + '<div class="field"><label for="kbfKind">Tür</label><select id="kbfKind">'
       +   kbKinds().map((k) => '<option value="' + esc(k.id) + '"' + (k.id === v.kind ? ' selected' : '') + '>' + esc(k.label) + '</option>').join('')
       + '</select></div>'
@@ -266,7 +319,8 @@
   }
 
   let kbSaving = false;
-  async function saveKb(item) {
+  async function saveKb(item, opts) {
+    opts = opts || {};
     if (kbSaving) return;
     const body = {
       kind: $('#kbfKind').value,
@@ -283,8 +337,8 @@
       if (item) await api('PUT', '/api/kb/' + encodeURIComponent(item.id), body);
       else await api('POST', '/api/kb', body);
       closeModal();
-      toast(item ? 'Madde güncellendi; ML arka planda yeniden eğitiliyor' : 'Madde eklendi; ML arka planda yeniden eğitiliyor', 'ok');
-      loadKb();
+      toast(item ? 'Yanıt güncellendi; ML arka planda yeniden eğitiliyor' : 'Yanıt Bilgi Bankası’na eklendi; ML arka planda yeniden eğitiliyor', 'ok');
+      (opts.onDone || loadKb)();
     } catch (err) {
       toast(err.message, 'err');
     } finally {
@@ -292,27 +346,31 @@
     }
   }
 
-  function confirmKbDelete(item) {
+  function confirmKbDelete(item, opts) {
+    opts = opts || {};
     openModal('Maddeyi kaldır',
       '<p class="hint" style="margin:0"><b>' + esc(item.title) + '</b> Bilgi Bankası’ndan kaldırılsın mı? '
       + 'Sık Sorulanlar, Arama ve ML önerilerinden de çıkar.</p>',
       [
-        { label: 'Vazgeç', cls: 'btn-ghost', run: () => openKbEditor(item) },
+        { label: 'Vazgeç', cls: 'btn-ghost', run: () => openKbEditor(item, opts) },
         { label: 'Kaldır', cls: 'btn-danger', run: async () => {
           try {
             await api('DELETE', '/api/kb/' + encodeURIComponent(item.id));
             closeModal();
             toast('Madde kaldırıldı', 'ok');
-            loadKb();
+            (opts.onDone || loadKb)();
           } catch (err) { toast(err.message, 'err'); }
         } },
       ]);
   }
 
   async function loadEditors() {
+    // Yöneticiler kendi ekiplerinde zaten yetkili; listede yalnızca ekip üyeleri.
+    // Liste yeniden çizilse de yapılmış seçim korunur.
+    const keep = $('#kbGrantUser').value;
     $('#kbGrantUser').innerHTML = '<option value="">Kişi seçin…</option>'
-      + USERS.filter((u) => u.dept).map((u) => '<option value="' + esc(u.id) + '">' + esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>').join('');
-    $('#kbGrantDept').innerHTML = deptOptions('Ekip seçin…', '');
+      + USERS.filter((u) => u.dept && u.role !== 'Yönetici' && u.role !== 'Sistem Yöneticisi')
+        .map((u) => '<option value="' + esc(u.id) + '"' + (u.id === keep ? ' selected' : '') + '>' + esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>').join('');
     $('#kbEditors').innerHTML = LOADING;
     try {
       const out = await api('GET', '/api/kb/editors');
@@ -330,10 +388,9 @@
 
   async function grantEditor() {
     const userId = $('#kbGrantUser').value;
-    const departmentId = $('#kbGrantDept').value;
-    if (!userId || !departmentId) return toast('Kişi ve ekip seçin', 'err');
+    if (!userId) return toast('Kişi seçin', 'err');
     try {
-      await api('POST', '/api/kb/editors', { userId, departmentId });
+      await api('POST', '/api/kb/editors', { userId });
       toast('Yetki verildi', 'ok');
       loadEditors();
     } catch (err) { toast(err.message, 'err'); }

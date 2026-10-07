@@ -43,7 +43,20 @@
     }
 
     const text = await res.text();
-    const data = text ? JSON.parse(text) : null;
+    let data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch (_) {
+        // Sunucu yeniden başlarken ara katman (ör. Cloudflare) HTML hata sayfası
+        // döndürür; teknik "Unexpected token '<'" yerine anlaşılır mesaj.
+        const err = new Error(res.ok
+          ? 'Sunucudan beklenmeyen bir yanıt geldi. Sayfayı yenileyin.'
+          : 'Sunucuya şu an ulaşılamıyor. Birkaç saniye sonra sayfayı yenileyin.');
+        err.status = res.status;
+        throw err;
+      }
+    }
 
     if (!res.ok) {
       const msg = (data && data.error && data.error.message) || 'İstek başarısız oldu.';
@@ -225,6 +238,9 @@
     try {
       if (CURRENT === 'detail') return refreshDetail(DETAIL_CODE);
       if (CURRENT === 'new-ticket') return;
+      // Kayıt listesine bağlı olmayan ekranlar tazelenmez: yeniden çizim
+      // yarım kalmış seçimleri (ör. yetki verilecek kişi) silerdi.
+      if (CURRENT === 'kb' || CURRENT === 'faq' || CURRENT === 'search') return;
       await refreshRecords();
       if (typeof renderView === 'function') renderView(CURRENT);
       if (typeof renderChrome === 'function') renderChrome();
