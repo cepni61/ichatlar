@@ -63,6 +63,8 @@ export default async function notificationRoutes(app: FastifyInstance) {
         record: n.record
           ? { code: n.record.code, title: visible ? n.record.title : null, canOpen: visible }
           : null,
+        /** Kayda bağlı olmayan bildirimin açacağı ekran (geri bildirim → Yönetim). */
+        view: n.type === 'FEEDBACK' ? 'management' : null,
       };
     });
 

@@ -50,6 +50,78 @@ export const USERS: DemoUser[] = [
   { key: 'admin', name: 'Sistem Yöneticisi', dept: null, role: Role.ADMIN },
 ];
 
+/** Unvanlar — kişi aramasında görünür (gerçek kurulumda kurumsal dizinden gelir). */
+export const TITLES: Record<string, string> = {
+  u1: 'İK İş Ortağı', u2: 'Bordro Uzmanı', u3: 'İnsan Kaynakları Müdürü', u4: 'İşe Alım Uzmanı',
+  u13: 'Bilgi Teknolojileri Müdürü', u14: 'BT Destek Uzmanı', u15: 'SAP Uygulama Uzmanı',
+  u10: 'Finans Müdürü', u9: 'Muhasebe Uzmanı',
+  u6: 'Genel Müdür Yardımcısı', u5: 'Yönetici Asistanı',
+  u16: 'İş Geliştirme Müdürü', u17: 'Uluslararası Pazarlar Uzmanı',
+  u18: 'Ticari Operasyonlar Müdürü', u11: 'Süreç Geliştirme Uzmanı',
+  u12: 'Kalite Güvence Müdürü', u19: 'Kalite Güvence Uzmanı',
+  u20: 'Kamu İlişkileri Müdürü', u21: 'Pazar Erişim Uzmanı',
+  u22: 'Medikal Müdür', u23: 'Medikal Danışman',
+  u24: 'Spesifik Tedaviler Grup Müdürü', u25: 'Ürün Müdürü',
+  u8: 'Tedarik Zinciri Müdürü', u7: 'Satınalma Uzmanı',
+  u26: 'Temel Tedaviler Grup Müdürü', u27: 'Marka Uzmanı',
+  u28: 'Tüketici Sağlığı Grup Müdürü', u29: 'Kategori Uzmanı',
+  admin: 'Sistem Yöneticisi',
+};
+
+/**
+ * Bilgi Bankası örnekleri. Bağlantılar örnek alan adında (ornek.com) —
+ * kurulumda ekipler kendi gerçek adreslerini girer.
+ */
+export interface KbSeed {
+  dept: string;
+  kind: 'BILGI' | 'UYGULAMA' | 'SUREC';
+  title: string;
+  keywords: string;
+  answer: string;
+  url: string | null;
+  /** Maddeyi yazan (demo kullanıcı anahtarı). */
+  by: string;
+}
+
+export const KB_ARTICLES: KbSeed[] = [
+  { dept: 'ik', kind: 'UYGULAMA', by: 'u3', title: 'Bordro ve ücret pusulası',
+    keywords: 'bordro, maaş, ücret pusulası, e-bordro, maaş bordrosu',
+    answer: 'Bordronuzu ve ücret pusulalarınızı İK portalındaki Bordro ekranından görüntüleyebilirsiniz. Eksik ya da hatalı bir kalem görürseniz İnsan Kaynakları ekibine kayıt açın.',
+    url: 'https://ikportal.ornek.com/bordro' },
+  { dept: 'ik', kind: 'SUREC', by: 'u3', title: 'Yıllık izin talebi',
+    keywords: 'izin, yıllık izin, izin bakiyesi, izin onayı, izin talebi',
+    answer: 'Yıllık izninizi İK portalı > İzin Talebi ekranından oluşturun; talep yöneticinizin onayına düşer. Kalan izin bakiyeniz aynı ekranda görünür.',
+    url: 'https://ikportal.ornek.com/izin' },
+  { dept: 'ik', kind: 'BILGI', by: 'u3', title: 'Özel sağlık sigortasına aile bireyi ekleme',
+    keywords: 'sağlık sigortası, özel sağlık, eş ekleme, çocuk ekleme, aile ekleme',
+    answer: 'Eş ve çocuklarınızı her yıl ocak ayındaki yenileme döneminde ya da evlilik, doğum gibi durumlarda 30 gün içinde ekleyebilirsiniz. Nüfus kayıt örneğiyle İnsan Kaynakları ekibine başvurun.',
+    url: null },
+  { dept: 'bt', kind: 'UYGULAMA', by: 'u13', title: 'SAP erişimi ve yetki talebi',
+    keywords: 'sap, erp, sap yetki, sap şifre, sap rol',
+    answer: 'SAP’ye kurumsal giriş sayfasından tek oturumla erişebilirsiniz. Yeni rol ya da yetki için Bilgi Teknolojileri ekibine kayıt açın; yöneticinizin onayı gerekir.',
+    url: 'https://sap.ornek.com' },
+  { dept: 'bt', kind: 'BILGI', by: 'u13', title: 'VPN bağlantı sorunu',
+    keywords: 'vpn, uzaktan bağlantı, evden bağlanamıyorum, vpn kopuyor',
+    answer: 'VPN istemcisini güncel sürüme yükseltin ve kurumsal profili yeniden indirin. Sorun sürerse istemci günlüğüyle birlikte Bilgi Teknolojileri ekibine kayıt açın.',
+    url: 'https://destek.ornek.com/vpn' },
+  { dept: 'bt', kind: 'SUREC', by: 'u13', title: 'Şifre sıfırlama ve kilitlenen hesap',
+    keywords: 'şifre, parola, hesap kilitlendi, şifremi unuttum, windows hesabı',
+    answer: 'Şifrenizi self-servis şifre sıfırlama sayfasından cep telefonu doğrulamasıyla yenileyebilirsiniz. Kilitlenen hesap 15 dakika sonra kendiliğinden açılır.',
+    url: 'https://sifre.ornek.com' },
+  { dept: 'finans', kind: 'SUREC', by: 'u10', title: 'Masraf beyanı ve harcırah',
+    keywords: 'masraf, harcırah, fatura, avans, masraf iadesi',
+    answer: 'Masraflarınızı ayın son iş gününe kadar masraf sistemine fiş ya da fatura görseliyle girin; yönetici onayından sonra bir sonraki maaşla ödenir.',
+    url: 'https://masraf.ornek.com' },
+  { dept: 'tedarik', kind: 'UYGULAMA', by: 'u8', title: 'Satınalma talebi oluşturma',
+    keywords: 'satınalma, satın alma, sipariş, tedarikçi, talep',
+    answer: 'Satınalma taleplerinizi tedarik portalından oluşturun; tutar sınırına göre onay akışı kendiliğinden başlar.',
+    url: 'https://tedarik.ornek.com' },
+  { dept: 'kalite', kind: 'SUREC', by: 'u12', title: 'Sapma kaydı açma',
+    keywords: 'sapma, deviation, gmp, kalite olayı',
+    answer: 'Sapmayı tespit ettiğiniz gün kalite yönetim sisteminde kaydedin; Kalite Güvence ekibi bir iş günü içinde sınıflandırır.',
+    url: 'https://kys.ornek.com' },
+];
+
 export interface Topic {
   type: 'bilgi' | 'oneri';
   titles: [string, string];

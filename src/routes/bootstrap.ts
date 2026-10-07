@@ -14,6 +14,7 @@ import {
   TYPE_TO_SLUG,
 } from '../domain/constants.js';
 import { slaRules } from '../domain/sla.js';
+import { kbAccess, KB_KINDS } from '../domain/kb.js';
 
 /**
  * Arayüzün açılışta ihtiyaç duyduğu her şey tek istekte.
@@ -26,7 +27,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
   app.get('/api/bootstrap', { preHandler: requireUser }, async (req) => {
     const me = req.user!;
 
-    const [departments, users, rules] = await Promise.all([
+    const [departments, users, rules, kb] = await Promise.all([
       prisma.department.findMany({
         where: { active: true },
         orderBy: [{ order: 'asc' }, { name: 'asc' }],
@@ -40,6 +41,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
         select: { id: true, name: true, role: true, departmentId: true },
       }),
       slaRules(),
+      kbAccess({ id: me.id, role: me.role, departmentId: me.departmentId }),
     ]);
 
     return {
@@ -49,6 +51,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
       org: { name: env.ORG_NAME || null },
       /** Ek dosya sınırları — arayüz seçimde uyarır; asıl denetim sunucuda. */
       uploads: { maxMb: env.MAX_UPLOAD_MB, maxFiles: MAX_FILES, extensions: Object.keys(ALLOWED) },
+      /** Bilgi Bankası yönetimi: görebilir mi, hangi ekipleri düzenler, yetki verebilir mi. */
+      kb: { view: kb.view, admin: kb.admin, edit: kb.edit, kinds: Object.entries(KB_KINDS).map(([id, label]) => ({ id, label })) },
       /** Öneri formundaki "beklenen fayda" seçenekleri. */
       benefits: Object.entries(BENEFITS).map(([id, label]) => ({ id, label })),
       me: {

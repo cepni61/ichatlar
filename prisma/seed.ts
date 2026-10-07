@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { Priority, RecordStatus, RecordType } from '../src/domain/enums.js';
 import { applyOrgConfig, orgConfigSchema } from '../src/setup/org-config.js';
-import { CONTEXT, COUNTS, TOPICS, USERS } from './demo-data.js';
+import { CONTEXT, COUNTS, KB_ARTICLES, TITLES, TOPICS, USERS } from './demo-data.js';
 
 const prisma = new PrismaClient();
 
@@ -131,13 +131,26 @@ async function main() {
         entraOid: `seed:${u.key}`,
         email: `${slug(u.name)}@ornek.com`,
         name: u.name,
+        title: TITLES[u.key] ?? null,
         role: u.role,
         departmentId: u.dept,
       },
-      update: { name: u.name, role: u.role, departmentId: u.dept, active: true },
+      update: { name: u.name, title: TITLES[u.key] ?? null, role: u.role, departmentId: u.dept, active: true },
       select: { id: true },
     });
     userIds.set(u.key, row.id);
+  }
+
+  // Bilgi Bankası örnekleri — kayıtlar varken de eklenir (başlık + ekip ile bulunur).
+  console.log('Bilgi Bankası örnekleri…');
+  for (const a of KB_ARTICLES) {
+    const data = {
+      kind: a.kind, departmentId: a.dept, title: a.title, keywords: a.keywords,
+      answer: a.answer, url: a.url, active: true, updatedById: userIds.get(a.by) ?? null,
+    };
+    const found = await prisma.kbArticle.findFirst({ where: { title: a.title, departmentId: a.dept }, select: { id: true } });
+    if (found) await prisma.kbArticle.update({ where: { id: found.id }, data });
+    else await prisma.kbArticle.create({ data: { ...data, createdById: userIds.get(a.by) ?? null } });
   }
 
   if (process.env.SEED_RECORDS === 'false') {
@@ -211,9 +224,18 @@ function buildRecords(userIds: Map<string, string>) {
     const extra = CONTEXT[(i * 3) % CONTEXT.length]!;
     const description = [topic.details[Math.floor(round / 2) % 2]!, extra].filter(Boolean).join(' ');
 
-    const status = ST_CYCLE[i % ST_CYCLE.length]!;
+    const isOneri = topic.type === 'oneri';
+    // Öneri kendi akışını izler: üzerinde çalışılan "Değerlendiriliyor", sonuçlanan
+    // "Fayda Sağladı" ya da "Değerlendirildi", reddedilen "Uygun Bulunmadı".
+    const base = ST_CYCLE[i % ST_CYCLE.length]!;
+    const status: string = !isOneri ? base
+      : base === 'UZERIME_ALINDI' || base === 'INCELENIYOR' || base === 'CALISILIYOR' ? 'DEGERLENDIRILIYOR'
+      : base === 'COZULDU' || base === 'KAPATILDI' ? (i % 3 === 0 ? 'DEGERLENDIRILDI' : 'FAYDA_SAGLADI')
+      : base === 'REDDEDILDI' ? 'UYGUN_BULUNMADI'
+      : base;
     const priority = PR_CYCLE[i % PR_CYCLE.length]!;
-    const closed = status === 'COZULDU' || status === 'KAPATILDI' || status === 'REDDEDILDI';
+    const closed = ['COZULDU', 'KAPATILDI', 'REDDEDILDI', 'DEGERLENDIRILDI', 'FAYDA_SAGLADI', 'UYGUN_BULUNMADI'].includes(status);
+    const outcome = ['DEGERLENDIRILDI', 'FAYDA_SAGLADI', 'UYGUN_BULUNMADI'].includes(status);
     const isNew = status === RecordStatus.YENI;
 
     const team = staff.filter((u) => u.dept === deptId);
@@ -254,12 +276,20 @@ function buildRecords(userIds: Map<string, string>) {
     if (assignee) {
       events.push({
         type: 'ASSIGN', at: firstResponseAt ?? createdAt, byId: by(assignee.key),
-        text: `Kayıt ${assignee.name} tarafından üzerine alındı.`,
+        text: isOneri ? `Öneri ${assignee.name} tarafından değerlendirmeye alındı.` : `Kayıt ${assignee.name} tarafından üzerine alındı.`,
       });
     }
     if (resolvedAt && status === RecordStatus.COZULDU && assignee) {
       events.push({ type: 'COMMENT', at: resolvedAt, byId: by(assignee.key), text: topic.resolution });
     }
+    if (resolvedAt && outcome && assignee) {
+      events.push({
+        type: 'STATUS', at: resolvedAt, byId: by(assignee.key),
+        text: `Değerlendirme sonucu: ${({ DEGERLENDIRILDI: 'Değerlendirildi', FAYDA_SAGLADI: 'Fayda Sağladı', UYGUN_BULUNMADI: 'Uygun Bulunmadı' } as Record<string, string>)[status]}. ${topic.resolution}`,
+      });
+    }
+    // Kapatılmış bilgi taleplerinin bir kısmı "yenilenen kayıt" (ML hafızasında).
+    const renewed = !isOneri && status === RecordStatus.KAPATILDI && i % 3 === 0;
 
     return {
       type: topic.type === 'oneri' ? RecordType.ONERI : RecordType.BILGI,
@@ -273,7 +303,9 @@ function buildRecords(userIds: Map<string, string>) {
       assigneeId: assignee ? by(assignee.key) : null,
       // Yeni kayıt formunda anonim gönderim yok; demo verisinde de yok.
       anonymous: false,
-      resolution: status === RecordStatus.COZULDU ? topic.resolution : null,
+      resolution: status === RecordStatus.COZULDU || status === RecordStatus.KAPATILDI || outcome ? topic.resolution : null,
+      renewed,
+      renewedAt: renewed ? resolvedAt : null,
       createdAt,
       firstResponseAt,
       resolvedAt,

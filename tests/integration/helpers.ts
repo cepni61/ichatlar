@@ -25,6 +25,9 @@ export const silentLog = {
 export async function resetDb() {
   assertTestDatabase(process.env.DATABASE_URL);
   await prisma.notification.deleteMany();
+  await prisma.feedback.deleteMany();
+  await prisma.kbEditor.deleteMany();
+  await prisma.kbArticle.deleteMany();
   await prisma.suggestion.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.recordEvent.deleteMany();
@@ -75,13 +78,16 @@ export async function createRecord(opts: {
   anonymous?: boolean;
   slaDueAt?: Date;
   title?: string;
+  type?: RecordType;
+  resolution?: string | null;
 }) {
   const now = new Date();
   return prisma.record.create({
     data: {
       code: uid('KAY'),
-      type: RecordType.BILGI,
+      type: opts.type ?? RecordType.BILGI,
       title: opts.title ?? 'Test kaydı başlığı',
+      resolution: opts.resolution ?? null,
       description: 'Test kaydının açıklaması',
       priority: Priority.NORMAL,
       status: opts.status ?? RecordStatus.YENI,

@@ -40,6 +40,8 @@ model Department {
   users            User[]
   primaryRecords   Record[] @relation("primaryDepartment")
   secondaryRecords Record[] @relation("secondaryDepartment")
+  kbArticles       KbArticle[]
+  kbEditors        KbEditor[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -58,6 +60,10 @@ model User {
   role   String  @default("USER")
   active Boolean @default(true)
 
+  /// Unvan (ör. "İK Uzmanı"). Kişi aramasında görünür; kurumsal dizinden
+  /// (Entra / Cortex) dolacak, şimdilik kurulum verisinden.
+  title String?
+
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
@@ -72,6 +78,11 @@ model User {
   sessions        Session[]
   auditLogs       AuditLog[]
   notifications   Notification[]
+  feedbacks       Feedback[]
+  kbCreated       KbArticle[] @relation("kbCreator")
+  kbUpdated       KbArticle[] @relation("kbUpdater")
+  kbGrants        KbEditor[]  @relation("kbEditor")
+  kbGranted       KbEditor[]  @relation("kbGrantor")
 
   @@index([departmentId, active])
 }
@@ -138,6 +149,13 @@ model Record {
   /// { current, proposal, benefits: string[], benefitNote? }. Bilgi kaydında boş.
   /// `description` aynı içeriğin okunur birleşimini taşır (arama ve ML için).
   details String?
+
+  /// "Yenilenen kayıt": çözen kişi çözümü ML hafızasına ekledi. Bu kayıtlar
+  /// departman modelinde daha ağır sayılır ve benzer kayıt aramasında
+  /// "onaylı çözüm" olarak öne çıkar.
+  renewed     Boolean   @default(false)
+  renewedAt   DateTime?
+  renewedById String?
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -305,4 +323,83 @@ model Notification {
   /// Aynı kişiye aynı kayıt için aynı tür bildirim ikinci kez düşmez.
   @@unique([userId, recordId, type])
   @@index([userId, readAt, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Uygulama geri bildirimi
+// ---------------------------------------------------------------------------
+
+/// Kenar çubuğundaki "Uygulama için geri bildirim" kutusundan gelen serbest
+/// metin. Sistem yöneticilerine bildirim düşer; Yönetim ekranında listelenir.
+model Feedback {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  text String
+  /// Gönderildiği ekran (ör. "reports") — bağlam için.
+  page String?
+
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Bilgi Bankası
+// ---------------------------------------------------------------------------
+
+/// Ekiplerin hazır yanıtları ve kurumsal uygulama / süreç bağlantıları.
+/// Departman yöneticisi kendi ekibinin, yetki verilen kişi yetkili olduğu
+/// ekibin maddelerini yönetir. ML departman modeli, benzer kayıt araması,
+/// Sık Sorulanlar ve Arama buradan beslenir.
+model KbArticle {
+  id  String @id @default(cuid())
+  /// Kısa numara: eşleşmelerde "BB-12" olarak görünür.
+  seq Int    @unique @default(autoincrement())
+
+  /// BILGI | UYGULAMA | SUREC
+  kind String @default("BILGI")
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  title    String
+  /// Aynı sorunun başka söylenişleri / anahtar kelimeler — eşleşmeyi güçlendirir.
+  keywords String?
+  answer   String
+  url      String?
+
+  active Boolean @default(true)
+
+  createdById String?
+  createdBy   User?   @relation("kbCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedById String?
+  updatedBy   User?   @relation("kbUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([departmentId, active])
+  @@index([kind, active])
+}
+
+/// Sistem yöneticisinin verdiği Bilgi Bankası düzenleme yetkisi (ekip bazında).
+model KbEditor {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation("kbEditor", fields: [userId], references: [id], onDelete: Cascade)
+
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  grantedById String?
+  grantedBy   User?   @relation("kbGrantor", fields: [grantedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, departmentId])
 }

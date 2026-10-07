@@ -51,6 +51,11 @@ const schema = z.object({
   /** Geliştirme girişinde oturum yokken açılan kullanıcı. */
   DEV_DEFAULT_USER: z.string().email().default('omer.uygun@ornek.com'),
 
+  /** Kurumsal arama kaynağı (Cortex). Boşsa arama yalnızca Bilgi Bankası ve kayıtlarla çalışır. */
+  CORTEX_URL: z.string().trim().default(''),
+  CORTEX_TOKEN: z.string().trim().default(''),
+  CORTEX_TIMEOUT_MS: z.coerce.number().int().positive().default(2500),
+
   STORAGE_DIR: z.string().default('./var/uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
 });

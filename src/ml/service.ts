@@ -13,6 +13,7 @@ import {
   predict,
   train,
   type Doc,
+  type Features,
   type Model,
   type Params,
   type Prediction,
@@ -39,6 +40,19 @@ const KEEP_VERSIONS = 10;
  */
 const EXCLUDED_FROM_TRAINING = [RecordStatus.YENI, RecordStatus.REDDEDILDI];
 
+/**
+ * Daha güvenilir etiket = daha ağır belge:
+ *  - "Yenilenen kayıt": çözen kişi çözümü ML hafızasına ekledi,
+ *  - Bilgi Bankası maddesi: ekibin kendi yazdığı hazır yanıt.
+ * Ağırlık terim sayılarını çarpar; belge sayısı (önsel) 1 kalır, böylece
+ * birini-dışarıda-bırak ölçümü de tutarlı kalır (kopya belge sızıntısı yok).
+ */
+const RENEWED_WEIGHT = 2;
+const KB_WEIGHT = 2;
+
+const scaled = (f: Features, k: number): Features =>
+  k === 1 ? f : { ...f, weights: new Map([...f.weights].map(([t, w]) => [t, w * k])), total: f.total * k };
+
 interface ActiveModel {
   id: string | null;
   model: Model;
@@ -54,7 +68,7 @@ let training: Promise<ActiveModel | null> | null = null;
 // ─────────────────────────────────────────────────────────────── eğitim
 
 async function loadTrainingData(params: Params) {
-  const [departments, records] = await Promise.all([
+  const [departments, records, kb] = await Promise.all([
     prisma.department.findMany({
       where: { active: true },
       select: { id: true, name: true },
@@ -67,9 +81,15 @@ async function loadTrainingData(params: Params) {
         title: true,
         description: true,
         departmentId: true,
+        renewed: true,
         events: { where: { type: EventType.FORWARD }, select: { meta: true } },
       },
       orderBy: { code: 'asc' },
+    }),
+    prisma.kbArticle.findMany({
+      where: { active: true },
+      select: { seq: true, departmentId: true, title: true, keywords: true, answer: true },
+      orderBy: { seq: 'asc' },
     }),
   ]);
 
@@ -79,11 +99,20 @@ async function loadTrainingData(params: Params) {
     .map((r) => ({
       code: r.code,
       departmentId: r.departmentId,
-      features: featurize(r.title, r.description, params),
+      features: scaled(featurize(r.title, r.description, params), r.renewed ? RENEWED_WEIGHT : 1),
       corrected: r.events.some(
         (e) => fromJsonText<{ departmentId?: string | null }>(e.meta)?.departmentId,
       ),
     }));
+  for (const a of kb) {
+    if (!activeIds.has(a.departmentId)) continue;
+    docs.push({
+      code: `BB-${a.seq}`,
+      departmentId: a.departmentId,
+      features: scaled(featurize(`${a.title} ${a.keywords ?? ''}`, a.answer, params), KB_WEIGHT),
+      corrected: false,
+    });
+  }
 
   // Parmak izi yalnızca eğitimi etkileyen alanlardan: durum değişikliği gibi
   // alakasız güncellemeler her seferinde yeni sürüm üretmesin.
@@ -91,8 +120,11 @@ async function loadTrainingData(params: Params) {
   h.update(`f${FEATURE_VERSION}|${JSON.stringify(params)}`);
   h.update(departments.map((d) => d.id).join(','));
   for (const r of records) {
-    if (activeIds.has(r.departmentId)) h.update(`\n${r.code}|${r.departmentId}|${r.title}|${r.description}`);
+    if (activeIds.has(r.departmentId)) {
+      h.update(`\n${r.code}|${r.departmentId}|${r.title}|${r.description}|${r.renewed ? 1 : 0}`);
+    }
   }
+  for (const a of kb) h.update(`\nBB-${a.seq}|${a.departmentId}|${a.title}|${a.keywords ?? ''}|${a.answer}`);
 
   return { departments, docs, fingerprint: h.digest('hex').slice(0, 32) };
 }
@@ -266,6 +298,11 @@ export async function ensureModel(log: FastifyBaseLogger, opts: { force?: boolea
   });
 
   return training;
+}
+
+/** ML hafızası değişti (yenilenen kayıt, Bilgi Bankası): arka planda yeniden eğit, istek beklemez. */
+export function relearn(log: FastifyBaseLogger) {
+  ensureModel(log).catch((err) => log.warn({ err: (err as Error).message }, 'ML yeniden eğitimi başarısız'));
 }
 
 /** Zamanlanmış yeniden eğitim — veri değişmediyse maliyeti bir sorgu. */

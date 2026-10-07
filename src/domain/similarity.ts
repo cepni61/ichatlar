@@ -54,7 +54,7 @@ const FOLD: Record<string, string> = {
   ç: 'c', ğ: 'g', ı: 'i', İ: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u',
 };
 
-const fold = (s: string) =>
+export const fold = (s: string) =>
   String(s ?? '')
     .toLocaleLowerCase('tr-TR')
     .replace(/[çğıİöşüâîû]/g, (c) => FOLD[c] ?? c);
@@ -120,6 +120,12 @@ export interface SimilarMatch {
   /** Çözüm tarihi (ISO); eşleşme kartında "ne zaman çözüldü" için. */
   resolvedAt: string | null;
   percent: number;
+  /** Onaylı çözüm: "yenilenen kayıt" ya da Bilgi Bankası maddesi. */
+  verified: boolean;
+  /** kayit | kb (Bilgi Bankası) */
+  source: 'kayit' | 'kb';
+  /** Bilgi Bankası maddesinin bağlantısı (uygulama / süreç sayfası). */
+  url: string | null;
   /** Eşleşmeyi tetikleyen kelimeler — kullanıcıya gerekçe göstermek için. */
   terms: string[];
 }
@@ -148,6 +154,7 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
       description: true,
       resolution: true,
       resolvedAt: true,
+      renewed: true,
       departmentId: true,
       department2Id: true,
       department: { select: { name: true } },
@@ -172,6 +179,8 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
     if (query.type && TYPE_TO_SLUG[r.type] === query.type) {
       score += 0.05;
     }
+    // Çözen kişinin ML hafızasına eklediği çözüm biraz öne alınır.
+    if (r.renewed) score += 0.06;
     score = Math.max(0, Math.min(1, score));
 
     const terms: string[] = [];
@@ -191,8 +200,53 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
       score,
       percent: Math.round(score * 100),
       terms,
+      verified: r.renewed,
+      source: 'kayit' as 'kayit' | 'kb',
+      url: null as string | null,
     };
   });
+
+  // Bilgi Bankası: ekiplerin hazır yanıtları aynı ölçütle aday olur.
+  const kb = await prisma.kbArticle.findMany({
+    where: { active: true },
+    select: {
+      seq: true, title: true, keywords: true, answer: true, url: true, departmentId: true,
+      department: { select: { name: true } },
+    },
+    take: 1000,
+  });
+  for (const a of kb) {
+    const head = `${a.title} ${a.keywords ?? ''}`;
+    const cTitleSet = new Set(tokenize(head));
+    const cAllSet = new Set(tokenize(head).concat(tokenize(a.answer)));
+    let score =
+      0.40 * jaccard(qAllSet, cAllSet) +
+      0.35 * jaccard(qTitleSet, cTitleSet) +
+      0.25 * overlapRatio(qAllTokens, cAllSet);
+    if (query.department && a.departmentId === query.department) score += 0.05;
+    score += 0.05; // ekibin onayladığı hazır yanıt
+    score = Math.max(0, Math.min(1, score));
+    const terms: string[] = [];
+    for (const w of qAllSet) {
+      if (cAllSet.has(w) && terms.length < 4) terms.push(surface.get(w) ?? w);
+    }
+    scored.push({
+      code: `BB-${a.seq}`,
+      type: 'bilgi',
+      title: a.title,
+      description: '',
+      resolution: a.answer,
+      departmentId: a.departmentId,
+      departmentName: a.department.name,
+      resolvedAt: null,
+      score,
+      percent: Math.round(score * 100),
+      terms,
+      verified: true,
+      source: 'kb' as const,
+      url: a.url,
+    });
+  }
 
   return scored
     .filter((x) => x.percent >= 12) // prototipteki eşik

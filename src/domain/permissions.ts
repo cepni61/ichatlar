@@ -1,5 +1,5 @@
-import { RecordStatus, Role } from './enums.js';
-import { isOpen, WORK_STATUSES } from './constants.js';
+import { RecordStatus, RecordType, Role } from './enums.js';
+import { isOpen, ONERI_OUTCOMES, ONERI_WORK_STATUSES, WORK_STATUSES } from './constants.js';
 
 /**
  * Yetki kuralları tek yerde. Arayüz hangi düğmeyi göstereceğini buradan
@@ -17,6 +17,8 @@ export interface Actor {
   * karşılaştırmalar enums.ts sabitleriyle yapıldığı için güvenli kalır. */
 export interface RecordShape {
   status: string;
+  /** Verilmezse bilgi talebi sayılır (yalnızca öneriye özel aksiyonlar bakar). */
+  type?: string;
   departmentId: string;
   department2Id: string | null;
   createdById: string;
@@ -34,7 +36,9 @@ export type Action =
   | 'close'
   | 'reopen'
   | 'comment'
-  | 'attach';
+  | 'attach'
+  | 'evaluate'
+  | 'learn';
 
 export interface Relation {
   isCreator: boolean;
@@ -81,9 +85,22 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
 
     // Ara durumları ve çözümü yalnızca kaydı üzerine alan kişi değiştirir.
     case 'status':
+      return r.open && (r.isAssignee || r.isAdmin);
+
+    // Bilgi talebi çözülür / reddedilir; öneri ise değerlendirilir.
     case 'resolve':
     case 'reject':
-      return r.open && (r.isAssignee || r.isAdmin);
+      return r.open && (r.isAssignee || r.isAdmin) && rec.type !== RecordType.ONERI;
+    case 'evaluate':
+      return r.open && (r.isAssignee || r.isAdmin) && rec.type === RecordType.ONERI;
+
+    // "Yenilenen kayıt" (ML hafızası): çözümü yazan kişi ya da sistem yöneticisi.
+    case 'learn':
+      return (
+        rec.type !== RecordType.ONERI &&
+        (rec.status === RecordStatus.COZULDU || rec.status === RecordStatus.KAPATILDI) &&
+        (r.isAssignee || r.isAdmin)
+      );
 
     // Çözülen kaydı kapatma hakkı kaydı açanda — çözümün işe yarayıp
     // yaramadığına o karar verir.
@@ -105,7 +122,9 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
 
 /** Arayüze gönderilen izin listesi — düğme görünürlüğü için. */
 export function permissionsFor(rec: RecordShape, actor: Actor) {
-  const actions: Action[] = ['claim', 'forward', 'status', 'resolve', 'reject', 'close', 'reopen', 'comment', 'attach'];
+  const actions: Action[] = [
+    'claim', 'forward', 'status', 'resolve', 'reject', 'close', 'reopen', 'comment', 'attach', 'evaluate', 'learn',
+  ];
   const out: Partial<Record<Action, boolean>> = {};
   for (const a of actions) out[a] = can(a, rec, actor);
   return out;
@@ -115,15 +134,25 @@ export function permissionsFor(rec: RecordShape, actor: Actor) {
  * Geçerli durum geçişleri. Yetki ayrı bir kontrol; bu tablo yalnızca
  * "bu durumdan şuraya gidilebilir mi" sorusunu yanıtlar.
  */
+/* Açık bir kayıttan gidilebilecek her yer. Türe özgü sınırlar (öneri yalnızca
+   değerlendirilir, bilgi yalnızca çözülür) aksiyon yetkilerinde ve uçlarda. */
+const FROM_OPEN: RecordStatus[] = [
+  ...WORK_STATUSES, ...ONERI_WORK_STATUSES, ...ONERI_OUTCOMES,
+  RecordStatus.COZULDU, RecordStatus.REDDEDILDI, RecordStatus.YENI,
+];
 const TRANSITIONS: Record<string, RecordStatus[]> = {
-  YENI: [RecordStatus.UZERIME_ALINDI, RecordStatus.REDDEDILDI],
-  UZERIME_ALINDI: [...WORK_STATUSES, RecordStatus.COZULDU, RecordStatus.REDDEDILDI, RecordStatus.YENI],
-  INCELENIYOR: [...WORK_STATUSES, RecordStatus.COZULDU, RecordStatus.REDDEDILDI, RecordStatus.YENI],
-  CALISILIYOR: [...WORK_STATUSES, RecordStatus.COZULDU, RecordStatus.REDDEDILDI, RecordStatus.YENI],
-  EK_BILGI: [...WORK_STATUSES, RecordStatus.COZULDU, RecordStatus.REDDEDILDI, RecordStatus.YENI],
+  YENI: [RecordStatus.UZERIME_ALINDI, RecordStatus.DEGERLENDIRILIYOR, RecordStatus.REDDEDILDI, ...ONERI_OUTCOMES],
+  UZERIME_ALINDI: FROM_OPEN,
+  INCELENIYOR: FROM_OPEN,
+  CALISILIYOR: FROM_OPEN,
+  EK_BILGI: FROM_OPEN,
+  DEGERLENDIRILIYOR: FROM_OPEN,
   COZULDU: [RecordStatus.KAPATILDI, RecordStatus.CALISILIYOR], // yeniden açılabilir
   KAPATILDI: [],
   REDDEDILDI: [],
+  DEGERLENDIRILDI: [],
+  FAYDA_SAGLADI: [],
+  UYGUN_BULUNMADI: [],
 };
 
 export function canTransition(from: string, to: string): boolean {

@@ -48,6 +48,10 @@ export const STATUS_LABELS: Record<string, string> = {
   COZULDU: 'Çözüldü',
   KAPATILDI: 'Kapatıldı',
   REDDEDILDI: 'Reddedildi',
+  DEGERLENDIRILIYOR: 'Değerlendiriliyor',
+  DEGERLENDIRILDI: 'Değerlendirildi',
+  FAYDA_SAGLADI: 'Fayda Sağladı',
+  UYGUN_BULUNMADI: 'Uygun Bulunmadı',
 };
 
 /** Arayüzdeki pill renkleri — prototiple aynı. */
@@ -60,6 +64,10 @@ export const STATUS_TONES: Record<string, string> = {
   COZULDU: 'green',
   KAPATILDI: 'gray',
   REDDEDILDI: 'red',
+  DEGERLENDIRILIYOR: 'blue',
+  DEGERLENDIRILDI: 'teal',
+  FAYDA_SAGLADI: 'green',
+  UYGUN_BULUNMADI: 'gray',
 };
 
 export const STATUS_FROM_SLUG: Record<string, RecordStatus> = {
@@ -71,6 +79,10 @@ export const STATUS_FROM_SLUG: Record<string, RecordStatus> = {
   cozuldu: RecordStatus.COZULDU,
   kapatildi: RecordStatus.KAPATILDI,
   reddedildi: RecordStatus.REDDEDILDI,
+  degerlendiriliyor: RecordStatus.DEGERLENDIRILIYOR,
+  degerlendirildi: RecordStatus.DEGERLENDIRILDI,
+  fayda_sagladi: RecordStatus.FAYDA_SAGLADI,
+  uygun_bulunmadi: RecordStatus.UYGUN_BULUNMADI,
 };
 
 export const STATUS_TO_SLUG: Record<string, string> = {
@@ -82,6 +94,10 @@ export const STATUS_TO_SLUG: Record<string, string> = {
   COZULDU: 'cozuldu',
   KAPATILDI: 'kapatildi',
   REDDEDILDI: 'reddedildi',
+  DEGERLENDIRILIYOR: 'degerlendiriliyor',
+  DEGERLENDIRILDI: 'degerlendirildi',
+  FAYDA_SAGLADI: 'fayda_sagladi',
+  UYGUN_BULUNMADI: 'uygun_bulunmadi',
 };
 
 /** Kayıt hâlâ ekipte iş bekliyor mu. Prototipteki OPEN_STATUSES. */
@@ -91,15 +107,38 @@ export const OPEN_STATUSES: RecordStatus[] = [
   RecordStatus.INCELENIYOR,
   RecordStatus.CALISILIYOR,
   RecordStatus.EK_BILGI,
+  RecordStatus.DEGERLENDIRILIYOR,
 ];
 
 export const isOpen = (s: string) => (OPEN_STATUSES as string[]).includes(s);
 
-/** Sahip tarafından serbestçe seçilebilen ara durumlar. */
+/** Sahip tarafından serbestçe seçilebilen ara durumlar (bilgi talebi). */
 export const WORK_STATUSES: RecordStatus[] = [
   RecordStatus.INCELENIYOR,
   RecordStatus.CALISILIYOR,
   RecordStatus.EK_BILGI,
+];
+
+/** Öneride değerlendiren kişinin seçebildiği ara durumlar. */
+export const ONERI_WORK_STATUSES: RecordStatus[] = [
+  RecordStatus.DEGERLENDIRILIYOR,
+  RecordStatus.EK_BILGI,
+];
+
+/** Öneri değerlendirmesinin sonuçları (son durumlar). */
+export const ONERI_OUTCOMES: RecordStatus[] = [
+  RecordStatus.DEGERLENDIRILDI,
+  RecordStatus.FAYDA_SAGLADI,
+  RecordStatus.UYGUN_BULUNMADI,
+];
+
+/** Sonuçlanmış kayıt: çözülen, kapatılan ya da değerlendirmesi biten. */
+export const DONE_STATUSES: RecordStatus[] = [
+  RecordStatus.COZULDU,
+  RecordStatus.KAPATILDI,
+  RecordStatus.DEGERLENDIRILDI,
+  RecordStatus.FAYDA_SAGLADI,
+  RecordStatus.UYGUN_BULUNMADI,
 ];
 
 export const HOUR_MS = 60 * 60 * 1000;

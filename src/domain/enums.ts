@@ -31,6 +31,13 @@ export const RecordStatus = {
   COZULDU: 'COZULDU',
   KAPATILDI: 'KAPATILDI',
   REDDEDILDI: 'REDDEDILDI',
+  /* Öneri akışı: ekipten biri üzerine alınca "Değerlendiriliyor"; değerlendiren
+     sonucu seçer — Değerlendirildi, Fayda Sağladı ya da Uygun Bulunmadı. Bu
+     üçü son durumdur (öneri sahibinin ayrıca kapatması gerekmez). */
+  DEGERLENDIRILIYOR: 'DEGERLENDIRILIYOR',
+  DEGERLENDIRILDI: 'DEGERLENDIRILDI',
+  FAYDA_SAGLADI: 'FAYDA_SAGLADI',
+  UYGUN_BULUNMADI: 'UYGUN_BULUNMADI',
 } as const;
 export type RecordStatus = (typeof RecordStatus)[keyof typeof RecordStatus];
 
@@ -55,6 +62,8 @@ export const EventType = {
   ATTACH: 'ATTACH',
   SLA_BREACH: 'SLA_BREACH',
   REOPEN: 'REOPEN',
+  /** Yenilenen kayıt işareti kondu / kaldırıldı (ML hafızası). */
+  LEARN: 'LEARN',
 } as const;
 export type EventType = (typeof EventType)[keyof typeof EventType];
 
@@ -73,6 +82,12 @@ export const NotificationType = {
   COMMENT: 'COMMENT',
   /** Kayıt doğrudan bu kişiye atandı. */
   ASSIGNED: 'ASSIGNED',
+  /** Öneri değerlendirmeye alındı (öneri sahibi). */
+  EVALUATING: 'EVALUATING',
+  /** Öneri değerlendirmesi sonuçlandı (öneri sahibi). */
+  EVALUATED: 'EVALUATED',
+  /** Uygulama geri bildirimi geldi (sistem yöneticileri). Kayda bağlı değil. */
+  FEEDBACK: 'FEEDBACK',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

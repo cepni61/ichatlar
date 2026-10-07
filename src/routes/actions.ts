@@ -4,13 +4,15 @@ import { EventType, NotificationType, RecordStatus, RecordType, type Role } from
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { actorOf, requireUser } from '../auth/guard.js';
-import { STATUS_FROM_SLUG, STATUS_LABELS, WORK_STATUSES } from '../domain/constants.js';
+import {
+  ONERI_OUTCOMES, ONERI_WORK_STATUSES, STATUS_FROM_SLUG, STATUS_LABELS, WORK_STATUSES,
+} from '../domain/constants.js';
 import { can, canTransition, type Action } from '../domain/permissions.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeRecord } from '../lib/serialize.js';
 import { MAX_FILES } from '../domain/attachments.js';
 import { lockRecordByCode, toJsonText } from '../lib/dialect.js';
-import { recordForward } from '../ml/service.js';
+import { recordForward, relearn } from '../ml/service.js';
 import { notifyUsers } from '../lib/notify.js';
 
 /** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
@@ -159,15 +161,34 @@ export default async function actionRoutes(app: FastifyInstance) {
       actorDept: a.departmentId,
       action: 'claim',
       ip: req.ip,
-      plan: (r) => ({
-        nextStatus: RecordStatus.UZERIME_ALINDI,
-        data: {
-          assignee: { connect: { id: a.id } },
-          status: RecordStatus.UZERIME_ALINDI,
-          ...stampFirstResponse(r),
-        },
-        event: { type: EventType.ASSIGN, text: `Kayıt ${req.user!.name} tarafından üzerine alındı.` },
-      }),
+      plan: (r) => {
+        // Öneri üzerine alınınca öneri sahibi için "Değerlendiriliyor"a düşer.
+        const oneri = r.type === RecordType.ONERI;
+        const next = oneri ? RecordStatus.DEGERLENDIRILIYOR : RecordStatus.UZERIME_ALINDI;
+        return {
+          nextStatus: next,
+          data: {
+            assignee: { connect: { id: a.id } },
+            status: next,
+            ...stampFirstResponse(r),
+          },
+          event: {
+            type: EventType.ASSIGN,
+            text: oneri
+              ? `Öneri ${req.user!.name} tarafından değerlendirmeye alındı.`
+              : `Kayıt ${req.user!.name} tarafından üzerine alındı.`,
+          },
+          ...(oneri
+            ? {
+                notify: {
+                  userIds: [r.createdById],
+                  type: NotificationType.EVALUATING,
+                  text: `${codeParam(req)} önerin değerlendirmeye alındı.`,
+                },
+              }
+            : {}),
+        };
+      },
     });
     return { record: await serializeRecord(rec, a) };
   });
@@ -242,7 +263,10 @@ export default async function actionRoutes(app: FastifyInstance) {
         if (assigneeId && (!mateDept || (mateDept !== r.departmentId && mateDept !== r.department2Id))) {
           throw badRequest('Kayıt yalnızca ekipteki birine devredilebilir; başka ekibe göndermek için ekip seçin.');
         }
-        const next = typeof nextStatus === 'function' ? nextStatus(r.status) : nextStatus;
+        let next = typeof nextStatus === 'function' ? nextStatus(r.status) : nextStatus;
+        if (assigneeId && r.type === RecordType.ONERI && next === RecordStatus.UZERIME_ALINDI) {
+          next = RecordStatus.DEGERLENDIRILIYOR;
+        }
         return {
         nextStatus: next,
         data: { ...data, ...(assigneeId ? { status: next } : {}), ...stampFirstResponse(r) },
@@ -270,8 +294,8 @@ export default async function actionRoutes(app: FastifyInstance) {
     if (!parsed.success) throw badRequest('Geçersiz istek.');
 
     const next = STATUS_FROM_SLUG[parsed.data.status];
-    if (!next || !WORK_STATUSES.includes(next)) {
-      throw badRequest('Bu uçtan yalnızca İnceleniyor, Çalışılıyor veya Ek Bilgi durumları ayarlanır.');
+    if (!next || !(WORK_STATUSES.includes(next) || ONERI_WORK_STATUSES.includes(next))) {
+      throw badRequest('Bu uçtan yalnızca ara durumlar (İnceleniyor, Çalışılıyor, Değerlendiriliyor, Ek Bilgi) ayarlanır.');
     }
 
     const note = parsed.data.note;
@@ -282,7 +306,14 @@ export default async function actionRoutes(app: FastifyInstance) {
       actorDept: a.departmentId,
       action: 'status',
       ip: req.ip,
-      plan: (r) => ({
+      plan: (r) => {
+        const allowed = r.type === RecordType.ONERI ? ONERI_WORK_STATUSES : WORK_STATUSES;
+        if (!allowed.includes(next)) {
+          throw badRequest(r.type === RecordType.ONERI
+            ? 'Öneride ara durum olarak yalnızca Değerlendiriliyor ya da Ek Bilgi seçilebilir.'
+            : 'Bilgi talebinde ara durum olarak İnceleniyor, Çalışılıyor ya da Ek Bilgi seçilebilir.');
+        }
+        return {
         nextStatus: next,
         data: { status: next, ...stampFirstResponse(r) },
         event: {
@@ -299,7 +330,8 @@ export default async function actionRoutes(app: FastifyInstance) {
               },
             }
           : {}),
-      }),
+        };
+      },
     });
     return { record: await serializeRecord(rec, a) };
   });
@@ -311,10 +343,12 @@ export default async function actionRoutes(app: FastifyInstance) {
       .object({
         resolution: z.string().trim().min(10, 'Çözümü en az 10 karakter yazın.').max(5000),
         attachmentIds,
+        /** "Yenilenen kayıt olarak işaretle" — çözüm ML hafızasına eklenir. */
+        learn: z.boolean().default(false),
       })
       .safeParse(req.body);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
-    const { resolution } = parsed.data;
+    const { resolution, learn } = parsed.data;
 
     const rec = await mutate(app, {
       code: codeParam(req),
@@ -330,6 +364,7 @@ export default async function actionRoutes(app: FastifyInstance) {
           resolution,
           resolvedAt: new Date(),
           ...stampFirstResponse(r),
+          ...(learn ? { renewed: true, renewedAt: new Date(), renewedById: a.id } : {}),
         },
         event: { type: EventType.COMMENT, text: resolution },
         attachmentIds: parsed.data.attachmentIds,
@@ -342,6 +377,95 @@ export default async function actionRoutes(app: FastifyInstance) {
         },
       }),
     });
+    if (learn) relearn(req.log);
+    return { record: await serializeRecord(rec, a) };
+  });
+
+  /**
+   * Öneri değerlendirmesi: değerlendiren kişi sonucu seçer. Üç sonuç da son
+   * durumdur; öneri sahibine bildirim gider. Not zorunlu — öneri sahibi
+   * neden bu sonucun çıktığını görmeli.
+   */
+  const OUTCOME_FROM_SLUG: Record<string, RecordStatus> = {
+    degerlendirildi: RecordStatus.DEGERLENDIRILDI,
+    fayda_sagladi: RecordStatus.FAYDA_SAGLADI,
+    uygun_bulunmadi: RecordStatus.UYGUN_BULUNMADI,
+  };
+  app.post('/api/records/:code/evaluate', async (req) => {
+    const a = actorOf(req);
+    const parsed = z
+      .object({
+        outcome: z.enum(['degerlendirildi', 'fayda_sagladi', 'uygun_bulunmadi'], {
+          errorMap: () => ({ message: 'Değerlendirme sonucunu seçin.' }),
+        }),
+        note: z.string().trim().min(10, 'Değerlendirme notunu en az 10 karakter yazın.').max(5000),
+        attachmentIds,
+      })
+      .safeParse(req.body);
+    if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
+    const outcome = OUTCOME_FROM_SLUG[parsed.data.outcome]!;
+    const label = STATUS_LABELS[outcome]!;
+    const now = new Date();
+
+    const rec = await mutate(app, {
+      code: codeParam(req),
+      actorId: a.id,
+      actorRole: a.role,
+      actorDept: a.departmentId,
+      action: 'evaluate',
+      ip: req.ip,
+      plan: (r) => ({
+        nextStatus: outcome,
+        data: {
+          status: outcome,
+          resolution: parsed.data.note,
+          resolvedAt: now,
+          closedAt: now,
+          ...stampFirstResponse(r),
+        },
+        event: {
+          type: EventType.STATUS,
+          text: `Değerlendirme sonucu: ${label}. ${parsed.data.note}`,
+          meta: { outcome: parsed.data.outcome },
+        },
+        attachmentIds: parsed.data.attachmentIds,
+        notify: {
+          userIds: [r.createdById],
+          type: NotificationType.EVALUATED,
+          text: `${codeParam(req)} önerinin değerlendirmesi tamamlandı: ${label}.`,
+        },
+      }),
+    });
+    return { record: await serializeRecord(rec, a) };
+  });
+
+  /** "Yenilenen kayıt" işaretini koy / kaldır — çözüm ML hafızasına eklenir ya da çıkar. */
+  app.post('/api/records/:code/learn', async (req) => {
+    const a = actorOf(req);
+    const parsed = z.object({ on: z.boolean() }).safeParse(req.body);
+    if (!parsed.success) throw badRequest('Geçersiz istek.');
+    const on = parsed.data.on;
+
+    const rec = await mutate(app, {
+      code: codeParam(req),
+      actorId: a.id,
+      actorRole: a.role,
+      actorDept: a.departmentId,
+      action: 'learn',
+      ip: req.ip,
+      plan: () => ({
+        data: on
+          ? { renewed: true, renewedAt: new Date(), renewedById: a.id }
+          : { renewed: false, renewedAt: null, renewedById: null },
+        event: {
+          type: EventType.LEARN,
+          text: on
+            ? 'Yenilenen kayıt olarak işaretlendi; çözüm ML hafızasına eklendi.'
+            : 'Yenilenen kayıt işareti kaldırıldı; çözüm ML hafızasından çıkarıldı.',
+        },
+      }),
+    });
+    relearn(req.log);
     return { record: await serializeRecord(rec, a) };
   });
 

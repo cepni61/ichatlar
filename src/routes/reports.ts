@@ -5,6 +5,7 @@ import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
 import { requireRole, requireUser } from '../auth/guard.js';
 import {
+  DONE_STATUSES,
   HOUR_MS,
   isOpen,
   PRIORITY_LABELS,
@@ -83,6 +84,12 @@ async function gather(deptId: string | null) {
 type Row = Awaited<ReturnType<typeof gather>>['rows'][number];
 
 const breached = (r: Row, now: number) => isOpen(r.status) && r.slaDueAt.getTime() <= now;
+
+/* Öneri kabulü: yeni akışta "Fayda Sağladı"; eski kayıtlarda çözülen öneri.
+   Oran, sonuçlanmış önerilere göre (açık öneri paydada yok). */
+const oneriAccepted = (r: Row) =>
+  r.type === 'ONERI' && (r.status === 'FAYDA_SAGLADI' || r.status === 'COZULDU' || r.status === 'KAPATILDI');
+const oneriDecided = (r: Row) => r.type === 'ONERI' && !isOpen(r.status);
 const slaPct = (rs: Row[], now: number) => slaCompliancePct(rs, (r) => isOpen(r.status), now);
 
 export default async function reportRoutes(app: FastifyInstance) {
@@ -98,9 +105,10 @@ export default async function reportRoutes(app: FastifyInstance) {
 
       const open = rows.filter((r) => isOpen(r.status));
       const late = open.filter((r) => breached(r, now));
-      const closed = rows.filter((r) => r.status === 'COZULDU' || r.status === 'KAPATILDI');
+      const closed = rows.filter((r) => (DONE_STATUSES as string[]).includes(r.status));
       const oneri = rows.filter((r) => r.type === 'ONERI');
-      const oneriOk = oneri.filter((r) => r.status === 'COZULDU');
+      const oneriOk = oneri.filter(oneriAccepted);
+      const oneriDone = oneri.filter(oneriDecided);
       const anon = rows.filter((r) => r.anonymous);
 
       const respHours = rows
@@ -131,7 +139,7 @@ export default async function reportRoutes(app: FastifyInstance) {
               .map((r) => (r.resolvedAt!.getTime() - r.createdAt.getTime()) / HOUR_MS),
           ),
           slaPct: slaPct(all, now),
-          oneriSolved: all.filter((r) => r.type === 'ONERI' && r.status === 'COZULDU').length,
+          oneriSolved: all.filter(oneriAccepted).length,
         };
       });
 
@@ -160,7 +168,7 @@ export default async function reportRoutes(app: FastifyInstance) {
           owned: rows.filter((r) => isOpen(r.status)).length,
           anonymousPct: rows.length ? Math.round((anon.length / rows.length) * 100) : 0,
           slaPct: slaPct(rows, now),
-          oneriAcceptPct: oneri.length ? Math.round((oneriOk.length / oneri.length) * 100) : null,
+          oneriAcceptPct: oneriDone.length ? Math.round((oneriOk.length / oneriDone.length) * 100) : null,
           oneriSolved: oneriOk.length,
           avgFirstResponseHours: avg(respHours),
           avgSolveHours: avg(solveHours),

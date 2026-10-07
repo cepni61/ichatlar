@@ -68,6 +68,9 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     resolution: rec.resolution,
     /** Öneri kaydının yapısal alanları; bilgi kaydında null. */
     oneri: parseDetails(rec.details),
+    /** "Yenilenen kayıt": çözüm ML hafızasına eklendi. */
+    renewed: rec.renewed,
+    renewedAt: rec.renewedAt ? rec.renewedAt.toISOString() : null,
 
     createdAt: rec.createdAt.toISOString(),
     updatedAt: rec.updatedAt.toISOString(),
