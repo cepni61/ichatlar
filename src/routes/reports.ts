@@ -1,5 +1,6 @@
 import { slaCompliancePct } from '../domain/sla-compliance.js';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { z } from 'zod';
 import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
 import { requireRole, requireUser } from '../auth/guard.js';
@@ -7,13 +8,15 @@ import {
   HOUR_MS,
   isOpen,
   PRIORITY_LABELS,
+  PRIORITY_TO_SLUG,
   STATUS_LABELS,
   STATUS_TO_SLUG,
   TYPE_LABELS,
   TYPE_TO_SLUG,
 } from '../domain/constants.js';
-import { tokenize } from '../domain/similarity.js';
+import { surfaceForms, tokenize } from '../domain/similarity.js';
 import { toJsonText } from '../lib/dialect.js';
+import { badRequest } from '../lib/errors.js';
 
 /**
  * Raporlar ekip ve kurum düzeyinde toplu sayılar üretir; kayıt gövdesi
@@ -26,9 +29,31 @@ import { toJsonText } from '../lib/dialect.js';
  */
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
-async function gather() {
+/**
+ * Ekip filtresi (?department=<id>). Kayıt, asıl ya da ikincil ekibi o ekipse
+ * sayılır — ekip tablosundaki sayılarla aynı kural.
+ */
+const reportQuery = z.object({ department: z.string().trim().min(1).max(64).optional() });
+
+async function departmentFilter(req: FastifyRequest) {
+  const q = reportQuery.safeParse(req.query);
+  if (!q.success) throw badRequest('Geçersiz rapor filtresi.');
+  if (!q.data.department) return null;
+  const d = await prisma.department.findUnique({
+    where: { id: q.data.department },
+    select: { id: true, name: true },
+  });
+  if (!d) throw badRequest('Seçilen ekip bulunamadı.');
+  return d;
+}
+
+const inDepartment = (deptId: string | null) =>
+  deptId ? { OR: [{ departmentId: deptId }, { department2Id: deptId }] } : undefined;
+
+async function gather(deptId: string | null) {
   const [rows, departments] = await Promise.all([
     prisma.record.findMany({
+      where: inDepartment(deptId),
       select: {
         code: true,
         title: true,
@@ -47,7 +72,7 @@ async function gather() {
       },
     }),
     prisma.department.findMany({
-      where: { active: true },
+      where: deptId ? { id: deptId } : { active: true },
       orderBy: [{ order: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, short: true },
     }),
@@ -66,9 +91,10 @@ export default async function reportRoutes(app: FastifyInstance) {
   app.get(
     '/api/reports/summary',
     { preHandler: requireRole(Role.MANAGER, Role.ADMIN) },
-    async () => {
+    async (req) => {
       const now = Date.now();
-      const { rows, departments } = await gather();
+      const dept = await departmentFilter(req);
+      const { rows, departments } = await gather(dept?.id ?? null);
 
       const open = rows.filter((r) => isOpen(r.status));
       const late = open.filter((r) => breached(r, now));
@@ -109,16 +135,22 @@ export default async function reportRoutes(app: FastifyInstance) {
         };
       });
 
+      // Konular katlanmış token'larla sayılır ("izin" = "İzin"), ama
+      // kullanıcıya başlıklarda geçen Türkçe biçimiyle gösterilir.
       const wc = new Map<string, number>();
+      const surface = new Map<string, string>();
       for (const r of rows) {
         for (const w of tokenize(r.title)) wc.set(w, (wc.get(w) ?? 0) + 1);
+        for (const [f, raw] of surfaceForms(r.title)) if (!surface.has(f)) surface.set(f, raw);
       }
       const topics = [...wc.entries()]
-        .map(([term, n]) => ({ term, n }))
+        .map(([term, n]) => ({ term: surface.get(term) ?? term, n }))
         .sort((a, b) => b.n - a.n)
         .slice(0, 8);
 
       return {
+        /** Uygulanan filtre; filtresizse null (kurum geneli). */
+        filter: dept ? { department: dept } : null,
         totals: {
           records: rows.length,
           open: open.length,
@@ -139,6 +171,11 @@ export default async function reportRoutes(app: FastifyInstance) {
           label,
           n: rows.filter((r) => r.type === key).length,
         })),
+        byPriority: Object.entries(PRIORITY_LABELS).map(([key, label]) => ({
+          id: PRIORITY_TO_SLUG[key],
+          label,
+          n: rows.filter((r) => r.priority === key).length,
+        })),
         byStatus: Object.entries(STATUS_LABELS)
           .map(([key, label]) => ({
             id: STATUS_TO_SLUG[key as keyof typeof STATUS_TO_SLUG],
@@ -157,7 +194,9 @@ export default async function reportRoutes(app: FastifyInstance) {
     { preHandler: requireRole(Role.MANAGER, Role.ADMIN) },
     async (req, reply) => {
       const now = Date.now();
+      const dept = await departmentFilter(req);
       const rows = await prisma.record.findMany({
+        where: inDepartment(dept?.id ?? null),
         orderBy: { createdAt: 'desc' },
         select: {
           code: true,
@@ -210,7 +249,7 @@ export default async function reportRoutes(app: FastifyInstance) {
           action: 'report.export',
           entity: 'Record',
           entityId: '*',
-          after: toJsonText({ rows: rows.length }),
+          after: toJsonText({ rows: rows.length, department: dept?.id ?? null }),
           ip: req.ip,
         },
       });

@@ -854,6 +854,16 @@
     to  {opacity:1;transform:none}
   }
   /* KPI kartları tek tek gelsin */
+  /* Rapor ekip filtresi */
+  .rep-filter{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:12px 16px;margin-bottom:16px}
+  .rep-filter label{font-size:11px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2)}
+  .rep-filter select{
+    min-width:260px;border:1px solid var(--line-2);border-radius:var(--r-sm);
+    background:var(--panel);color:var(--text);padding:9px 12px;font-size:14px;
+  }
+  .rep-filter select:focus{outline:none;border-color:var(--b-500);box-shadow:0 0 0 3.5px var(--focus-ring)}
+  .rep-filter .mini-btn[hidden]{display:none}
+  @media(max-width:640px){ .rep-filter select{min-width:0;flex:1} }
   .kpis .kpi, .report-kpis .metric-box{animation:kpiIn .5s cubic-bezier(.22,1,.36,1) both}
   .kpis .kpi:nth-child(1),.report-kpis .metric-box:nth-child(1){animation-delay:.06s}
   .kpis .kpi:nth-child(2),.report-kpis .metric-box:nth-child(2){animation-delay:.12s}
@@ -1542,6 +1552,10 @@
     transition:background .18s var(--ease);
   }
   .chat-h button:hover{background:rgba(255,255,255,.22)}
+  /* "Yeni sohbet": geçmiş korunduğu için temizleme yolu */
+  .chat-h .chat-reset{width:auto;padding:0 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+  .chat-h .chat-reset + button{margin-left:0}
+  .chat .kpi-box .d + .d{margin-top:3px}
 
   .chat-body{
     padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;
@@ -1929,6 +1943,13 @@
 
     <!-- ---------- RAPORLAR ---------- -->
     <section id="reports" class="view">
+      <!-- Ekip filtresi: seçilince bütün kartlar ve CSV o ekibin kayıtlarıyla
+           (asıl ya da ikincil ekibi o ekip olanlar) yeniden hesaplanır. -->
+      <div class="card rep-filter">
+        <label for="repDept">Ekip</label>
+        <select id="repDept"><option value="">Tüm ekipler</option></select>
+        <button class="mini-btn" type="button" id="repDeptClear" hidden>Filtreyi kaldır</button>
+      </div>
       <div class="grid report-kpis" id="repKpis"></div>
       <div class="grid reports" id="repCharts"></div>
       <!-- CSV yalnızca yönetici ve sistem yöneticisine açık; ekip üyesine
@@ -1938,7 +1959,8 @@
         <div class="card-head"><h3>Rapor Çıktısı</h3><button class="btn btn-ghost" id="csvBtn">CSV'ye Aktar</button></div>
         <div class="card-body">
           <p class="hint" style="margin:0;line-height:1.6">Kayıtları Excel'de açılabilen bir dosya olarak indirir: kayıt no, tür,
-          başlık, ekip, öncelik, durum, açan, sahip, tarihler ve SLA. Her indirme denetim izine yazılır;
+          başlık, ekip, öncelik, durum, açan, sahip, tarihler ve SLA. Yukarıda ekip seçiliyse yalnızca o ekibin
+          kayıtları aktarılır. Her indirme denetim izine yazılır;
           dosya kişisel veri içerir, kurum dışına paylaşmayın.</p>
         </div>
       </div>
@@ -3321,7 +3343,8 @@ function createRecord(){
    ========================================================================= */
 
 const REP_TTL = 30000;     /* özet ucu kısa süreli önbelleğe alınır */
-let repCache = null;       /* {at, sum} */
+let repCache = {};         /* ekip filtresi → {at, sum}; '' = kurum geneli */
+let repDept = '';          /* seçili ekip filtresi; boş = tüm ekipler */
 
 const repPct = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
 const repAvg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -3332,17 +3355,20 @@ const repAvg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : nu
 /* 403 (yetki yok) ile gerçek hata ayrı tutulur: yönetici kurum geneli raporu
    alamadıysa bunu sessizce kendi kapsamındaki sayılarla geçiştirmek yanıltıcıydı. */
 let repFailed = false;
-function fetchReportSummary(){
+function fetchReportSummary(dept){
+  dept = dept || '';
   if (location.protocol === 'file:') return Promise.resolve(null);
-  if (repCache && Date.now() - repCache.at < REP_TTL) return Promise.resolve(repCache.sum);
-  return fetch('/api/reports/summary', { credentials:'same-origin' })
+  const hit = repCache[dept];
+  if (hit && Date.now() - hit.at < REP_TTL) return Promise.resolve(hit.sum);
+  const url = '/api/reports/summary' + (dept ? '?department=' + encodeURIComponent(dept) : '');
+  return fetch(url, { credentials:'same-origin' })
     .then(res => {
       repFailed = !res.ok && res.status !== 403;
       return res.ok ? res.json() : null;
     })
     .then(sum => {
       if (!sum || !sum.totals) return null;
-      repCache = { at: Date.now(), sum };
+      repCache[dept] = { at: Date.now(), sum };
       return sum;
     })
     .catch(() => { repFailed = true; return null; });
@@ -3350,21 +3376,24 @@ function fetchReportSummary(){
 
 /* Gecikenler yalnızca kullanıcının görebildiği kayıtlardan listelenebilir:
    özet ucu kayıt gövdesi döndürmüyor. Sayı kurumun, liste kapsamın. */
-function repVisibleLate(){
-  return Store.data.records.filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
+/* Kayıt, asıl ya da ikincil ekibi seçili ekipse filtreye girer (sunucuyla aynı kural). */
+const inRepDept = (r, dept) => !dept || r.department === dept || r.department2 === dept;
+
+function repVisibleLate(dept){
+  return Store.data.records.filter(r => inRepDept(r, dept) && OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
 }
 
-function reportModelLocal(){
-  const recs = Store.data.records;
+function reportModelLocal(dept){
+  const recs = Store.data.records.filter(r => inRepDept(r, dept));
   const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
-  const late = repVisibleLate();
+  const late = repVisibleLate(dept);
   const anon = recs.filter(r => r.anonymous).length;
   const oneri = recs.filter(r => r.type === 'oneri');
   const oneriOk = oneri.filter(r => r.status === 'cozuldu').length;
 
   /* İkincil ekip de sayılır — özet ucu da öyle sayıyor. İki görünüm
      arasında gidip gelirken sayılar zıplamasın. */
-  const depts = DEPARTMENTS.map(d => {
+  const depts = DEPARTMENTS.filter(d => !dept || d.id === dept).map(d => {
     const all = recs.filter(r => r.department === d.id || r.department2 === d.id);
     return {
       label: d.name,
@@ -3380,7 +3409,7 @@ function reportModelLocal(){
   recs.forEach(r => mlTokens(r.title).forEach(w => { wc[w] = (wc[w] || 0) + 1; }));
 
   return {
-    scope: 'local',
+    scope: 'local', dept: dept || '',
     total: recs.length, open: open.length, late: late.length,
     anonPct:  recs.length ? repPct(anon, recs.length) : null,
     slaPct:   slaPctOf(recs),
@@ -3388,6 +3417,7 @@ function reportModelLocal(){
     avgResp: null, avgSolve: null,
     depts,
     types:    TYPES.map(t => ({ label:t.label, n:recs.filter(r => r.type === t.id).length })),
+    priorities: PRIORITIES.map(p => ({ label:p.label, n:recs.filter(r => r.priority === p.id).length })),
     statuses: STATUSES.map(s => ({ label:s.label, n:recs.filter(r => r.status === s.id).length }))
                       .filter(x => x.n > 0),
     topics:   Object.keys(wc).map(k => ({ label:k, n:wc[k] })).sort((a,b) => b.n - a.n).slice(0,6),
@@ -3395,16 +3425,17 @@ function reportModelLocal(){
   };
 }
 
-function reportModelServer(sum){
+function reportModelServer(sum, dept){
   const t = sum.totals;
-  const vis = repVisibleLate();
+  const vis = repVisibleLate(dept);
   return {
-    scope: 'org',
+    scope: 'org', dept: dept || '',
     total: t.records, open: t.open, late: t.late,
     anonPct: t.anonymousPct, slaPct: t.slaPct, oneriPct: t.oneriAcceptPct,
     avgResp: t.avgFirstResponseHours, avgSolve: t.avgSolveHours,
     depts:    (sum.byDepartment || []).map(d => ({ label:d.name, n:d.total, resp:d.resp, solve:d.solve })),
     types:    (sum.byType   || []).map(x => ({ label:x.label, n:x.n })),
+    priorities: (sum.byPriority || []).map(x => ({ label:x.label, n:x.n })),
     statuses: (sum.byStatus || []).map(x => ({ label:x.label, n:x.n })),
     topics:   (sum.topics   || []).slice(0,6).map(x => ({ label:x.term, n:x.n })),
     lateRows: vis.slice(0,6),
@@ -3412,13 +3443,26 @@ function reportModelServer(sum){
   };
 }
 
+/* Ekip seçeneklerini doldurur; ekipler açılışta sunucudan geldiği için
+   her çizimde tazelenir, seçim korunur. */
+function fillRepDept(){
+  const sel = $('#repDept'); if (!sel) return;
+  if (repDept && !DEPARTMENTS.some(d => d.id === repDept)) repDept = '';
+  sel.innerHTML = '<option value="">Tüm ekipler</option>'
+    + DEPARTMENTS.map(d => '<option value="'+esc(d.id)+'"'+(d.id === repDept ? ' selected' : '')+'>'+esc(d.name)+'</option>').join('');
+  $('#repDeptClear').hidden = !repDept;
+}
+
 function renderReports(){
-  paintReports(reportModelLocal());
-  fetchReportSummary().then(sum => {
-    if (sum) paintReports(reportModelServer(sum));
-    else if (repFailed) paintReports(reportModelLocal());   // hata şeridi + "Tekrar dene"
+  fillRepDept();
+  const want = repDept;
+  paintReports(reportModelLocal(want));
+  fetchReportSummary(want).then(sum => {
+    if (want !== repDept) return;   // bu arada filtre değişti: eski yanıtı çizme
+    if (sum) paintReports(reportModelServer(sum, want));
+    else if (repFailed) paintReports(reportModelLocal(want));   // hata şeridi + "Tekrar dene"
     const retry = $('#repRetry');
-    if (retry) retry.onclick = () => { repCache = null; renderReports(); };
+    if (retry) retry.onclick = () => { repCache = {}; renderReports(); };
   });
 }
 
@@ -3426,8 +3470,9 @@ function paintReports(m){
   if (!$('#repKpis') || !$('#repCharts')) return;
   const yuzde = v => (v == null ? '—' : '%' + v);
 
+  const dAd = m.dept ? deptName(m.dept) : '';
   $('#repKpis').innerHTML = [
-    ['Toplam Kayıt', m.total, m.scope === 'org' ? 'Kurum geneli' : 'Görebildiğiniz kayıtlar'],
+    ['Toplam Kayıt', m.total, dAd ? dAd : (m.scope === 'org' ? 'Kurum geneli' : 'Görebildiğiniz kayıtlar')],
     // Anonim gönderim kaldırıldı; o kart hep %0 gösterecekti.
     ['Açık Kayıt', m.open, m.late ? m.late + ' tanesi gecikmiş' : 'Gecikme yok'],
     ['SLA Uyumu', yuzde(m.slaPct), 'Hedef: %90+'],
@@ -3450,7 +3495,10 @@ function paintReports(m){
      Ortadaki sayı gerçek kayıt adedi; dilimler ikincil ekip yüzünden
      bundan biraz fazla toplayabilir, yüzdeler dilim toplamına göre. */
   const donutColors = ['#2563eb','#0d9c92','#f59e0b','#7c4ddb','#4caf3f','#94a3b8'];
-  const dTop = m.depts.filter(x => x.n > 0).sort((a,b) => b.n - a.n);
+  /* Ekip seçiliyken ekiplere göre dağılım tek dilim olurdu: yerine o ekibin
+     kayıtlarının önceliğe göre dağılımı gösterilir. */
+  const pieRows = m.dept ? (m.priorities || []) : m.depts;
+  const dTop = pieRows.filter(x => x.n > 0).sort((a,b) => b.n - a.n);
   const dSum = dTop.reduce((a,c) => a + c.n, 0) || 1;
   let acc = 0;
   const dilimler = dTop.map((r,i) => {
@@ -3467,7 +3515,7 @@ function paintReports(m){
           + '<span class="lg-name">'+esc(r.label)+'</span>'
           + '<b>'+r.n+'</b><em>%'+(r.n/dSum*100).toFixed(1)+'</em></li>').join('')
       + '</ul></div>'
-      + (dSum > m.total
+      + (!m.dept && dSum > m.total
           ? '<p class="hint">Dilimler '+dSum+' atama gösteriyor: ikincil ekibe de yönlendirilen kayıt iki ekipte birden sayılır. Ortadaki sayı gerçek kayıt adedi.</p>'
           : '')
     : '<p class="hint">Henüz kayıt yok.</p>';
@@ -3487,7 +3535,13 @@ function paintReports(m){
     + '</div>';
 
   /* Kapsam şeridi: tablonun neyi kapsadığı okunmadan görünsün. */
-  const kapsam = m.scope === 'org'
+  const kapsam = m.dept && m.scope === 'org'
+    ? '<span class="pill blue">Ekip: '+esc(dAd)+'</span>'
+      + '<span class="hint">Asıl ya da ikincil ekibi '+esc(dAd)+' olan kayıtların tamamı.</span>'
+    : m.dept && !repFailed
+    ? '<span class="pill gray">Ekip: '+esc(dAd)+'</span>'
+      + '<span class="hint">Görebildiğiniz kayıtlardan bu ekibe ait olanlar. Ekibin tamamı için yönetici yetkisi gerekiyor.</span>'
+    : m.scope === 'org'
     ? '<span class="pill blue">Kurum geneli</span>'
       + '<span class="hint">Sayılar kurum geneli rapordan geliyor; bütün ekipleri kapsıyor.</span>'
     : repFailed
@@ -3505,7 +3559,7 @@ function paintReports(m){
 
   const geciken = m.lateRows.length
     ? '<div class="table-wrap"><table class="table compact"><tbody>'
-      + m.lateRows.map(r => '<tr><td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td><td>'+esc(deptName(r.department))+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
+      + m.lateRows.map(r => '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'"><td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td><td>'+esc(deptName(r.department))+(r.department2 ? ' + '+esc(deptName(r.department2)) : '')+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
       + '</tbody></table></div>'
       + (m.lateHidden ? '<p class="hint">Görüntüleme kapsamınız dışında '+m.lateHidden+' geciken kayıt daha var.</p>' : '')
     : (m.late
@@ -3515,8 +3569,8 @@ function paintReports(m){
   $('#repCharts').innerHTML =
     '<div class="rep-scope">'+kapsam+ortalama+'</div>'
   + '<div class="rep-wide">'
-  +   card('Ekiplere Göre Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
-  +   card('SLA Performansı','<span class="pill gray">'+(m.scope === 'org' ? 'Tüm ekipler' : 'Kapsamınız')+'</span>', slaBlok)
+  +   card(m.dept ? 'Öncelik Dağılımı' : 'Ekiplere Göre Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
+  +   card('SLA Performansı','<span class="pill gray">'+(m.dept ? esc(dAd) : m.scope === 'org' ? 'Tüm ekipler' : 'Kapsamınız')+'</span>', slaBlok)
   + '</div><div class="rep-mason">'
   + card('Kayıt Türü','<span class="pill yellow">Bilgi / Öneri</span>', barChart(m.types, v => v))
   + card('Durum Dağılımı','', barChart(m.statuses, v => v))
@@ -3759,6 +3813,8 @@ function init(){
   };
 
   $('#csvBtn').onclick = exportCsv;
+  $('#repDept').addEventListener('change', e => { repDept = e.target.value; renderReports(); });
+  $('#repDeptClear').addEventListener('click', () => { repDept = ''; renderReports(); $('#repDept').focus(); });
 
   Agent.init();
   show('dashboard');
@@ -4094,11 +4150,51 @@ const HOVER_LINES = [
   'Nasıl yardımcı olabilirim?',
 ];
 
-/* ---------- Sohbet ---------- */
+/* ---------- Sohbet ----------
+   Kural tabanlı asistan. Üç bilgi kaynağı:
+     - yerel kayıt önbelleği (Store) ve gerekirse sunucu (/api/records/:code),
+     - sunucudaki ML (benzer çözülmüş kayıt + hangi ekip),
+     - konuşmanın bağlamı: en son konuşulan kayıt ve açık olan kayıt sayfası.
+   Bağlam sayesinde "KAY-2026-0198 durumu nedir?" sorusundan sonra "kimde?",
+   "çözümü ne?", "aç" gibi kısa sorular aynı kayda bağlanır. Eskiden kayıt
+   kodu tanınmıyor, soru ML'e gidip alakasız "benzer kayıt" cevabı dönüyordu.
+
+   Sohbet kapanıp açılınca (ve sayfa yenilenince, sekme kapanana dek) geçmiş
+   korunur: kayıt sessionStorage'da tutulur. "Yeni sohbet" temizler. */
+const CHAT_KEY = 'ih_chat';
+const CHAT_MAX = 60;
+
 const Chat = {
   open:false,
+  log:null,                 // [{who:'bot'|'me', html}]
+  ctx:null,                 // {code, prefill}
 
   toggle(){ this.open ? this.close() : this.show(); },
+
+  /* --- kalıcılık --- */
+  load(){
+    if (this.log) return;
+    this.log = []; this.ctx = {};
+    try {
+      const raw = sessionStorage.getItem(CHAT_KEY);
+      const v = raw ? JSON.parse(raw) : null;
+      if (v && Array.isArray(v.log)) { this.log = v.log.slice(-CHAT_MAX); this.ctx = v.ctx || {}; }
+    } catch (_) { /* depolama kapalı olabilir: bellekte devam */ }
+  },
+  save(){
+    try { sessionStorage.setItem(CHAT_KEY, JSON.stringify({ log:this.log, ctx:this.ctx })); } catch (_) {}
+  },
+  push(who, html){
+    this.log.push({ who, html });
+    if (this.log.length > CHAT_MAX) this.log = this.log.slice(-CHAT_MAX);
+    this.save();
+  },
+  reset(){
+    this.log = []; this.ctx = {};
+    this.save();
+    const b = this.el(); if (b) b.innerHTML = '';
+    this.greet();
+  },
 
   close(){
     this.open = false;
@@ -4109,6 +4205,7 @@ const Chat = {
   },
 
   show(){
+    this.load();
     this.open = true;
     Agent.setPaused(true);                  // sohbet açıkken takip durur
     document.body.classList.add('chat-open');
@@ -4119,12 +4216,13 @@ const Chat = {
       + '<div class="chat-h">'
         + '<div class="av">' + icon('spark') + '</div>'
         + '<div><b>Zümrüt Asistan</b><small><i></i>Çevrimiçi</small></div>'
+        + '<button id="chatReset" class="chat-reset" type="button">Yeni sohbet</button>'
         + '<button id="chatClose" aria-label="Kapat">' + icon('x') + '</button>'
       + '</div>'
-      + '<div class="chat-body" id="chatBody"></div>'
+      + '<div class="chat-body" id="chatBody" aria-live="polite"></div>'
       + '<div class="chat-chips" id="chatChips"></div>'
       + '<div class="chat-f">'
-        + '<input id="chatInput" placeholder="Bir soru yazın..." autocomplete="off" />'
+        + '<input id="chatInput" placeholder="Bir soru yazın... (ör. KAY-2026-0198 durumu)" autocomplete="off" aria-label="Asistana soru" />'
         + '<button id="chatSend" aria-label="Gönder">'
           + '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>'
         + '</button>'
@@ -4132,13 +4230,15 @@ const Chat = {
       + '</div>';
 
     $('#chatClose').onclick = () => this.close();
+    $('#chatReset').onclick = () => this.reset();
     $('#chatSend').onclick  = () => this.submit();
     /* ML cevabındaki "Bu konuda kayıt aç" düğmesi */
     $('#chatBody').addEventListener('click', e => {
-      const b = e.target.closest('[data-chat-new]'); if (!b || !this.prefill) return;
-      const { text, dept } = this.prefill;
+      const b = e.target.closest('[data-chat-new]'); if (!b || !this.ctx.prefill) return;
+      const { text, dept } = this.ctx.prefill;
       this.close();
       show('new-ticket');
+      setFormType('bilgi');                 // alanlar tür seçilmeden gizli
       $('#fTitle').value = text.slice(0, 200);
       $('#fDesc').value = text;
       if (dept) $('#fDept1').value = dept;
@@ -4147,7 +4247,24 @@ const Chat = {
     });
     $('#chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') this.submit(); });
 
-    /* Açılış: selam + rastgele KPI + yardım teklifi */
+    if (this.log.length) {
+      /* Kaldığı yerden: geçmiş anında çizilir, yeniden selam verilmez. */
+      const b = this.el();
+      this.log.forEach(m => {
+        const d = document.createElement('div');
+        d.className = 'msg ' + m.who; d.innerHTML = m.html;
+        b.appendChild(d);
+      });
+      this.scroll();
+      this.chips();
+    } else {
+      this.greet();
+    }
+    setTimeout(() => { const i = $('#chatInput'); if (i) i.focus({ preventScroll:true }); }, 50);
+  },
+
+  /* Açılış: selam + rastgele KPI + yardım teklifi */
+  greet(){
     const me = Store.me();
     const k = randomKpi();
     this.bot('Merhaba ' + esc(me.name.split(' ')[0]) + '. Ben Zümrüt Asistan.', 0);
@@ -4155,49 +4272,61 @@ const Chat = {
       + '<div class="kpi-box"><div class="k">' + esc(k.k) + '</div>'
       + '<div class="v">' + esc(k.v) + '</div>'
       + '<div class="d">' + esc(k.d) + '</div></div>', 700);
-    this.bot('Peki, size nasıl yardımcı olabilirim?', 1600);
+    this.bot('Size nasıl yardımcı olabilirim? Bir kaydın durumunu sormak için numarasını yazabilirsiniz (ör. <b>KAY-2026-0198</b> ya da <b>0198</b>).', 1600);
     setTimeout(() => this.chips(), 1900);
   },
 
   el(){ return $('#chatBody'); },
   scroll(){ const b = this.el(); if (b) b.scrollTop = b.scrollHeight; },
 
-  /* Yazıyor göstergesiyle birlikte bot mesajı */
+  /* Yazıyor göstergesiyle birlikte bot mesajı. Sohbet bu arada kapansa bile
+     mesaj geçmişe yazılır; açılınca görünür. */
   bot(html, delay){
     setTimeout(() => {
-      const b = this.el(); if (!b) return;
+      const b = this.el();
+      if (!b) { this.push('bot', html); return; }
       const t = document.createElement('div');
       t.className = 'typing'; t.innerHTML = '<i></i><i></i><i></i>';
       b.appendChild(t); this.scroll();
       setTimeout(() => {
-        if (!this.el()) return;
         t.remove();
+        this.push('bot', html);
+        const b2 = this.el(); if (!b2) return;
         const m = document.createElement('div');
         m.className = 'msg bot'; m.innerHTML = html;
-        b.appendChild(m); this.scroll();
+        b2.appendChild(m); this.scroll();
+        this.chips();   // sayfa değiştiyse "Bu kaydın durumu" kısayolu gelsin/gitsin
       }, 420);
     }, delay || 0);
   },
 
   me(text){
+    this.push('me', esc(text));
     const b = this.el(); if (!b) return;
     const m = document.createElement('div');
     m.className = 'msg me'; m.textContent = text;
     b.appendChild(m); this.scroll();
   },
 
+  /* Hızlı sorular. Bir kayıt sayfasındayken ilk düğme o kaydı sorar. */
   chips(){
     const c = $('#chatChips'); if (!c) return;
-    const items = [
+    const items = [];
+    if (typeof CURRENT !== 'undefined' && CURRENT === 'detail' && DETAIL_CODE) items.push(['Bu kaydın durumu', 'sayfa']);
+    items.push(
       ['Geciken kayıtlar', 'geciken'],
       ['Ekip yoğunluğu', 'yogunluk'],
       ['Üzerimdekiler', 'uzerim'],
       ['Başka bir metrik', 'kpi'],
       ['Yeni kayıt aç', 'yeni'],
-    ];
+    );
     c.innerHTML = items.map(i => '<button class="chip" data-q="'+i[1]+'">'+esc(i[0])+'</button>').join('');
     c.querySelectorAll('.chip').forEach(btn => {
-      btn.onclick = () => { this.me(btn.textContent); this.answer(btn.dataset.q); };
+      btn.onclick = () => {
+        this.me(btn.textContent);
+        if (btn.dataset.q === 'sayfa') return this.recordAnswer(DETAIL_CODE, 'durum');
+        this.answer(btn.dataset.q);
+      };
     });
   },
 
@@ -4206,20 +4335,197 @@ const Chat = {
     const t = inp.value.trim(); if (!t) return;
     inp.value = '';
     this.me(t);
-    const q = this.route(t);
-    q === 'soru' ? this.askMl(t) : this.answer(q);
+    const r = this.route(t);
+    if (r.q === 'kayit') return this.recordAnswer(r.code, r.sub, r.short);
+    r.q === 'soru' ? this.askMl(t) : this.answer(r.q);
   },
 
-  /* Serbest soru: sunucudaki ML'e sor — hangi ekip, benzer çözülmüş kayıt.
-     Eskiden bu durumda "Bunu tam anlayamadım" deniyordu. */
+  /* --- yönlendirme --- */
+
+  /* Türkçe karakterler sadeleşir: "üzerimdeki" ile "uzerimdeki" aynı kalıba düşer. */
+  fold(text){
+    return mlNorm(text)
+      .replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i')
+      .replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u');
+  },
+
+  /* Metindeki kayıt numarası: "KAY-2026-0198", "kay 2026 198" ya da kayıttan
+     söz eden bir cümlede kısa "0198" / "198". */
+  codeIn(text, s){
+    const full = /KAY[\s\-_]*(\d{4})[\s\-_]*(\d{1,4})\b/i.exec(text);
+    if (full) return { code: 'KAY-' + full[1] + '-' + full[2].padStart(4, '0') };
+    const kayShort = /\bKAY[\s\-_]*(\d{1,4})\b/i.exec(text);
+    const recordy = /kayit|kayd|durum|nerede|kimde|numara|\bno\b|talep|oneri/.test(s);
+    const bare = recordy ? /(?:^|\s)#?(\d{3,4})(?=\s|$|[?.!,])/.exec(text) : null;
+    const m = kayShort || bare;
+    if (!m) return null;
+    const n = m[1];
+    if (n.length === 4 && /^20\d\d$/.test(n) && !kayShort) return null;   // yıl, numara değil
+    return { short: n.padStart(4, '0') };
+  },
+
+  /* Hangi alt soruyu soruyor? Varsayılan: genel durum kartı. */
+  subOf(s){
+    if (/\b(ac|git|goster|detay)\b|acar misin|gidelim/.test(s)) return 'ac';
+    if (/kimde|kim\b|kime|sahib|ilgilen|bakiyor|calisiyor|atan/.test(s)) return 'kim';
+    if (/cozum|cozul(en|du)? ne|sonuc|cevap|yanit/.test(s)) return 'cozum';
+    // Süre önce: "süresi ne kadar kaldı" tarih değil SLA sorusu.
+    if (/gecik|sla|sure|kaldi|asil/.test(s)) return 'sla';
+    if (/ne zaman|tarih|kac gun|kac saat|ne kadar/.test(s)) return 'zaman';
+    return 'durum';
+  },
+
+  route(text){
+    const s = this.fold(text);
+    const words = s.split(/\s+/).filter(Boolean).length;
+
+    /* 1) Kayıt numarası geçiyorsa o kayıt. */
+    const c = this.codeIn(text, s);
+    if (c) return { q:'kayit', code:c.code || null, short:c.short || null, sub:this.subOf(s) };
+
+    /* 2) "bu / o kayıt" diye açıkça bağlama gönderme → o kayıt. */
+    const page = (typeof CURRENT !== 'undefined' && CURRENT === 'detail') ? DETAIL_CODE : null;
+    const says = /\b(bu|bunun|bunu)\b/.test(s);
+    const ctxCode = (page && (says || !this.ctx.code)) ? page : (this.ctx.code || page);
+    const plural = /kayitlar|kayitlari|hepsi|\btum\b/.test(s);
+    const refers = /\b(bu|o|bunun|onun|bunu|onu)\b|kaydin|kaydi\b/.test(s);
+    if (ctxCode && !plural && refers) return { q:'kayit', code:ctxCode, sub:this.subOf(s) };
+
+    /* 3) Genel listeler — çoğul ya da açık komut. */
+    if (/geciken kayit|gecikmis kayit|geciken(ler)?$|sla durum(u|lari)? (ne|nasil)/.test(s) && !/\b(bu|o|bunun|onun)\b/.test(s)) return { q:'geciken' };
+    if (/uzerimdeki|bana atanan/.test(s)) return { q:'uzerim' };
+    if (/departman|yogunlu|dagilim/.test(s)) return { q:'yogunluk' };
+    if (/yeni kayit|kayit ac\b|talep ac\b|kayit olustur|oneri (ac|ver|yap)|olusturmak ist/.test(s)) return { q:'yeni' };
+    if (/kpi|metrik|istatistik|ozet/.test(s) && words <= 5) return { q:'kpi' };
+    if (/tesekkur|sagol|eyvallah/.test(s)) return { q:'tesekkur' };
+    if (/^(merhaba|selam|gunaydin|iyi gunler)/.test(s) && words <= 3) return { q:'selam' };
+
+    /* 4) Bağlam: kısa, tek kayda dair soru ("kimde?", "çözümü ne?", "aç")
+          son konuşulan kayda ya da açık olan kayıt sayfasına bağlanır. */
+    const single = /durum|kimde|kim\b|kime|sahib|ilgilen|ne zaman|cozum|cozul|sonuc|gecik|sla|sure|kaldi|nerede|son (durum|guncelleme|hareket)|\bac\b|git\b|goster|detay/.test(s);
+    if (ctxCode && !plural && single && words <= 6) {
+      return { q:'kayit', code:ctxCode, sub:this.subOf(s) };
+    }
+
+    /* 5) Kısa ve tanınmayan → yardım; uzun → sorun anlatıyor, ML'e. */
+    if (words <= 2 && /gecik|sla/.test(s)) return { q:'geciken' };
+    return { q: words >= 3 ? 'soru' : 'bilinmiyor' };
+  },
+
+  /* --- kayıt sorusu --- */
+
+  typingOn(){
+    const b = this.el(); if (!b) return null;
+    const t = document.createElement('div'); t.className = 'typing'; t.innerHTML = '<i></i><i></i><i></i>';
+    b.appendChild(t); this.scroll(); return t;
+  },
+
+  /* Önce yerel önbellek (görebildiğiniz kayıtlar), yoksa sunucu: sunucu
+     yetkiyi yeniden denetler, görmeye yetkiniz yoksa kayıt gelmez. */
+  async lookup(code, short){
+    if (!code && short) {
+      const hits = Store.data.records.filter(r => r.code.endsWith('-' + short));
+      if (hits.length === 1) return { r: hits[0] };
+      if (hits.length > 1) return { many: hits };
+      code = 'KAY-' + new Date().getFullYear() + '-' + short;
+    }
+    const local = Store.find(code);
+    if (local) return { r: local };
+    if (!window.IhApi) return { missing: code };
+    try { return { r: (await IhApi.record(code)).record }; }
+    catch (_) { return { missing: code }; }
+  },
+
+  slaText(r){
+    const isOpen = OPEN_STATUSES.includes(r.status);
+    if (!isOpen) return r.status === 'cozuldu' ? 'Çözüldü — süre takibi durdu.'
+      : r.status === 'reddedildi' ? 'Reddedildi — süre takibi durdu.' : 'Kapandı — süre takibi durdu.';
+    const remain = prioObj(r.priority).sla * HOUR - (Date.now() - new Date(r.createdAt));
+    return remain > 0 ? 'Süre aşımına <b>' + fmtDur(remain / HOUR) + '</b> kaldı.'
+                      : 'Süre <b>' + fmtDur(-remain / HOUR) + '</b> aşıldı.';
+  },
+
+  /* Kaydı açan kişiye sıradaki adım; ekip tarafına durum özeti. */
+  nextStep(r){
+    const me = Store.me();
+    const mine = r.createdBy === me.id;
+    if (r.status === 'cozuldu' && mine) return r.type === 'oneri'
+      ? 'Değerlendirme sonuçlandı ve sizin onayınızı bekliyor.'
+      : 'Çözüm sizin onayınızı bekliyor: işinizi gördüyse kaydı kapatın, görmediyse “Çözüm İşe Yaramadı” deyin.';
+    if (r.status === 'ek_bilgi' && mine) return 'Ekip sizden ek bilgi bekliyor; kayda güncelleme ekleyerek yanıtlayın.';
+    if (r.status === 'yeni' && !r.assignee) return 'Kayıt ekipte bekliyor, henüz kimse üzerine almadı.';
+    if (r.assignee === me.id && OPEN_STATUSES.includes(r.status)) return 'Bu kayıt sizin üzerinizde.';
+    return '';
+  },
+
+  card(r){
+    const last = (r.history || [])[r.history.length - 1];
+    const sonuc = r.type === 'oneri' ? 'Değerlendirme sonucu' : 'Çözüm';
+    const row = (k, v) => '<div class="d"><span style="color:var(--muted)">' + k + ':</span> ' + v + '</div>';
+    const step = this.nextStep(r);
+    return '<b>' + esc(r.code) + '</b> — ' + esc(r.title)
+      + '<div class="kpi-box" style="margin-top:8px">'
+      +   row('Durum', '<b>' + esc(statusObj(r.status).label) + '</b> · ' + esc(typeLabel(r.type)))
+      +   row('Ekip', esc(deptName(r.department)) + (r.department2 ? ' + ' + esc(deptName(r.department2)) : ''))
+      +   row('Sahip', r.assignee ? esc(userName(r.assignee)) : 'henüz yok')
+      +   row('Süre', this.slaText(r))
+      +   (last ? row('Son hareket', esc(last.text.length > 90 ? last.text.slice(0, 90) + '…' : last.text)
+              + ' <span style="color:var(--muted)">(' + esc(fmtRel(last.at)) + ')</span>') : '')
+      +   (r.resolution ? row(sonuc, esc(r.resolution)) : '')
+      + '</div>'
+      + (step ? '<div style="margin-top:8px">' + step + '</div>' : '')
+      + '<button class="btn btn-soft" type="button" data-open="' + esc(r.code) + '" style="margin-top:10px">Kaydı aç</button>';
+  },
+
+  async recordAnswer(code, sub, short){
+    const t = this.typingOn();
+    const out = await this.lookup(code, short);
+    if (t) t.remove();
+
+    if (out.many) {
+      const list = out.many.slice(0, 5).map(r => '<li><b>' + esc(r.code) + '</b> — ' + esc(r.title) + '</li>').join('');
+      return this.bot('Bu numarayla birden fazla kayıt var, hangisini soruyorsunuz?<ul>' + list + '</ul>', 0);
+    }
+    if (!out.r) {
+      return this.bot('<b>' + esc(out.missing) + '</b> numaralı kaydı bulamadım. Numara doğru mu? '
+        + 'Kayıt başka bir ekibe aitse görme yetkiniz olmayabilir.', 0);
+    }
+
+    const r = out.r;
+    this.ctx.code = r.code; this.save();
+    const kod = '<b>' + esc(r.code) + '</b>';
+
+    if (sub === 'ac') {
+      this.bot(kod + ' kaydını açıyorum.', 0);
+      return setTimeout(() => show('detail', r.code), 500);
+    }
+    if (sub === 'kim') {
+      return this.bot(r.assignee
+        ? kod + ' şu an <b>' + esc(userName(r.assignee)) + '</b> üzerinde (' + esc(statusObj(r.status).label) + ').'
+        : kod + ' henüz kimsenin üzerinde değil; <b>' + esc(deptName(r.department)) + '</b> ekibinde sahiplenilmeyi bekliyor.', 0);
+    }
+    if (sub === 'cozum') {
+      const sonuc = r.type === 'oneri' ? 'Değerlendirme sonucu' : 'Çözüm';
+      return this.bot(r.resolution
+        ? kod + ' için ' + sonuc.toLocaleLowerCase('tr-TR') + ': <div class="kpi-box" style="margin-top:8px"><div class="d">' + esc(r.resolution) + '</div></div>'
+        : kod + ' için henüz ' + sonuc.toLocaleLowerCase('tr-TR') + ' yazılmadı. Durum: <b>' + esc(statusObj(r.status).label) + '</b>.', 0);
+    }
+    if (sub === 'zaman') {
+      const p = [['Oluşturma', r.createdAt], ['İlk geri dönüş', r.firstResponseAt], ['Çözülme', r.resolvedAt], ['Son güncelleme', r.updatedAt]]
+        .filter(x => x[1]).map(x => '<li>' + x[0] + ': <b>' + esc(fmtDate(x[1])) + '</b></li>').join('');
+      return this.bot(kod + ' tarihleri:<ul>' + p + '</ul>', 0);
+    }
+    if (sub === 'sla') return this.bot(kod + ': ' + this.slaText(r), 0);
+    return this.bot(this.card(r), 0);
+  },
+
+  /* Serbest soru: sunucudaki ML'e sor — hangi ekip, benzer çözülmüş kayıt. */
   async askMl(text){
     if (!window.IhApi) return this.answer('bilinmiyor');
-    const b = this.el();
-    const t = document.createElement('div'); t.className = 'typing'; t.innerHTML = '<i></i><i></i><i></i>';
-    b && b.appendChild(t); this.scroll();
+    const t = this.typingOn();
     let out = null;
     try { out = await IhApi.similar({ title: text, description: '' }); } catch (_) { out = null; }
-    t.remove();
+    if (t) t.remove();
     if (!out) return this.bot('Şu an benzer kayıtları tarayamadım. Yeni kayıt açarak ekibe iletebilirsiniz.', 0);
 
     const d = out.department, top = d && d.candidates && d.candidates[0];
@@ -4231,41 +4537,16 @@ const Chat = {
       html += 'Hangi ekibin işi olduğundan tam emin değilim. En yakın adaylar: '
         + d.candidates.slice(0, 3).map(c => '<b>' + esc(c.name) + '</b>').join(', ') + '.';
     } else {
-      html += 'Bu konuda geçmişte yeterli kayıt yok, ekibi siz seçmelisiniz.';
+      html += 'Bu konuyu geçmiş kayıtlardan bir ekiple eşleştiremedim; kayıt açarken ekibi siz seçebilirsiniz.';
     }
     if (m && m.resolution) {
       html += '<div class="kpi-box" style="margin-top:8px"><div class="k">Benzer çözülmüş kayıt · ' + esc(m.code) + '</div>'
         + '<div class="d"><b>' + esc(m.title) + '</b><br>' + esc(m.resolution) + '</div></div>';
     }
-    this.prefill = { text, dept: top && !d.lowConfidence ? top.id : null };
+    this.ctx.prefill = { text, dept: top && !d.lowConfidence ? top.id : null };
+    this.save();
     html += '<button class="btn btn-primary" data-chat-new style="margin-top:10px">Bu konuda kayıt aç</button>';
     this.bot(html, 0);
-  },
-
-  /* Basit anahtar kelime yönlendirmesi.
-     Türkçe karakterleri sadeleştiriyoruz ki kullanıcı "üzerimdeki" de yazsa
-     "uzerimdeki" de yazsa aynı kalıp eşleşsin. */
-  route(text){
-    const s = mlNorm(text)
-      .replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i')
-      .replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u');
-    const words = s.split(/\s+/).filter(Boolean).length;
-    /* Kısa metin = komut ("geciken kayıtlar", "üzerimdekiler"). Uzun metin
-       büyük ihtimalle bir sorun anlatıyor: içinde "ekip" ya da "yeni" geçmesi
-       onu "departman yoğunluğu" sorusu yapmaz — ML'e gider. */
-    if (words <= 4) {
-      if (/gecik|geciken|sla|kirmizi/.test(s)) return 'geciken';
-      if (/departman|yogun|dagilim/.test(s)) return 'yogunluk';
-      if (/uzerim|bana atanan|atanan/.test(s))  return 'uzerim';
-      if (/yeni kayit|olustur|kayit ac|talep ac/.test(s)) return 'yeni';
-      if (/kpi|metrik|rapor|ozet|istatistik/.test(s)) return 'kpi';
-      if (/tesekkur|sagol|eyvallah/.test(s)) return 'tesekkur';
-      if (/^(merhaba|selam|gunaydin)/.test(s)) return 'selam';
-    } else {
-      if (/geciken kayit|sla durum/.test(s)) return 'geciken';
-      if (/uzerimdeki kayit|bana atanan/.test(s)) return 'uzerim';
-    }
-    return words >= 2 ? 'soru' : 'bilinmiyor';
   },
 
   answer(q){
@@ -4275,7 +4556,7 @@ const Chat = {
       const late = recs.filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
       if (!late.length) return this.bot('Şu anda geciken kayıt bulunmuyor — SLA hedeflerinin tamamı karşılanıyor.', 250);
       const list = late.slice(0,3).map(r => '<li><b>'+esc(r.code)+'</b> — '+esc(r.title)+' <span style="color:var(--muted)">('+esc(deptName(r.department))+')</span></li>').join('');
-      return this.bot('Toplam <b>'+late.length+'</b> geciken kayıt var. Öne çıkanlar:<ul>'+list+'</ul>', 250);
+      return this.bot('Toplam <b>'+late.length+'</b> geciken kayıt var. Öne çıkanlar:<ul>'+list+'</ul>Birinin durumunu sormak için numarasını yazabilirsiniz.', 250);
     }
 
     if (q === 'yogunluk') {
@@ -4289,12 +4570,12 @@ const Chat = {
       const mine = recs.filter(r => r.assignee === me.id && OPEN_STATUSES.includes(r.status));
       if (!mine.length) return this.bot('Üzerinizde açık kayıt yok. Ekibe gelen kayıtlardan sahiplenebilirsiniz.', 250);
       const list = mine.slice(0,3).map(r => '<li><b>'+esc(r.code)+'</b> — '+esc(r.title)+'</li>').join('');
-      this.bot('Üzerinizde <b>'+mine.length+'</b> açık kayıt var:<ul>'+list+'</ul>', 250);
-      return setTimeout(() => { show('owned-tickets'); }, 1100);
+      return this.bot('Üzerinizde <b>'+mine.length+'</b> açık kayıt var:<ul>'+list+'</ul>'
+        + '<button class="btn btn-soft" type="button" data-view="owned-tickets" style="margin-top:6px">Üzerimdekiler sayfasını aç</button>', 250);
     }
 
     if (q === 'yeni') {
-      this.bot('Yeni kayıt ekranını açıyorum. Unutmayın: kaydı iletmeden önce <b>ML ile Kontrol Et</b> adımını tamamlamanız gerekiyor.', 250);
+      this.bot('Yeni kayıt ekranını açıyorum. Bilgi talebinde göndermeden önce <b>ML ile Kontrol Et</b> adımı var; öneri doğrudan gönderilir.', 250);
       return setTimeout(() => { show('new-ticket'); }, 1100);
     }
 
@@ -4306,9 +4587,11 @@ const Chat = {
     }
 
     if (q === 'tesekkur') return this.bot('Rica ederim. Başka bir konuda yardım gerekirse buradayım.', 250);
-    if (q === 'selam')    return this.bot('Merhaba! Kayıtlar, SLA durumu veya raporlar hakkında soru sorabilirsiniz.', 250);
+    if (q === 'selam')    return this.bot('Merhaba! Bir kaydın durumunu, geciken kayıtları, ekip yoğunluğunu ya da rapor metriklerini sorabilirsiniz.', 250);
 
-    return this.bot('Sorunuzu birkaç kelimeyle anlatırsanız benzer çözülmüş kayıtları tarayıp doğru ekibi önerebilirim. Ayrıca geciken kayıtlar, ekip yoğunluğu, üzerinizdeki kayıtlar ve rapor metrikleri hakkında yardımcı olabilirim.', 250);
+    return this.bot('Tam anlayamadım. Bir kaydı sormak için numarasını yazın (ör. <b>KAY-2026-0198</b>). '
+      + 'Bir sorunu birkaç kelimeyle anlatırsanız benzer çözülmüş kayıtları tarayıp doğru ekibi önerebilirim. '
+      + 'Ayrıca geciken kayıtlar, ekip yoğunluğu ve üzerinizdeki kayıtlar hakkında yardımcı olabilirim.', 250);
   },
 };
 

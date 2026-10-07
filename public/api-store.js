@@ -750,7 +750,9 @@
 
   window.exportCsv = function () {
     // Aktarım sunucuda yapılır: yetki kontrolü ve denetim izi orada.
-    window.location.href = '/api/reports/export.csv';
+    // Raporlar ekranında ekip seçiliyse CSV de yalnızca o ekibin kayıtları.
+    const dept = typeof repDept !== 'undefined' ? repDept : '';
+    window.location.href = '/api/reports/export.csv' + (dept ? '?department=' + encodeURIComponent(dept) : '');
   };
 
   /* ------------------------------------------------------------ açılış */
