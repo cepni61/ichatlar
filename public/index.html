@@ -346,19 +346,22 @@
      olmadigi icin icerikle birlikte kayar, yumusak gecis oldugu icin ust bant
      yuksekligi degisince (mobilde sarma) sert kenar olusmaz. */
   html[data-theme="softdark"]{
-    --bg:#eef1f6;
-    --panel:#ffffff;
-    --panel2:#f4f6fa;
-    --panel3:#e7ebf2;
+    /* İç yüzeyler bembeyaz değil, kırık beyaz (kullanıcı isteği); zemin ona
+       uyan sıcak gri. Soluk metin her yüzeyde ≥4.5:1 (en düşük panel3 5.0). */
+    --bg:#e9e7e2;
+    --panel:#f7f5f0;
+    --panel2:#f0eee8;
+    --panel3:#e6e3dc;
 
     --text:#141a26;
     --text-2:#3d465a;
-    --muted:#5e677b;            /* ≥4.5:1 (eski #727c91 = 4.2:1) */
-    --line:#e2e6ee;
-    --line-2:#cfd5e1;
+    --muted:#575f72;
+    --line:#e3dfd7;
+    --line-2:#d3cec4;
 
     --primary:#2563eb;
     --primary-hover:#1d4ed8;
+    --b-700:#1d4ed8;            /* metin olarak kullanılan mavi: kırık beyazda ≥4.5:1 */
     --primary2:#e8effe;
     --on-soft:#1d4ed8;
 
