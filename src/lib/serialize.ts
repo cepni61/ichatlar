@@ -7,6 +7,7 @@ import {
 } from '../domain/constants.js';
 import { maySeeCreator, permissionsFor, type Actor } from '../domain/permissions.js';
 import { slaStatus } from '../domain/sla.js';
+import { parseDetails } from '../domain/suggestion.js';
 
 const openSlugs: string[] = OPEN_STATUSES.map((s) => STATUS_TO_SLUG[s] ?? s);
 
@@ -65,6 +66,8 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     anonymous: rec.anonymous,
 
     resolution: rec.resolution,
+    /** Öneri kaydının yapısal alanları; bilgi kaydında null. */
+    oneri: parseDetails(rec.details),
 
     createdAt: rec.createdAt.toISOString(),
     updatedAt: rec.updatedAt.toISOString(),

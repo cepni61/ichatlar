@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { Prisma } from '@prisma/client';
-import { EventType, NotificationType, RecordStatus, type Role } from '../domain/enums.js';
+import { EventType, NotificationType, RecordStatus, RecordType, type Role } from '../domain/enums.js';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { actorOf, requireUser } from '../auth/guard.js';
@@ -38,6 +38,7 @@ async function mutate(
     plan: (rec: {
       id: string;
       status: string;
+      type: string;
       departmentId: string;
       department2Id: string | null;
       assigneeId: string | null;
@@ -67,6 +68,7 @@ async function mutate(
       select: {
         id: true,
         status: true,
+        type: true,
         departmentId: true,
         department2Id: true,
         createdById: true,
@@ -334,7 +336,9 @@ export default async function actionRoutes(app: FastifyInstance) {
         notify: {
           userIds: [r.createdById],
           type: NotificationType.RESOLVED,
-          text: `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.`,
+          text: r.type === RecordType.ONERI
+            ? `${codeParam(req)} önerinizin değerlendirmesi sonuçlandı. Sonucu inceleyip öneriyi kapatın ya da yeniden değerlendirilmesini isteyin.`
+            : `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.`,
         },
       }),
     });
@@ -359,8 +363,17 @@ export default async function actionRoutes(app: FastifyInstance) {
       plan: (r) => ({
         nextStatus: RecordStatus.REDDEDILDI,
         data: { status: RecordStatus.REDDEDILDI, closedAt: new Date(), ...stampFirstResponse(r) },
-        event: { type: EventType.STATUS, text: `Kayıt reddedildi. Gerekçe: ${parsed.data.reason}` },
-        notify: { userIds: [r.createdById], type: NotificationType.REJECTED, text: `${codeParam(req)} reddedildi.` },
+        event: {
+          type: EventType.STATUS,
+          text: `${r.type === RecordType.ONERI ? 'Öneri uygun bulunmadı' : 'Kayıt reddedildi'}. Gerekçe: ${parsed.data.reason}`,
+        },
+        notify: {
+          userIds: [r.createdById],
+          type: NotificationType.REJECTED,
+          text: r.type === RecordType.ONERI
+            ? `${codeParam(req)} önerinizi ekip uygun bulmadı; gerekçe kayıtta.`
+            : `${codeParam(req)} reddedildi.`,
+        },
       }),
     });
     return { record: await serializeRecord(rec, a) };
@@ -389,11 +402,16 @@ export default async function actionRoutes(app: FastifyInstance) {
         // İşe yaramayan çözüm "güncel çözüm" olarak görünmesin ve ML onu benzer
         // kayıtlarda önermesin; metni süreç geçmişinde kalıyor.
         data: { status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null },
-        event: { type: EventType.REOPEN, text: `Kayıt yeniden açıldı. Gerekçe: ${parsed.data.reason}` },
+        event: {
+          type: EventType.REOPEN,
+          text: `${r.type === RecordType.ONERI ? 'Öneri yeniden değerlendirmeye alındı' : 'Kayıt yeniden açıldı'}. Gerekçe: ${parsed.data.reason}`,
+        },
         notify: {
           userIds: [r.assigneeId],
           type: NotificationType.REOPENED,
-          text: `${codeParam(req)} yeniden açıldı: çözüm kaydı açan kişinin sorununu gidermedi.`,
+          text: r.type === RecordType.ONERI
+            ? `${codeParam(req)} öneri sahibi değerlendirme sonucunun yeniden ele alınmasını istedi.`
+            : `${codeParam(req)} yeniden açıldı: çözüm kaydı açan kişinin sorununu gidermedi.`,
         },
       }),
     });
@@ -410,10 +428,13 @@ export default async function actionRoutes(app: FastifyInstance) {
       actorDept: a.departmentId,
       action: 'close',
       ip: req.ip,
-      plan: () => ({
+      plan: (r) => ({
         nextStatus: RecordStatus.KAPATILDI,
         data: { status: RecordStatus.KAPATILDI, closedAt: new Date() },
-        event: { type: EventType.STATUS, text: 'Kayıt, açan kişi tarafından kapatıldı.' },
+        event: {
+          type: EventType.STATUS,
+          text: r.type === RecordType.ONERI ? 'Öneri, sahibi tarafından kapatıldı.' : 'Kayıt, açan kişi tarafından kapatıldı.',
+        },
       }),
     });
     return { record: await serializeRecord(rec, a) };

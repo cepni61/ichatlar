@@ -27,15 +27,38 @@ const recordForPermission = {
 export default async function attachmentRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireUser);
 
-  /** Yükle (çok parçalı form, alan adı serbest). */
+  /**
+   * Yükle (çok parçalı form, alan adı serbest).
+   * `?bind=create`: yeni kayıt formunda seçilen dosyalar, kayıt oluşturulduktan
+   * hemen sonra yüklenir ve doğrudan "kayıt oluşturuldu" olayına bağlanır
+   * (taslak aşaması yok). Yalnızca kaydı açan kişi, oluşturmadan sonraki 30
+   * dakika içinde yapabilir.
+   */
   app.post('/api/records/:code/attachments', async (req) => {
     const actor = actorOf(req);
     const { code } = req.params as { code: string };
+    const bindCreate = (req.query as { bind?: string }).bind === 'create';
     if (!req.isMultipart()) throw badRequest('Dosya yüklemesi bekleniyordu.');
 
-    const rec = await prisma.record.findUnique({ where: { code }, select: recordForPermission });
+    const rec = await prisma.record.findUnique({
+      where: { code },
+      select: { ...recordForPermission, createdAt: true },
+    });
     if (!rec) throw notFound();
     if (!can('attach', rec, actor)) throw forbidden('Bu kayda dosya ekleme yetkiniz yok.');
+
+    let createEventId: string | null = null;
+    if (bindCreate) {
+      if (rec.createdById !== actor.id) throw forbidden('Kayıt anındaki dosyaları yalnızca kaydı açan ekleyebilir.');
+      if (Date.now() - rec.createdAt.getTime() > 30 * 60 * 1000) {
+        throw badRequest('Kayıt anı geçti; dosyayı kayda güncelleme olarak ekleyin.');
+      }
+      const ev = await prisma.recordEvent.findFirst({
+        where: { recordId: rec.id, type: 'CREATE' },
+        select: { id: true },
+      });
+      createEventId = ev?.id ?? null;
+    }
 
     const saved: { key: string; size: number; name: string; mime: string }[] = [];
     try {
@@ -69,7 +92,10 @@ export default async function attachmentRoutes(app: FastifyInstance) {
     const rows = await prisma.$transaction(
       saved.map((s) =>
         prisma.attachment.create({
-          data: { recordId: rec.id, name: s.name, size: s.size, mime: s.mime, storageKey: s.key, uploadedById: actor.id },
+          data: {
+            recordId: rec.id, name: s.name, size: s.size, mime: s.mime, storageKey: s.key, uploadedById: actor.id,
+            eventId: createEventId,
+          },
           select: { id: true, name: true, size: true, mime: true },
         }),
       ),

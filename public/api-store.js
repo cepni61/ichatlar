@@ -60,10 +60,12 @@
     record: (code) => req('GET', '/api/records/' + encodeURIComponent(code)),
     create: (payload) => req('POST', '/api/records', payload),
     similar: (payload) => req('POST', '/api/similar', payload),
-    upload: (code, files) => {
+    /** `bind: 'create'` → dosyalar doğrudan "kayıt oluşturuldu" adımına bağlanır. */
+    upload: (code, files, opts) => {
       const fd = new FormData();
       Array.from(files).forEach((f) => fd.append('file', f, f.name));
-      return req('POST', '/api/records/' + encodeURIComponent(code) + '/attachments', fd);
+      const q = opts && opts.bind ? '?bind=' + encodeURIComponent(opts.bind) : '';
+      return req('POST', '/api/records/' + encodeURIComponent(code) + '/attachments' + q, fd);
     },
     dropAttachment: (id) => req('DELETE', '/api/attachments/' + encodeURIComponent(id)),
     act: (code, action, payload) =>
@@ -275,13 +277,21 @@
   const draftKey = (slot) => slot + ':' + DETAIL_CODE;
   const drafts = (slot) => (Drafts[draftKey(slot)] = Drafts[draftKey(slot)] || []);
 
-  const fmtSize = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+  const fmtSize = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB'
+    : n >= 1024 ? Math.round(n / 1024) + ' KB' : n + ' bayt');
   window.fmtSize = fmtSize;
 
+  /*
+   * Yeni kayıt formu ("create" yuvası): henüz kayıt yok, dosyalar yüklenmez;
+   * File nesneleri form.files içinde bekler ve kayıt oluşunca gönderilir.
+   */
+  const createItems = () => ((typeof form !== 'undefined' && form && form.files) || [])
+    .map((f, i) => ({ id: 'f' + i, name: f.name, size: f.size }));
+
   function chipsHtml(slot) {
-    return drafts(slot).map((a) =>
+    return (slot === 'create' ? createItems() : drafts(slot)).map((a) =>
       '<span class="attach-chip">' + icon('clip') + ' ' + esc(a.name) + ' <small>' + fmtSize(a.size) + '</small>' +
-      '<button type="button" data-attach-rm="' + esc(a.id) + '" data-slot="' + slot + '" aria-label="Kaldır">' + icon('x') + '</button></span>',
+      '<button type="button" data-attach-rm="' + esc(a.id) + '" data-slot="' + slot + '" aria-label="Kaldır: ' + esc(a.name) + '">' + icon('x') + '</button></span>',
     ).join('');
   }
 
@@ -297,7 +307,14 @@
 
   function repaint(slot) {
     document.querySelectorAll('[data-attach-list="' + slot + '"]').forEach((el) => { el.innerHTML = chipsHtml(slot); });
+    if (slot === 'create' && form.type === 'oneri' && typeof renderOneriPreview === 'function') renderOneriPreview();
   }
+  /** Kaldırılan çipin düğmesi DOM'dan gider; odak sayfa başına düşmesin. */
+  const focusPicker = (slot) => {
+    const b = document.querySelector('[data-attach-pick="' + slot + '"]');
+    if (b) b.focus();
+  };
+  window.repaintAttach = repaint;
 
   document.addEventListener('click', (e) => {
     const pick = e.target.closest('[data-attach-pick]');
@@ -307,12 +324,19 @@
       return;
     }
     const rm = e.target.closest('[data-attach-rm]');
+    if (rm && rm.dataset.slot === 'create') {
+      form.files.splice(Number(rm.dataset.attachRm.slice(1)), 1);
+      repaint('create');
+      focusPicker('create');
+      return;
+    }
     if (rm) {
       const slot = rm.dataset.slot;
       const id = rm.dataset.attachRm;
       Api.dropAttachment(id).catch(() => {}); // sunucuda kalsa bile 24 saatte silinir
       Drafts[draftKey(slot)] = drafts(slot).filter((a) => a.id !== id);
       repaint(slot);
+      focusPicker(slot);
     }
   });
 
@@ -325,18 +349,39 @@
     const files = Array.from(input.files);
     input.value = '';
 
-    if (files.length > Uploads.maxFiles - drafts(slot).length) {
-      return toast('En fazla ' + Uploads.maxFiles + ' dosya ekleyebilirsiniz', 'err');
+    // Uygun olanlar eklenir; olmayanlar tek mesajda nedeniyle söylenir.
+    // (Önceden tek bir uygunsuz dosya geçerli olanları da düşürüyordu; boş
+    // dosya ise sunucuda reddedilip kayıt anındaki tüm ekleri kaybettiriyordu.)
+    const have = slot === 'create' ? form.files : drafts(slot);
+    const same = (a, b) => a.name === b.name && a.size === b.size;
+    const ok = [];
+    const why = [];
+    for (const f of files) {
+      if (!Uploads.extensions.includes(extOf(f.name))) why.push('"' + f.name + '" türü desteklenmiyor');
+      else if (f.size === 0) why.push('"' + f.name + '" boş bir dosya');
+      else if (f.size > Uploads.maxMb * 1048576) why.push('"' + f.name + '" ' + Uploads.maxMb + ' MB sınırını aşıyor');
+      else if (have.some((x) => same(x, f)) || ok.some((x) => same(x, f))) why.push('"' + f.name + '" zaten ekli');
+      else ok.push(f);
     }
-    const big = files.find((f) => f.size > Uploads.maxMb * 1048576);
-    if (big) return toast('"' + big.name + '" ' + Uploads.maxMb + ' MB sınırını aşıyor', 'err');
-    const bad = files.find((f) => !Uploads.extensions.includes(extOf(f.name)));
-    if (bad) return toast('"' + bad.name + '" dosya türü desteklenmiyor', 'err');
+    const room = Math.max(0, Uploads.maxFiles - have.length);
+    if (ok.length > room) {
+      why.push('en fazla ' + Uploads.maxFiles + ' dosya eklenebilir, ' + (ok.length - room) + ' dosya dışarıda kaldı');
+      ok.length = room;
+    }
+    if (why.length) {
+      toast(why.join('; ') + (ok.length ? '. Diğer ' + ok.length + ' dosya eklendi.' : '.'), 'err');
+    }
+    if (!ok.length) return;
+
+    if (slot === 'create') {
+      form.files.push(...ok);
+      return repaint('create');
+    }
 
     const list = document.querySelector('[data-attach-list="' + slot + '"]');
     if (list) list.insertAdjacentHTML('beforeend', '<span class="attach-chip busy">Yükleniyor…</span>');
     try {
-      const out = await Api.upload(DETAIL_CODE, files);
+      const out = await Api.upload(DETAIL_CODE, ok);
       drafts(slot).push(...out.attachments);
     } catch (err) {
       toast(err.message, 'err');
@@ -414,21 +459,27 @@
   };
 
   window.actResolve = function (r) {
+    const oneri = r.type === 'oneri';
     openModal(
-      'Kaydı Çözüldü Yap',
-      '<div class="field"><label for="resTxt">Çözüm açıklaması</label>' +
-        '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
-        '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>' +
+      oneri ? 'Öneriyi Sonuçlandır' : 'Kaydı Çözüldü Yap',
+      (oneri
+        ? '<div class="field"><label for="resTxt">Değerlendirme sonucu</label>' +
+          '<textarea id="resTxt" placeholder="Öneri hayata geçirilecek mi? Karar, gerekçesi ve varsa sonraki adımlar..."></textarea>' +
+          '<p class="hint" style="margin-top:8px">Sonuç öneri sahibine bildirilir; uygun bulursa öneriyi kapatır.</p></div>'
+        : '<div class="field"><label for="resTxt">Çözüm açıklaması</label>' +
+          '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
+          '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>') +
         window.attachPicker('resolve'),
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
-          label: 'Çözüldü Olarak İşaretle',
+          label: oneri ? 'Sonuçlandır' : 'Çözüldü Olarak İşaretle',
           cls: 'btn-success',
           run() {
             const t = ($('#resTxt').value || '').trim();
-            if (t.length < 10) return toast('Çözüm açıklaması en az 10 karakter olmalı', 'err');
-            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve') }, 'Kayıt çözüldü olarak işaretlendi')
+            if (t.length < 10) return toast((oneri ? 'Değerlendirme sonucu' : 'Çözüm açıklaması') + ' en az 10 karakter olmalı', 'err');
+            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve') },
+              oneri ? 'Öneri sonuçlandırıldı' : 'Kayıt çözüldü olarak işaretlendi')
               .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
@@ -437,12 +488,17 @@
   };
 
   window.actReject = function (r) {
+    const oneri = r.type === 'oneri';
     openModal(
-      'Kaydı Reddet',
+      oneri ? 'Öneriyi Reddet' : 'Kaydı Reddet',
       // Ret kalıcıdır; yanlış ekibe gelen kayıt için doğru yol yönlendirmek.
-      '<p class="hint" style="margin:0 0 12px">Reddedilen kayıt yeniden açılamaz ve kaydı açan kişiye bildirilir. ' +
-        'Kayıt yanlış ekibe geldiyse reddetmek yerine <b>Kaydı Yönlendir</b>\'i kullanın.</p>' +
-        '<div class="field"><label for="rejTxt">Ret sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz? Bu metin kaydı açan kişiye görünür."></textarea></div>',
+      (oneri
+        ? '<p class="hint" style="margin:0 0 12px">Reddedilen öneri yeniden açılamaz; gerekçesiyle öneri sahibine bildirilir. ' +
+          'Öneri başka bir ekibin konusuysa reddetmek yerine <b>Kaydı Yönlendir</b>’i kullanın.</p>' +
+          '<div class="field"><label for="rejTxt">Gerekçe</label><textarea id="rejTxt" placeholder="Öneri neden şu an uygulanamıyor? Bu metin öneri sahibine görünür."></textarea></div>'
+        : '<p class="hint" style="margin:0 0 12px">Reddedilen kayıt yeniden açılamaz ve kaydı açan kişiye bildirilir. ' +
+          'Kayıt yanlış ekibe geldiyse reddetmek yerine <b>Kaydı Yönlendir</b>\'i kullanın.</p>' +
+          '<div class="field"><label for="rejTxt">Ret sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz? Bu metin kaydı açan kişiye görünür."></textarea></div>'),
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
@@ -450,8 +506,8 @@
           cls: 'btn-danger',
           run() {
             const t = ($('#rejTxt').value || '').trim();
-            if (t.length < 10) return toast('Ret sebebini en az 10 karakter yazın', 'err');
-            run(r.code, 'reject', { reason: t }, 'Kayıt reddedildi').then(closeModal, () => {});
+            if (t.length < 10) return toast((oneri ? 'Gerekçeyi' : 'Ret sebebini') + ' en az 10 karakter yazın', 'err');
+            run(r.code, 'reject', { reason: t }, oneri ? 'Öneri reddedildi' : 'Kayıt reddedildi').then(closeModal, () => {});
           },
         },
       ],
@@ -459,20 +515,25 @@
   };
 
   window.actReopen = function (r) {
+    const oneri = r.type === 'oneri';
     openModal(
-      'Çözüm İşe Yaramadı',
-      '<p class="hint" style="margin:0 0 12px">Kayıt yeniden çalışmaya alınır ve sahibine bildirim gider. ' +
-        'Neyin eksik kaldığını yazın ki ekip doğru noktadan devam etsin.</p>' +
-        '<div class="field"><label for="reoTxt">Neden</label><textarea id="reoTxt" placeholder="Ör. Fark ekim bordrosunda da ödenmedi."></textarea></div>',
+      oneri ? 'Yeniden Değerlendirilsin' : 'Çözüm İşe Yaramadı',
+      (oneri
+        ? '<p class="hint" style="margin:0 0 12px">Öneri yeniden değerlendirmeye alınır ve değerlendirene bildirim gider. ' +
+          'Sonucun hangi noktada eksik kaldığını yazın.</p>' +
+          '<div class="field"><label for="reoTxt">Neden</label><textarea id="reoTxt" placeholder="Ör. Maliyet hesabı eski fiyatlarla yapılmış."></textarea></div>'
+        : '<p class="hint" style="margin:0 0 12px">Kayıt yeniden çalışmaya alınır ve sahibine bildirim gider. ' +
+          'Neyin eksik kaldığını yazın ki ekip doğru noktadan devam etsin.</p>' +
+          '<div class="field"><label for="reoTxt">Neden</label><textarea id="reoTxt" placeholder="Ör. Fark ekim bordrosunda da ödenmedi."></textarea></div>'),
       [
         { label: 'Vazgeç', cls: 'btn-ghost' },
         {
-          label: 'Yeniden Aç',
+          label: oneri ? 'Yeniden Değerlendirmeye Gönder' : 'Yeniden Aç',
           cls: 'btn-primary',
           run() {
             const t = ($('#reoTxt').value || '').trim();
             if (t.length < 10) return toast('Nedeni en az 10 karakterle yazın', 'err');
-            run(r.code, 'reopen', { reason: t }, 'Kayıt yeniden açıldı').then(closeModal, () => {});
+            run(r.code, 'reopen', { reason: t }, oneri ? 'Öneri yeniden değerlendirmeye gönderildi' : 'Kayıt yeniden açıldı').then(closeModal, () => {});
           },
         },
       ],
@@ -480,13 +541,17 @@
   };
 
   window.actClose = function (r) {
-    openModal('Kaydı Kapat', '<p class="hint">Çözüm işinizi gördüyse kaydı kapatın. Kapatılan kayıt yeniden açılamaz.</p>', [
+    const oneri = r.type === 'oneri';
+    openModal(oneri ? 'Öneriyi Kapat' : 'Kaydı Kapat',
+      '<p class="hint">' + (oneri
+        ? 'Değerlendirme sonucunu uygun bulduysanız öneriyi kapatın. Kapatılan kayıt yeniden açılamaz.'
+        : 'Çözüm işinizi gördüyse kaydı kapatın. Kapatılan kayıt yeniden açılamaz.') + '</p>', [
       { label: 'Vazgeç', cls: 'btn-ghost' },
       {
-        label: 'Kaydı Kapat',
+        label: oneri ? 'Öneriyi Kapat' : 'Kaydı Kapat',
         cls: 'btn-primary',
         run() {
-          run(r.code, 'close', {}, 'Kayıt kapatıldı').then(closeModal, () => {});
+          run(r.code, 'close', {}, oneri ? 'Öneri kapatıldı' : 'Kayıt kapatıldı').then(closeModal, () => {});
         },
       },
     ]);
@@ -517,11 +582,12 @@
   };
 
   const origRunMl = window.runMl;
-  window.runMl = async function () {
+  const scanThenRender = async function () {
+    if (typeof form !== 'undefined' && form && form.type !== 'bilgi') return origRunMl.apply(this, arguments);
     const title = ($('#fTitle').value || '').trim();
     const desc = ($('#fDesc').value || '').trim();
 
-    if (title && desc) {
+    if (title.length >= 5 && desc.length >= 10) {
       try {
         // Departman ve tür skorlamada bonus veriyor (prototipteki mlScore ile
         // aynı), bu yüzden formdaki seçimler birlikte gönderilir.
@@ -542,6 +608,7 @@
             title: m.title,
             description: m.description,
             resolution: m.resolution,
+            resolvedAt: m.resolvedAt || null,
             department: m.departmentId,
           },
           percent: m.percent,
@@ -571,25 +638,61 @@
     return origRunMl.apply(this, arguments);
   };
 
+  window.runMl = async function () {
+    if (form.mlBusy) return;
+    const f = form;
+    const btn = $('#mlBtn');
+    f.mlBusy = true;
+    if (btn) btn.disabled = true;
+    try {
+      return await scanThenRender.apply(this, arguments);
+    } finally {
+      // Prototip sonucu 700 ms gecikmeyle çiziyor; kilit o bitince açılır.
+      setTimeout(() => { f.mlBusy = false; if (btn) btn.disabled = false; }, 750);
+    }
+  };
+
   window.findSimilar = function (_query, _records, topN) {
     // Yerel tarama yapmıyoruz: eşleşme adayları arasında kullanıcının görmeye
     // yetkili olmadığı kayıtlar var, tarama sunucuda kalmalı.
     return similarCache ? similarCache.slice(0, topN || 3) : [];
   };
 
+  /*
+   * Yeni kayıt. Bilgi ve öneri farklı alanlar gönderir (bkz. routes/records.ts).
+   * Formda seçilen dosyalar kayıt oluştuktan sonra yüklenir ve "kayıt
+   * oluşturuldu" adımına bağlanır; yükleme başarısız olursa kayıt yine
+   * oluşmuştur, kullanıcıya dosyaları güncelleme olarak eklemesi söylenir.
+   */
   window.createRecord = async function () {
+    if (form.busy) return;
+    const isOneri = form.type === 'oneri';
     const title = ($('#fTitle').value || '').trim();
-    const desc = ($('#fDesc').value || '').trim();
     const d1 = $('#fDept1').value;
-    const d2 = $('#fDept2').value;
+    let payload;
 
     if (!form.type) return toast('Kayıt türünü seçin', 'err');
-    if (!title || !desc) return toast('Başlık ve açıklama gereklidir', 'err');
-    if (!d1) return toast('İlgili ekibi seçin', 'err');
-    if (d2 && d2 === d1) return toast('İkinci ekip birinciyle aynı olamaz', 'err');
-
-    try {
-      const out = await Api.create({
+    if (isOneri) {
+      const miss = oneriMissing();
+      if (miss) return toast(miss, 'err');
+      const o = oneriData();
+      payload = {
+        type: 'oneri',
+        title,
+        current: o.current,
+        proposal: o.proposal,
+        benefits: o.benefits,
+        benefitNote: o.benefitNote || undefined,
+        department: d1,
+        anonymous: !!form.anon,
+      };
+    } else {
+      const desc = ($('#fDesc').value || '').trim();
+      const d2 = $('#fDept2').value;
+      if (!title || !desc) return toast('Başlık ve açıklama gereklidir', 'err');
+      if (!d1) return toast('İlgili ekibi seçin', 'err');
+      if (d2 && d2 === d1) return toast('İkinci ekip birinciyle aynı olamaz', 'err');
+      payload = {
         type: form.type,
         title,
         description: desc,
@@ -603,15 +706,43 @@
         })),
         mlInferenceId: form.mlInferenceId || null,
         deptSuggestionApplied: !!form.deptApplied,
-      });
+      };
+    }
 
-      upsertLocal(out.record);
+    const files = (form.files || []).slice();
+    const btn = $('#createBtn');
+    form.busy = true;
+    syncCreateBtn();
+    btn.textContent = isOneri ? 'Gönderiliyor…' : 'Oluşturuluyor…';
+    try {
+      let rec = (await Api.create(payload)).record;
+      let fileErr = null;
+      if (files.length) {
+        try {
+          await Api.upload(rec.code, files, { bind: 'create' });
+          rec = (await Api.record(rec.code)).record;
+        } catch (err) {
+          fileErr = err;
+        }
+      }
+
+      upsertLocal(rec);
+      form.busy = false;
       if (typeof resetForm === 'function') resetForm();
-      toast('Kayıt oluşturuldu: ' + out.record.code, 'ok');
-      if (typeof show === 'function') show('detail', out.record.code);
+      if (fileErr) {
+        toast((isOneri ? 'Öneri iletildi (' : 'Kayıt oluşturuldu (') + rec.code + ') ama dosyalar yüklenemedi: ' +
+          fileErr.message + ' Dosyaları kayda güncelleme olarak ekleyebilirsiniz.', 'err');
+      } else {
+        toast((isOneri ? 'Öneriniz iletildi: ' : 'Kayıt oluşturuldu: ') + rec.code, 'ok');
+      }
+      if (typeof show === 'function') show('detail', rec.code);
       if (typeof renderChrome === 'function') renderChrome();
     } catch (err) {
       toast(err.message, 'err');
+    } finally {
+      form.busy = false;
+      btn.textContent = form.type === 'oneri' ? 'Öneriyi Gönder' : 'Kaydı Oluştur';
+      syncCreateBtn();
     }
   };
 
@@ -640,6 +771,7 @@
       fill(STATUSES, boot.statuses);
 
       if (boot.uploads) Object.assign(Uploads, boot.uploads);
+      if (Array.isArray(boot.benefits) && boot.benefits.length) fill(BENEFITS, boot.benefits);
 
       // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
       if (boot.org && boot.org.name) {
@@ -693,6 +825,10 @@
    * init'ini ikinci kez çağırmıyoruz — olay dinleyicilerini ikiye katlardı.
    */
   function rewireAfterBoot(boot) {
+    if (typeof renderBenefitChips === 'function') renderBenefitChips();
+    const fa = $('#fAttach');
+    if (fa) fa.innerHTML = window.attachPicker('create');
+
     const deptOpts = (placeholder) =>
       '<option value="">' + placeholder + '</option>' +
       DEPARTMENTS.map((d) => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('');
@@ -701,7 +837,7 @@
     const d2 = $('#fDept2');
     const prio = $('#fPrio');
     if (d1) d1.innerHTML = deptOpts('Seçiniz...');
-    if (d2) d2.innerHTML = deptOpts('Seçiniz (opsiyonel)');
+    if (d2) d2.innerHTML = deptOpts('Seçiniz (isteğe bağlı)');
     if (prio) {
       prio.innerHTML = PRIORITIES.map(
         (p) => '<option value="' + p.id + '"' + (p.id === 'normal' ? ' selected' : '') + '>' +

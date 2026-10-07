@@ -134,6 +134,11 @@ model Record {
 
   resolution String?
 
+  /// Öneri kayıtlarının yapısal alanları, JSON metni:
+  /// { current, proposal, benefits: string[], benefitNote? }. Bilgi kaydında boş.
+  /// `description` aynı içeriğin okunur birleşimini taşır (arama ve ML için).
+  details String?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   firstResponseAt DateTime?

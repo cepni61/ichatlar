@@ -71,6 +71,19 @@ export function tokenize(text: string): string[] {
     .filter((w) => w.length >= 3 && !STOP.has(w));
 }
 
+/**
+ * Katlanmış token → kullanıcının yazdığı biçim ("baglantisi" → "bağlantısı").
+ * Eşleşme gerekçesi kullanıcıya gösterilirken Türkçe harfler kaybolmasın.
+ */
+export function surfaceForms(text: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const raw of String(text ?? '').toLocaleLowerCase('tr-TR').split(/[^a-z0-9çğıöşüâîû]+/)) {
+    const f = fold(raw);
+    if (f && !out.has(f)) out.set(f, raw);
+  }
+  return out;
+}
+
 function jaccard(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 && b.size === 0) return 0;
   let hit = 0;
@@ -104,6 +117,8 @@ export interface SimilarMatch {
   resolution: string;
   departmentId: string;
   departmentName: string;
+  /** Çözüm tarihi (ISO); eşleşme kartında "ne zaman çözüldü" için. */
+  resolvedAt: string | null;
   percent: number;
   /** Eşleşmeyi tetikleyen kelimeler — kullanıcıya gerekçe göstermek için. */
   terms: string[];
@@ -117,6 +132,7 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
 
   const qTitleSet = new Set(qTitleTokens);
   const qAllSet = new Set(qAllTokens);
+  const surface = surfaceForms(`${query.title} ${query.description}`);
 
   // Havuz: çözülmüş VE çözülüp kapatılmış kayıtların tamamı. Kapatılmış
   // olanlar en değerlisi — çözümün işe yaradığını kaydı açan onaylamış.
@@ -131,6 +147,7 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
       title: true,
       description: true,
       resolution: true,
+      resolvedAt: true,
       departmentId: true,
       department2Id: true,
       department: { select: { name: true } },
@@ -159,7 +176,7 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
 
     const terms: string[] = [];
     for (const w of qAllSet) {
-      if (cAllSet.has(w) && terms.length < 4) terms.push(w);
+      if (cAllSet.has(w) && terms.length < 4) terms.push(surface.get(w) ?? w);
     }
 
     return {
@@ -170,6 +187,7 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
       resolution: r.resolution!,
       departmentId: r.departmentId,
       departmentName: r.department.name,
+      resolvedAt: r.resolvedAt ? r.resolvedAt.toISOString() : null,
       score,
       percent: Math.round(score * 100),
       terms,

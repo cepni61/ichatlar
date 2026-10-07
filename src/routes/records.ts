@@ -18,6 +18,7 @@ import { nextRecordCode } from '../lib/code.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
 import { containsFilter, toJsonText } from '../lib/dialect.js';
+import { BENEFIT_KEYS, composeDescription } from '../domain/suggestion.js';
 
 const withDetail = detailInclude;
 
@@ -63,10 +64,20 @@ const listQuery = z.object({
   pageSize: z.coerce.number().int().min(1).max(200).default(100),
 });
 
+/*
+ * Bilgi ve öneri farklı formlardan gelir:
+ *   bilgi → description (sorun) + öncelik + ML kontrolü
+ *   öneri → current (mevcut durum) + proposal (öneri) + benefits; öncelik ve
+ *           ML yok (bkz. domain/suggestion.ts). description sunucuda birleştirilir.
+ */
 const createBody = z.object({
   type: z.enum(['bilgi', 'oneri']),
   title: z.string().trim().min(5, 'Başlık en az 5 karakter olmalı.').max(200),
-  description: z.string().trim().min(10, 'Açıklama en az 10 karakter olmalı.').max(5000),
+  description: z.string().trim().max(5000).optional(),
+  current: z.string().trim().max(3000).optional(),
+  proposal: z.string().trim().max(3000).optional(),
+  benefits: z.array(z.enum(BENEFIT_KEYS)).max(BENEFIT_KEYS.length).default([]),
+  benefitNote: z.string().trim().max(1000).optional(),
   department: z.string().min(1),
   department2: z.string().min(1).nullable().optional(),
   priority: z.enum(['normal', 'yuksek', 'kritik']).default('normal'),
@@ -77,6 +88,18 @@ const createBody = z.object({
   mlInferenceId: z.string().max(64).nullish(),
   /** Kullanıcı "Bu ekibi seç" ile ML'in ekip önerisini uyguladı mı. */
   deptSuggestionApplied: z.boolean().default(false),
+}).superRefine((b, ctx) => {
+  const need = (ok: boolean, path: string, message: string) => {
+    if (!ok) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+  };
+  if (b.type === 'bilgi') {
+    need((b.description ?? '').length >= 10, 'description', 'Açıklama en az 10 karakter olmalı.');
+  } else {
+    need((b.current ?? '').length >= 10, 'current', 'Mevcut durumu en az 10 karakter yazın.');
+    need((b.proposal ?? '').length >= 10, 'proposal', 'Önerinizi en az 10 karakter yazın.');
+    need(b.benefits.length > 0, 'benefits', 'En az bir beklenen fayda seçin.');
+    need(!b.department2, 'department2', 'Öneri tek bir ekibe gönderilir.');
+  }
 });
 
 export default async function recordRoutes(app: FastifyInstance) {
@@ -226,7 +249,18 @@ export default async function recordRoutes(app: FastifyInstance) {
     const primaryName = depts.find((d) => d.id === body.department)!.name;
     const secondName = body.department2 ? depts.find((d) => d.id === body.department2)!.name : null;
 
-    const priority = PRIORITY_FROM_SLUG[body.priority]!;
+    const isOneri = body.type === 'oneri';
+    // Öneride öncelik sorulmaz: SLA iç olarak Normal (ilk değerlendirme hedefi).
+    const priority = isOneri ? PRIORITY_FROM_SLUG.normal! : PRIORITY_FROM_SLUG[body.priority]!;
+    const details = isOneri
+      ? {
+          current: body.current!,
+          proposal: body.proposal!,
+          benefits: [...new Set(body.benefits)],
+          ...(body.benefitNote ? { benefitNote: body.benefitNote } : {}),
+        }
+      : null;
+    const description = details ? composeDescription(details) : body.description!;
     const now = new Date();
     const slaDueAt = await dueDateFor(priority, now);
 
@@ -238,7 +272,8 @@ export default async function recordRoutes(app: FastifyInstance) {
           code,
           type: TYPE_FROM_SLUG[body.type]!,
           title: body.title,
-          description: body.description,
+          description,
+          details: details ? JSON.stringify(details) : null,
           priority,
           status: RecordStatus.YENI,
           departmentId: body.department,
@@ -253,7 +288,9 @@ export default async function recordRoutes(app: FastifyInstance) {
                 type: 'CREATE',
                 byId: actor.id,
                 at: now,
-                text: `Kayıt oluşturuldu ve ${primaryName} ekibine iletildi.`,
+                text: isOneri
+                  ? `Öneri oluşturuldu ve değerlendirilmek üzere ${primaryName} ekibine iletildi.`
+                  : `Kayıt oluşturuldu ve ${primaryName} ekibine iletildi.`,
               },
               ...(secondName
                 ? [
@@ -295,7 +332,7 @@ export default async function recordRoutes(app: FastifyInstance) {
           action: 'record.create',
           entity: 'Record',
           entityId: rec.id,
-          after: toJsonText({ code: rec.code, department: body.department, priority: body.priority }),
+          after: toJsonText({ code: rec.code, type: body.type, department: body.department, priority }),
           ip: req.ip,
         },
       });
