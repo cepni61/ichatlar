@@ -37,7 +37,6 @@
 
   let faqData = null;
   let faqDept = '';
-  let faqFlat = [];
   let faqBound = false;
 
   window.renderFaq = async function () {
@@ -46,10 +45,6 @@
       faqBound = true;
       sel.addEventListener('change', () => { faqDept = sel.value; faqData = null; window.renderFaq(); });
       $('#faqQ').addEventListener('input', debounce(paintFaq, 150));
-      $('#faq').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-faq-new]');
-        if (b) newFromFaq(faqFlat[+b.dataset.faqNew]);
-      });
     }
     sel.innerHTML = deptOptions('Tüm ekipler', faqDept);
     if (!faqData) {
@@ -65,7 +60,7 @@
     paintFaq();
   };
 
-  function faqItem(x, i, opened) {
+  function faqItem(x, opened) {
     const badge = x.source === 'kb'
       ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span>'
       : x.verified ? '<span class="src-badge">' + icon('check') + ' Onaylı çözüm</span>'
@@ -83,8 +78,6 @@
       +   '<p style="margin-bottom:8px">' + badge + '</p>'
       +   '<p>' + esc(x.answer) + '</p>'
       +   (x.url ? '<p>Bağlantı: ' + linkHtml(x.url) + '</p>' : '')
-      +   '<div class="inline-actions"><span class="hint">Bu yanıt işinizi görmediyse:</span>'
-      +   '<button class="btn btn-soft" type="button" data-faq-new="' + i + '">Bu konuda kayıt aç</button></div>'
       + '</div></details>';
   }
 
@@ -93,30 +86,18 @@
     const q = trFold($('#faqQ').value.trim());
     const match = (x) => !q || trFold(x.title + ' ' + x.answer).includes(q);
     const items = faqData.items.filter(match);
-    const ready = faqData.ready.filter(match);
-    faqFlat = items.concat(ready);
+    // Hazır yanıtlar Bilgi Bankası maddesidir (sunucu kaynak alanı göndermiyor).
+    const ready = faqData.ready.filter(match).map((x) => Object.assign({ source: 'kb' }, x));
 
     $('#faqList').innerHTML =
       '<div class="res-head" style="margin-top:4px">En sık sorulan talepler · ' + items.length + '</div>'
       + (items.length
-          ? items.map((x, i) => faqItem(x, i, i === 0 && !q)).join('')
+          ? items.map((x, i) => faqItem(x, i === 0 && !q)).join('')
           : '<p class="hint">' + (q ? 'Aramanıza uyan sık sorulan talep yok.' : 'Henüz tekrar eden talep yok.') + '</p>');
     $('#faqReady').innerHTML = ready.length
       ? '<div class="res-head">Ekiplerin hazır yanıtları · ' + ready.length + '</div>'
-        + ready.map((x, k) => faqItem(x, items.length + k, false)).join('')
+        + ready.map((x) => faqItem(x, false)).join('')
       : '';
-  }
-
-  /* SSS'den kayıt açma: bilgi formu başlık ve ekip dolu açılır. */
-  function newFromFaq(x) {
-    if (!x) return;
-    show('new-ticket');
-    setFormType('bilgi');
-    $('#fTitle').value = x.title.slice(0, 200);
-    if (x.department && x.department.id) $('#fDept1').value = x.department.id;
-    invalidateMl();
-    $('#fDesc').focus();
-    toast('Başlık ve ekip dolduruldu; sorununuzu açıklamaya yazın', 'ok');
   }
 
   /* ============================================================== Arama */
