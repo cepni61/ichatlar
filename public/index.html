@@ -874,9 +874,41 @@
   .person a{font-size:12px;color:var(--b-700)}
   .resource p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--text-2)}
 
-  .table .owned-grp th{background:var(--panel2);font-size:14px;font-weight:700;text-transform:none;letter-spacing:0;color:var(--text);padding:12px;border-bottom-color:var(--line-2)}
-  .table .owned-grp th .small{font-weight:500}
-  .owned-sub td{padding:8px 12px 6px;font-size:11px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+  /* Tür başlığı (Bilgi Talepleri / Öneriler) durum başlıklarından güçlü:
+     önce tür, sonra durum okunur. */
+  .table .owned-grp th{
+    background:var(--panel3);font-size:15.5px;font-weight:800;text-transform:none;letter-spacing:var(--ls-snug);
+    color:var(--text);padding:15px 14px;border-top:2px solid var(--line-2);border-bottom:2px solid var(--line-2);
+  }
+  .table .owned-grp th .ic{width:17px;height:17px;vertical-align:-3px}
+  .table .owned-grp th .small{font-weight:600;font-size:12.5px}
+  /* Durum başlığı: kayıt satırları arasında kaybolmasın — durumun kendi
+     renginde zemin, solda renkli şerit, kalın renkli yazı ve sayı rozeti.
+     Yazı rengi durum rengini metin rengiyle karıştırır: açık temada koyulaşır,
+     koyu temada açılır; her iki durumda da zeminde okunur (≥4.5:1). */
+  .table .owned-sub td{
+    padding:11px 14px;border-bottom:1px solid var(--line);background:var(--sub-bg);
+    box-shadow:inset 4px 0 0 var(--sub-c);
+  }
+  .owned-sub .sub-lbl{
+    display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;
+    letter-spacing:.03em;text-transform:uppercase;
+    color:color-mix(in srgb, var(--sub-c) 60%, var(--text));
+  }
+  .owned-sub .sub-lbl::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--sub-c);flex-shrink:0}
+  .owned-sub .sub-n{
+    display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 8px;margin-left:10px;
+    border-radius:999px;background:var(--panel);font-size:12px;font-weight:800;
+    color:color-mix(in srgb, var(--sub-c) 60%, var(--text));
+    border:1px solid color-mix(in srgb, var(--sub-c) 45%, transparent);
+  }
+  .owned-sub.t-gray  {--sub-c:var(--slate);   --sub-bg:var(--slatebg)}
+  .owned-sub.t-blue  {--sub-c:var(--primary); --sub-bg:var(--primary2)}
+  .owned-sub.t-purple{--sub-c:var(--violet);  --sub-bg:var(--violetbg)}
+  .owned-sub.t-yellow{--sub-c:var(--warn);    --sub-bg:var(--warnbg)}
+  .owned-sub.t-green {--sub-c:var(--success); --sub-bg:var(--successbg)}
+  .owned-sub.t-red   {--sub-c:var(--danger);  --sub-bg:var(--dangerbg)}
+  .owned-sub.t-teal  {--sub-c:var(--teal);    --sub-bg:var(--tealbg)}
 
   /* Değerlendirme sonucu seçimi */
   .outcome-set{border:0;padding:0;margin:0 0 14px;display:grid;gap:8px}
@@ -2953,7 +2985,9 @@ function renderOwned(){
     const statuses = [...new Set(list.map(r => r.status))].sort((a,b) => rank(a) - rank(b));
     statuses.forEach(st => {
       const grp = list.filter(r => r.status === st);
-      html += '<tr class="owned-sub"><td colspan="7">'+esc(statusObj(st).label)+' · '+grp.length+'</td></tr>';
+      html += '<tr class="owned-sub t-'+esc(statusObj(st).cls || 'gray')+'"><td colspan="7">'
+           +  '<span class="sub-lbl">'+esc(statusObj(st).label)+'</span>'
+           +  '<span class="sub-n" aria-label="'+grp.length+' kayıt">'+grp.length+'</span></td></tr>';
       html += grp.map(row).join('');
     });
   });
