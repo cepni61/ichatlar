@@ -212,17 +212,18 @@
     --em-600:#059669; --em-500:#10b981; --em-400:#34d399; --em-300:#6ee7b7;
     --em-200:#a7f3d0; --em-100:#d1fae5; --em-50:#ecfdf5;
 
-    /* İç yüzeyler bembeyaz değil, çok açık krem (kullanıcı isteği): göz
-       yormuyor, zümrüt gradyanla sıcak bir geçiş kuruyor. Soluk metin her
-       krem tonda ≥4.5:1 (panel 5.4, panel2 5.0, panel3 4.9). */
-    --bg:#f6f2e6;
-    --panel:#fdfaf2;
-    --panel2:#f6f0e2;
-    --panel3:#f2ecde;
+    /* İç yüzeyler bembeyaz değil, açık krem (kullanıcı isteği). Kartlar,
+       pencereler ve formlar Ekibime Gelenler sütunlarındaki tonda (#f2ecde);
+       içteki kutular ve kanban sütunları birer kademe koyu ki ayrışsın.
+       Soluk metin her krem tonda ≥4.5:1 (panel 5.5, panel2 5.1, panel3 4.7). */
+    --bg:#ece6d6;
+    --panel:#f2ecde;
+    --panel2:#ebe4d3;
+    --panel3:#e4dcc8;
 
     --text:#0d2620;
     --text-2:#3f5b53;
-    --muted:#536b65;
+    --muted:#4c635d;
     --line:rgba(6,95,70,.11);
     --line-2:rgba(6,95,70,.20);
 
@@ -230,11 +231,11 @@
 
     /* Mavi skalanin yerine zumrut skalasi. --b-700 metin, --b-50 zemin
        olarak kullanildigi icin yonler korunur. */
-    --b-900:#032b21; --b-800:#04372c; --b-700:#047857; --b-600:#059669;
+    --b-900:#032b21; --b-800:#04372c; --b-700:#036a4c; --b-600:#059669;
     --b-500:#10b981; --b-400:#34d399; --b-300:#6ee7b7; --b-200:#a7f3d0;
     --b-100:#d1fae5; --b-50:#ecfdf5;
 
-    --primary:#047857;
+    --primary:#036a4c;          /* metin olarak koyu kremde de ≥4.5:1 */
     --primary-hover:#065f46;
     --primary2:#dff5ec;
     --on-soft:#065f46;
@@ -250,6 +251,8 @@
     --violet:#6d28d9;  --violetbg:#efe9fb;
     --slate:#475569;   --slatebg:#eef2f1;
     --teal:#0f766e;    --tealbg:#ddf3f0;   /* rozet metni 4.7:1 (eski #0d9488 = 3.2:1) */
+    /* Öneri kutusu krem kartın üstünde beyazımsı kalmasın: koyu kehribar-krem */
+    --idea:#8f4f00;    --ideabg:#f6e6c8;
 
     /* Referansin yumusak yaricap skalasi */
     --r-sm:12px; --r:18px; --r-lg:26px;
@@ -266,8 +269,8 @@
     /* — Sayfa katmanlari: capraz zumrut→beyaz + iki isik huzmesi — */
     --page-layer:linear-gradient(157deg,
       #032b21 0%, #04372c 9%, #065f46 19%, #08725a 28%, #0e8f70 37%,
-      #1fac89 46%, #4ec6a6 55%, #83dcc3 64%, #b2ebdb 73%, #d3f1e3 81%,
-      #e6f3e6 89%, #f1f0e3 95%, #f6f2e6 100%);   /* dip beyaz değil, krem */
+      #1fac89 46%, #4ec6a6 55%, #83dcc3 64%, #b2ebdb 73%, #cfeedd 81%,
+      #dfeedd 89%, #e9e9d8 95%, #ece6d6 100%);   /* dip beyaz değil, krem */
     --page-glow:
       radial-gradient(760px 420px at 12% 4%,  rgba(255,255,255,.16), transparent 62%),
       radial-gradient(620px 380px at 92% 30%, rgba(255,255,255,.12), transparent 60%);
@@ -319,7 +322,7 @@
   html[data-theme="zumrut"] .kpi{overflow:hidden}
   /* Krem kartın üst kenarında ince ışık: düz beyaz levha yerine hafif kabarık yüzey */
   html[data-theme="zumrut"] .card,
-  html[data-theme="zumrut"] .modal{box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.7)}
+  html[data-theme="zumrut"] .modal{box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.55)}
   html[data-theme="zumrut"] .kpi::after{
     content:'';position:absolute;left:0;right:0;top:0;height:2px;
     background:var(--grad);opacity:.9;
