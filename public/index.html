@@ -135,6 +135,14 @@
     --main-layer:none;
 
     --ease:cubic-bezier(.4,0,.2,1);
+
+    /* Asistan (marka mavisi): rozet, iz, ipucu balonu ve sohbet başlığı.
+       Durum renkleri (yeşil/kırmızı/kehribar) bilerek temadan bağımsız. */
+    --ag-1:#3b82f6; --ag-2:#2563eb; --ag-3:#1d4ed8;
+    --ag-ring:rgba(59,130,246,.55); --ag-dust:#93c5fd; --ag-dust-2:#60a5fa;
+    --ag-glow:rgba(29,78,216,.40); --ag-deep:#12275c; --ag-deep-2:#1d3a8a;
+    --ag-head:linear-gradient(135deg,#12275c 0%,#1d4ed8 60%,#2563eb 100%);
+    --ag-av:linear-gradient(140deg,#93c5fd,#2563eb); --ag-on:rgba(191,219,254,.9); --ag-tip-fg:#eef4ff;
   }
 
   /* ==========================================================================
@@ -150,6 +158,13 @@
 
   /* ---------- Koyu tema ---------- */
   html[data-theme="dark"]{
+    /* Asistan (açık mavi): rozet, iz, ipucu balonu ve sohbet başlığı.
+       Durum renkleri (yeşil/kırmızı/kehribar) bilerek temadan bağımsız. */
+    --ag-1:#60a5fa; --ag-2:#3b82f6; --ag-3:#1d4ed8;
+    --ag-ring:rgba(96,165,250,.55); --ag-dust:#bfdbfe; --ag-dust-2:#93c5fd;
+    --ag-glow:rgba(37,99,235,.45); --ag-deep:#0b1630; --ag-deep-2:#172a55;
+    --ag-head:linear-gradient(135deg,#0b1630 0%,#1e3a8a 60%,#2563eb 100%);
+    --ag-av:linear-gradient(140deg,#93c5fd,#3b82f6); --ag-on:rgba(191,219,254,.9); --ag-tip-fg:#eef4ff;
     color-scheme:dark;
     --chrome-menu-bg:#1e2942;
     --chrome-menu-line:#3a4767;              /* kaydirma cubugu ve form kontrolleri */
@@ -207,6 +222,13 @@
      Bu yuzden yalnizca renk token'lari degil, katman ve chrome token'lari da
      ezilir. */
   html[data-theme="zumrut"]{
+    /* Asistan (zümrüt): rozet, iz, ipucu balonu ve sohbet başlığı.
+       Durum renkleri (yeşil/kırmızı/kehribar) bilerek temadan bağımsız. */
+    --ag-1:#10b981; --ag-2:#059669; --ag-3:#047857;
+    --ag-ring:rgba(16,185,129,.55); --ag-dust:#a7f3d0; --ag-dust-2:#6ee7b7;
+    --ag-glow:rgba(4,120,87,.42); --ag-deep:#04372c; --ag-deep-2:#065f46;
+    --ag-head:linear-gradient(135deg,#04372c 0%,#065f46 60%,#047857 100%);
+    --ag-av:linear-gradient(140deg,#34d399,#059669); --ag-on:rgba(167,243,208,.85); --ag-tip-fg:#eafaf5;
     /* Zumrut skalasi — referanstaki --em-* karsiliklari */
     --em-950:#032b21; --em-900:#04372c; --em-800:#065f46; --em-700:#047857;
     --em-600:#059669; --em-500:#10b981; --em-400:#34d399; --em-300:#6ee7b7;
@@ -346,6 +368,13 @@
      olmadigi icin icerikle birlikte kayar, yumusak gecis oldugu icin ust bant
      yuksekligi degisince (mobilde sarma) sert kenar olusmaz. */
   html[data-theme="softdark"]{
+    /* Asistan (grafit başlık, mavi rozet): rozet, iz, ipucu balonu ve sohbet başlığı.
+       Durum renkleri (yeşil/kırmızı/kehribar) bilerek temadan bağımsız. */
+    --ag-1:#5b8def; --ag-2:#2563eb; --ag-3:#1e40af;
+    --ag-ring:rgba(91,141,239,.55); --ag-dust:#93b4f5; --ag-dust-2:#5b8def;
+    --ag-glow:rgba(30,64,175,.38); --ag-deep:#161d2b; --ag-deep-2:#212a3c;
+    --ag-head:linear-gradient(135deg,#161d2b 0%,#1c2434 55%,#2a3550 100%);
+    --ag-av:linear-gradient(140deg,#93b4f5,#2563eb); --ag-on:rgba(200,210,228,.8); --ag-tip-fg:#f3f6fc;
     /* İç yüzeyler bembeyaz değil, kırık beyaz (kullanıcı isteği); zemin ona
        uyan sıcak gri. Soluk metin her yüzeyde ≥4.5:1 (en düşük panel3 5.0). */
     --bg:#e9e7e2;
@@ -434,6 +463,13 @@
      desteği tam. <link> değişikliği theme-entry.txt içinde; font dosyaları
      yalnızca bu tema seçiliyken indirilir. */
   html[data-theme="santral"]{
+    /* Asistan (pirinç halkalı bakalit düğme): rozet, iz, ipucu balonu ve sohbet başlığı.
+       Durum renkleri (yeşil/kırmızı/kehribar) bilerek temadan bağımsız. */
+    --ag-1:#5a4636; --ag-2:#3a2d24; --ag-3:#1e1712;
+    --ag-ring:rgba(199,163,94,.6); --ag-dust:#e8cd97; --ag-dust-2:#c7a35e;
+    --ag-glow:rgba(30,23,18,.42); --ag-deep:#2a2019; --ag-deep-2:#15100c;
+    --ag-head:linear-gradient(135deg,#1e1712 0%,#2a2019 55%,#3a2d24 100%);
+    --ag-av:linear-gradient(140deg,#e8cd97,#a8812f); --ag-on:rgba(232,205,151,.85); --ag-tip-fg:#fbf5e9;
     color-scheme:light;
 
     /* — Malzeme — */
@@ -1399,7 +1435,7 @@
 
   #toast{
     position:fixed;right:26px;bottom:26px;
-    background:linear-gradient(140deg,#04372c,#065f46);
+    background:linear-gradient(140deg,var(--ag-deep),var(--ag-deep-2));
     color:#fff;padding:13px 18px;border-radius:var(--r-sm);
     box-shadow:var(--sh-3), inset 0 1px 0 rgba(255,255,255,.12);
     z-index:90;font-weight:500;font-size:13px;
@@ -1420,8 +1456,8 @@
     transform:translate3d(-300px,-300px,0);
     -webkit-tap-highlight-color:transparent;
     /* duruma göre değişen renkler */
-    --c1:#10b981; --c2:#059669; --c3:#047857;
-    --ring:rgba(16,185,129,.55); --dust:#34d399;
+    --c1:var(--ag-1); --c2:var(--ag-2); --c3:var(--ag-3);
+    --ring:var(--ag-ring); --dust:var(--ag-dust-2);
   }
   .agent.st-ok   { --c1:#4ade80; --c2:#22c55e; --c3:#15803d; --ring:rgba(74,222,128,.6);  --dust:#4ade80 }
   .agent.st-err  { --c1:#f87171; --c2:#ef4444; --c3:#b91c1c; --ring:rgba(248,113,113,.6); --dust:#f87171 }
@@ -1433,13 +1469,13 @@
     width:100%;height:100%;border-radius:50%;
     background:linear-gradient(140deg, var(--c1) 0%, var(--c2) 45%, var(--c3) 100%);
     display:grid;place-items:center;color:#fff;position:relative;
-    box-shadow:0 10px 28px rgba(4,120,87,.42), inset 0 1px 0 rgba(255,255,255,.32);
+    box-shadow:0 10px 28px var(--ag-glow), inset 0 1px 0 rgba(255,255,255,.32);
     transition:transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s var(--ease),
                background .3s var(--ease);
   }
   .agent.hot .agent-body{
     transform:scale(1.3);
-    box-shadow:0 18px 40px rgba(4,120,87,.5), inset 0 1px 0 rgba(255,255,255,.38);
+    box-shadow:0 18px 40px var(--ag-glow), inset 0 1px 0 rgba(255,255,255,.38);
   }
   .agent.paused .agent-body{transform:scale(.9)}
 
@@ -1478,14 +1514,14 @@
   .a-tip{
     position:absolute;bottom:calc(100% + 12px);left:50%;
     transform:translateX(-50%) translateY(6px) scale(.94);
-    background:#04372c;color:#eafaf5;padding:7px 12px;border-radius:11px;
+    background:var(--ag-deep);color:var(--ag-tip-fg);padding:7px 12px;border-radius:11px;
     font-size:11.5px;font-weight:600;white-space:nowrap;letter-spacing:var(--ls-snug);
     opacity:0;pointer-events:none;box-shadow:var(--sh-2);z-index:2;
     transition:opacity .22s var(--ease), transform .22s cubic-bezier(.34,1.4,.5,1);
   }
   .a-tip::after{
     content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
-    border:5px solid transparent;border-top-color:#04372c;
+    border:5px solid transparent;border-top-color:var(--ag-deep);
   }
   .agent.hot .a-tip{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
 
@@ -1497,7 +1533,7 @@
   .agent.paused .a-tip{opacity:0 !important}
 
   .agent:focus-visible{outline:none}
-  .agent:focus-visible .agent-body{box-shadow:0 0 0 3px #eafaf5, 0 10px 28px rgba(4,120,87,.42)}
+  .agent:focus-visible .agent-body{box-shadow:0 0 0 3px var(--panel), 0 0 0 5px var(--ag-2), 0 10px 28px var(--ag-glow)}
   .agent:focus-visible .a-tip{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
 
   /* =============== YILDIZ TOZU İZİ (roket kuyruğu) =============== */
@@ -1505,11 +1541,11 @@
   .dust{
     position:absolute;left:0;top:0;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;
     opacity:0;will-change:transform,opacity;
-    background:radial-gradient(circle, #ffffff 0%, var(--dc,#6ee7b7) 42%, rgba(16,185,129,0) 72%);
+    background:radial-gradient(circle, #ffffff 0%, var(--dc,var(--ag-dust-2)) 42%, transparent 72%);
     border-radius:50%;
   }
   .dust.star{
-    background:var(--dc,#a7f3d0);border-radius:0;
+    background:var(--dc,var(--ag-dust));border-radius:0;
     clip-path:polygon(50% 0%,59% 41%,100% 50%,59% 59%,50% 100%,41% 59%,0% 50%,41% 41%);
   }
   .dust.go{animation:dustFall var(--dur,900ms) cubic-bezier(.15,.55,.35,1) forwards}
@@ -1538,16 +1574,16 @@
   @keyframes chatIn{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
   .chat-h{
     display:flex;align-items:center;gap:11px;padding:15px 17px;
-    background:linear-gradient(135deg,#04372c 0%,#065f46 60%,#047857 100%);color:#fff;
+    background:var(--ag-head);color:#fff;
   }
   .chat-h .av{
     width:36px;height:36px;border-radius:50%;flex-shrink:0;
-    background:linear-gradient(140deg,#34d399,#059669);
+    background:var(--ag-av);
     display:grid;place-items:center;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
   }
   .chat-h b{display:block;font-size:14px;font-family:var(--f-display);font-weight:600;letter-spacing:var(--ls-tight)}
-  .chat-h small{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(167,243,208,.85);margin-top:1px}
+  .chat-h small{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ag-on);margin-top:1px}
   .chat-h small i{width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block}
   .chat-h button{
     margin-left:auto;border:0;background:rgba(255,255,255,.12);color:#fff;
@@ -1613,7 +1649,7 @@
   .chat-f button{
     width:38px;height:38px;border-radius:50%;border:0;flex-shrink:0;
     background:var(--grad);color:#fff;display:grid;place-items:center;cursor:pointer;
-    box-shadow:0 6px 16px rgba(4,120,87,.3);
+    box-shadow:0 6px 16px var(--ag-glow);
   }
 
   /* sohbet açıkken toast panele çarpmasın */
@@ -3904,7 +3940,7 @@ const Trail = {
     d.style.setProperty('--s0', (0.6 + Math.random() * 0.75).toFixed(2));
     d.style.setProperty('--rot', (Math.random() * 220 - 110).toFixed(0) + 'deg');
     d.style.setProperty('--dur', (760 + Math.random() * 520).toFixed(0) + 'ms');
-    d.style.setProperty('--dc', Math.random() < 0.5 ? '#a7f3d0' : '#6ee7b7');
+    d.style.setProperty('--dc', Math.random() < 0.5 ? 'var(--ag-dust)' : 'var(--ag-dust-2)');
     /* animasyonu yeniden başlat */
     d.classList.remove('go'); void d.offsetWidth; d.classList.add('go');
   },
