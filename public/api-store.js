@@ -1016,7 +1016,7 @@
     if (prio) {
       prio.innerHTML = PRIORITIES.map(
         (p) => '<option value="' + p.id + '"' + (p.id === 'normal' ? ' selected' : '') + '>' +
-          p.label + ' — ' + p.sla + ' saat</option>',
+          p.label + '</option>',
       ).join('');
     }
 

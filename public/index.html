@@ -4342,7 +4342,7 @@ function init(){
   /* Form seçenekleri */
   $('#fDept1').innerHTML = '<option value="">Seçiniz...</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
   $('#fDept2').innerHTML = '<option value="">Seçiniz (isteğe bağlı)</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
-  $('#fPrio').innerHTML  = PRIORITIES.map(p => '<option value="'+p.id+'"'+(p.id==='normal'?' selected':'')+'>'+p.label+' — '+p.sla+' saat</option>').join('');
+  $('#fPrio').innerHTML  = PRIORITIES.map(p => '<option value="'+p.id+'"'+(p.id==='normal'?' selected':'')+'>'+p.label+'</option>').join('');
 
   /* Tablo satırı klavyeyle de açılır (Enter / Boşluk); düğme ve bağlantılar kendi davranışını korur */
   document.addEventListener('keydown', e => {
