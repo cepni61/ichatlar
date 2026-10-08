@@ -60,7 +60,7 @@
     /* Odak halkasi. Ad bilincli olarak --focus-ring: gezici asistan
        (.agent.st-*) kendi --ring degiskenini tanimliyor, ayni ad kullanilsa
        asistanin icinde yanlis degere cozulurdu. */
-    --focus-ring:rgba(37,99,235,.13);
+    --focus-ring:rgba(37,99,235,.22);
     --glow:rgba(37,99,235,.28);     /* birincil buton parilti */
     --hair:rgba(37,99,235,.10);     /* ince mavi cerceve */
     --grad:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
@@ -72,6 +72,10 @@
     --violet:#7c4ddb;  --violetbg:#f1ebfd;
     --slate:#5b6b8c;   --slatebg:#eef1f7;
     --teal:#0d9c92;    --tealbg:#e4f6f4;
+    /* Rozet ve uyarı METNİ için koyu tonlar (≥4.5:1). Yukarıdaki canlı tonlar
+       nokta, çubuk ve kenar gibi metin olmayan yerlerde kalır; turuncu metin
+       açık zeminde 2.4:1'di ("Süre yaklaşıyor" en zor okunan rozetti). */
+    --warn-ink:#8a4b00; --danger-ink:#b42318; --teal-ink:#0b6b64;
     /* Öneri vurgusu: tür rozeti sarı; küçük metin için koyu kehribar (≥4.5:1). */
     --idea:#8f4f00;    --ideabg:#fef4e4;
 
@@ -202,6 +206,7 @@
     --violet:#a78bfa;  --violetbg:#241a3d;
     --slate:#9aa8c0;   --slatebg:#1e2436;
     --teal:#2dd4bf;    --tealbg:#0d2e2c;
+    --warn-ink:var(--warn); --danger-ink:var(--danger); --teal-ink:var(--teal);
     --idea:#fcd34d;    --ideabg:#33260c;
 
     /* Navy golge koyu zeminde gorunmez; siyah ve daha derin. */
@@ -273,6 +278,7 @@
     --violet:#6d28d9;  --violetbg:#efe9fb;
     --slate:#475569;   --slatebg:#eef2f1;
     --teal:#0f766e;    --tealbg:#ddf3f0;   /* rozet metni 4.7:1 (eski #0d9488 = 3.2:1) */
+    --warn-ink:#8f4f00; --danger-ink:var(--danger); --teal-ink:var(--teal);
     /* Öneri kutusu krem kartın üstünde beyazımsı kalmasın: koyu kehribar-krem */
     --idea:#8f4f00;    --ideabg:#f6e6c8;
 
@@ -303,7 +309,7 @@
     --chrome-line:rgba(255,255,255,.09);
     --chrome-brand:#ffffff;
     --chrome-brand-2:rgba(215,240,232,.62);
-    --chrome-section:rgba(167,243,208,.48);
+    --chrome-section:rgba(167,243,208,.80);
     --chrome-text:rgba(219,242,235,.80);
     --chrome-text-hi:#ffffff;
     --chrome-hover:rgba(255,255,255,.07);
@@ -318,18 +324,20 @@
     --chrome-card:rgba(255,255,255,.07);
     --chrome-card-line:rgba(255,255,255,.11);
     --chrome-name:#ffffff;
-    --chrome-role:rgba(167,243,208,.62);
+    --chrome-role:rgba(167,243,208,.82);
     --chrome-input-bg:rgba(3,33,26,.45);
     --chrome-input-fg:#eafaf5;
     --chrome-input-line:rgba(255,255,255,.14);
-    --chrome-foot:rgba(215,240,232,.45);
+    --chrome-foot:rgba(215,240,232,.78);
     --chrome-menu-bg:rgba(3,33,26,.94);
     --chrome-menu-line:rgba(255,255,255,.16);
 
     --head-title:#ffffff;
     --head-sub:rgba(232,250,244,.72);
-    --head-icon:rgba(232,250,244,.55);
-    --head-input-bg:rgba(255,255,255,.12);
+    --head-icon:rgba(232,250,244,.80);
+    /* Arama kutusu koyu cam: degradenin açık kısmına denk gelse de beyaz
+       yazı okunur (eski yarı saydam beyazda ~3:1'di). */
+    --head-input-bg:rgba(3,33,26,.42);
     --head-input-fg:#ffffff;
     --head-input-line:rgba(255,255,255,.18);
     --head-shadow:none;
@@ -358,6 +366,17 @@
   html[data-theme="zumrut"] .topbar .btn-ghost:hover{background:rgba(255,255,255,.20)}
   html[data-theme="zumrut"] .search input{
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  /* Kart dışında, doğrudan degrade zemin üstünde duran yazılar (bölüm
+     başlıkları, kapsam notu, boş durum ipuçları) koyu yeşil kısımda
+     okunmuyordu: krem bir şeride oturtulur. */
+  html[data-theme="zumrut"] .res-head,
+  html[data-theme="zumrut"] .rep-scope,
+  html[data-theme="zumrut"] .view > .hint,
+  html[data-theme="zumrut"] #faqList > .hint,
+  html[data-theme="zumrut"] #faqReady > .hint{
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:6px 12px;width:fit-content;max-width:100%;box-shadow:var(--sh-1);
   }
 
   /* ---------- Soft dark tema ----------
@@ -438,6 +457,19 @@
     border-color:rgba(255,255,255,.18);box-shadow:none;
   }
   html[data-theme="softdark"] .topbar .btn-ghost:hover{background:rgba(255,255,255,.18)}
+  /* Dar ekranda üst bant sütuna dönüp uzuyor; sabit yükseklikteki koyu şerit
+     arama kutusu ve zilin altında kalıyor, beyaz yazı açık zemine düşüyordu.
+     Burada şerit kalkar, üst bant aydınlık temadaki gibi çizilir. */
+  @media (max-width:1080px){
+    html[data-theme="softdark"]{
+      --main-layer:none;
+      --head-title:var(--text); --head-sub:var(--muted); --head-icon:var(--muted);
+      --head-input-bg:var(--panel); --head-input-fg:var(--text); --head-input-line:var(--line-2);
+      --head-shadow:var(--sh-1);
+    }
+    html[data-theme="softdark"] .topbar .btn-ghost{background:var(--panel);color:var(--text);border-color:var(--line-2);box-shadow:var(--sh-1)}
+    html[data-theme="softdark"] .topbar .btn-ghost:hover{background:var(--panel2)}
+  }
 
   /* ---------- Santral tema ----------
      Adın kendisinden: "iç hatlar" eski manuel telefon santralinin hatları.
@@ -522,6 +554,7 @@
     --violet:#5c3d8c;  --violetbg:#ebe5f0;
     --slate:#5a524b;   --slatebg:#e8e4de;
     --teal:#13665f;    --tealbg:#dcebe7;
+    --warn-ink:var(--warn); --danger-ink:var(--danger); --teal-ink:var(--teal);
     /* Öneri: kehribar sinyalle karışmasın diye pirinç-zeytin */
     --idea:#5c5216;    --ideabg:#ebe6cf;
 
@@ -866,7 +899,7 @@
     width:100%;border:1px solid var(--line-2);border-radius:999px;padding:11px 16px;font-size:14px;
     background:var(--panel);color:var(--text);
   }
-  .search-box:focus{outline:none;border-color:var(--b-500);box-shadow:0 0 0 3.5px var(--focus-ring)}
+  .search-box:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
   .res-head{font-size:11px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
   .person,.resource{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);margin-bottom:8px}
   .person b,.resource b{display:block;font-size:13.5px}
@@ -906,10 +939,10 @@
   .owned-sub.t-gray  {--sub-c:var(--slate);   --sub-bg:var(--slatebg)}
   .owned-sub.t-blue  {--sub-c:var(--primary); --sub-bg:var(--primary2)}
   .owned-sub.t-purple{--sub-c:var(--violet);  --sub-bg:var(--violetbg)}
-  .owned-sub.t-yellow{--sub-c:var(--warn);    --sub-bg:var(--warnbg)}
+  .owned-sub.t-yellow{--sub-c:var(--warn-ink);--sub-bg:var(--warnbg)}
   .owned-sub.t-green {--sub-c:var(--success); --sub-bg:var(--successbg)}
-  .owned-sub.t-red   {--sub-c:var(--danger);  --sub-bg:var(--dangerbg)}
-  .owned-sub.t-teal  {--sub-c:var(--teal);    --sub-bg:var(--tealbg)}
+  .owned-sub.t-red   {--sub-c:var(--danger-ink);--sub-bg:var(--dangerbg)}
+  .owned-sub.t-teal  {--sub-c:var(--teal-ink);--sub-bg:var(--tealbg)}
 
   /* Değerlendirme sonucu seçimi */
   .outcome-set{border:0;padding:0;margin:0 0 14px;display:grid;gap:8px}
@@ -1001,7 +1034,7 @@
     min-width:260px;border:1px solid var(--line-2);border-radius:var(--r-sm);
     background:var(--panel);color:var(--text);padding:9px 12px;font-size:14px;
   }
-  .rep-filter select:focus{outline:none;border-color:var(--b-500);box-shadow:0 0 0 3.5px var(--focus-ring)}
+  .rep-filter select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
   .rep-filter .mini-btn[hidden]{display:none}
   @media(max-width:640px){ .rep-filter select{min-width:0;flex:1} }
   .kpis .kpi, .report-kpis .metric-box{animation:kpiIn .5s cubic-bezier(.22,1,.36,1) both}
@@ -1029,7 +1062,10 @@
   .field input.sr-only{width:1px;height:1px;padding:0;border:0}
   /* Klavye odağı seçimden ayırt edilsin: seçili kart gölge, odak düz çizgi. */
   .type-card:has(input:focus-visible){outline:2px solid var(--primary);outline-offset:3px}
-  .table tbody tr.row-link:focus-visible{outline:3px solid var(--focus-ring);outline-offset:-3px}
+  .table tbody tr.row-link:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+  /* Bileşen kendi odak stilini tanımlamadıysa: görünür, tema renginde halka.
+     :where() özgüllüğü sıfırlar, bileşen kuralları her zaman kazanır. */
+  :where(a, button, summary, select, [tabindex]):focus-visible{outline:2px solid var(--primary);outline-offset:2px}
   .notif-row{width:100%;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:var(--r-sm)}
   .notif-row:hover,.notif-row:focus-visible{background:var(--panel2)}
   .kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:18px}
@@ -1120,12 +1156,12 @@
   }
   .pill .ic-sm{width:13px;height:13px}
   .green{background:var(--successbg);color:var(--success)}
-  .yellow{background:var(--warnbg);color:var(--warn)}
-  .red{background:var(--dangerbg);color:var(--danger)}
+  .yellow{background:var(--warnbg);color:var(--warn-ink)}
+  .red{background:var(--dangerbg);color:var(--danger-ink)}
   .blue{background:var(--primary2);color:var(--on-soft)}
   .purple{background:var(--violetbg);color:var(--violet)}
   .gray{background:var(--slatebg);color:var(--slate)}
-  .teal{background:var(--tealbg);color:var(--teal)}
+  .teal{background:var(--tealbg);color:var(--teal-ink)}
   .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
 
   /* ---------- Form ---------- */
@@ -1143,7 +1179,7 @@
     transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
   }
   .field input:focus,.field select:focus,.field textarea:focus{
-    outline:none;border-color:var(--b-500);box-shadow:0 0 0 3.5px var(--focus-ring);
+    outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring);
   }
   .field textarea{min-height:130px;resize:vertical;line-height:1.6}
   .hint{font-size:12.5px;color:var(--muted);line-height:1.55}
@@ -1335,7 +1371,7 @@
   .await-me{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:13px 15px;border-radius:var(--r-sm);
     background:var(--b-50);border:1px solid var(--b-200);color:var(--text-2);font-size:13px;line-height:1.5}
   .await-me b{color:var(--text)}
-  .pill.attn{background:var(--warnbg);color:var(--warn)}
+  .pill.attn{background:var(--warnbg);color:var(--warn-ink)}
 
   /* ML ekip önerisi */
   .ml-dept{
@@ -1357,6 +1393,7 @@
   .ml-dept .md-act{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text-2)}
   .ml-dept .md-note{color:var(--muted);font-size:11.5px;line-height:1.5}
   .ml-dept .md-ok{color:var(--success);font-weight:600;display:inline-flex;gap:6px;align-items:center}
+  .ml-dept .md-opts{margin-top:9px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 
   /* ---------- Kanban ---------- */
   .kanban{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:16px;overflow-x:auto;padding-bottom:10px}
@@ -1533,6 +1570,14 @@
   .modal-h button:hover{background:var(--panel2);color:var(--text)}
   .modal-b{padding:24px;overflow:auto}
   .modal-f{padding:16px 24px;border-top:1px solid var(--line);background:var(--panel2);display:flex;justify-content:flex-end;gap:10px}
+  .modal-f .btn[aria-busy="true"]{cursor:progress}
+  /* Yazılmış metin varken kapatma isteği: alt çubuğun üstünde onay */
+  .modal-discard{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 24px;
+    border-top:1px solid var(--line);background:var(--warnbg);color:var(--warn-ink);font-size:13px;font-weight:600;
+  }
+  .modal-discard[hidden]{display:none}
+  .modal-discard span{margin-right:auto}
 
   #toast{
     position:fixed;right:26px;bottom:26px;
@@ -1544,6 +1589,22 @@
     border:1px solid rgba(255,255,255,.10);
   }
   #toast.show{opacity:1;transform:translateY(0)}
+  /* Oturum düştüğünde (api-store.js → sessionExpired): sayfa yerinde kalır */
+  .session-bar{
+    position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:95;
+    width:min(720px, calc(100% - 32px));display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 14px 12px 18px;border-radius:var(--r);background:var(--panel);color:var(--text);
+    border:1px solid var(--line-2);border-left:4px solid var(--danger);box-shadow:var(--sh-3);font-size:13.5px;
+  }
+  .session-bar span{flex:1;min-width:220px;line-height:1.5}
+  #toast.has-act{display:flex;align-items:center;gap:14px}
+  #toast.show.has-act{pointer-events:auto}
+  .toast-act{
+    border:1px solid rgba(255,255,255,.45);background:rgba(255,255,255,.14);color:#fff;
+    font:inherit;font-weight:600;padding:5px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;
+  }
+  .toast-act:hover{background:rgba(255,255,255,.26)}
+  .toast-act:focus-visible{outline:2px solid #fff;outline-offset:2px}
   #toast.ok{background:linear-gradient(140deg,#15803d,#047857)}
   #toast.err{background:linear-gradient(140deg,#991b1b,#b91c1c)}
 
@@ -1746,7 +1807,7 @@
     flex:1;border:1px solid var(--line-2);border-radius:999px;padding:9px 15px;font-size:13px;
     transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
   }
-  .chat-f input:focus{outline:none;border-color:var(--b-500);box-shadow:0 0 0 3px var(--focus-ring)}
+  .chat-f input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--focus-ring)}
   .chat-f button{
     width:38px;height:38px;border-radius:50%;border:0;flex-shrink:0;
     background:var(--grad);color:#fff;display:grid;place-items:center;cursor:pointer;
@@ -1943,7 +2004,7 @@
             </div>
           </div>
 
-          <div class="field" data-only="bilgi oneri"><label for="fTitle">Başlık</label><input id="fTitle" maxlength="200" placeholder="Lütfen başlığı giriniz" /></div>
+          <div class="field" data-only="bilgi oneri"><label for="fTitle">Başlık</label><input id="fTitle" maxlength="200" placeholder="Ör. Bordro pusulam portalda görünmüyor" /></div>
 
           <!-- Bilgi -->
           <div class="field" data-only="bilgi"><label for="fDesc">Açıklama</label><textarea id="fDesc" maxlength="5000" placeholder="Kaydınızı açık ve anlaşılır şekilde yazın..."></textarea>
@@ -1976,8 +2037,9 @@
           <div class="field" data-only="bilgi oneri"><span class="lbl">Ek Dosya <span class="opt">(isteğe bağlı)</span></span>
             <div id="fAttach"></div></div>
 
+          <!-- Benzer çözüm taraması ayrı bir düğme değil: yazarken kendiliğinden
+               çalışır ve kaydı açmayı engellemez (bkz. scheduleScan). -->
           <div class="inline-actions" style="margin-top:6px" data-only="bilgi oneri">
-            <button class="btn btn-soft" id="mlBtn" data-only="bilgi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/></svg> ML ile Kontrol Et</button>
             <button class="btn btn-primary" id="createBtn" disabled>Kaydı Oluştur</button>
           </div>
           <!-- Düğme kapalıyken nedenini söyler; dar ekranda yan panel formun altında kalıyor. -->
@@ -1999,13 +2061,11 @@
               <div class="ml-ic"><svg class="ic ic-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/><path d="M18.6 16.4l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6z"/></svg></div>
               <div><b>Akıllı Çözüm Asistanı</b><span>Geçmişte çözülmüş benzer kayıtları tarar.</span></div>
             </div>
-            <div class="ml-status" id="mlStatus">
-              Başlık ve açıklamayı yazdıktan sonra <b>ML ile Kontrol Et</b>'e basın.
-              Sistem geçmiş çözümleri tarayıp önerileri gösterir; onayladıktan sonra kaydı iletebilirsiniz.
+            <div class="ml-status" id="mlStatus" aria-live="polite">
+              Başlık ve açıklamayı yazdıkça geçmişte çözülmüş benzer kayıtlar ve uygun ekip burada görünür.
             </div>
             <div id="mlDept"></div>
             <div id="mlResults"></div>
-            <div id="mlConfirm"></div>
           </div>
 
           <div class="card form-card" data-only="bilgi">
@@ -2438,15 +2498,22 @@ function slaPill(r){
 const statusPill = s => '<span class="pill '+statusObj(s).cls+'">'+esc(statusObj(s).label)+'</span>';
 const typePill   = t => '<span class="pill '+(t==='bilgi'?'blue':'yellow')+'">'+typeIcon(t)+' '+esc(typeLabel(t))+'</span>';
 
-function toast(msg, kind){
+/* action: { label, run } — ör. "Geri al". Eylemli bildirim daha uzun kalır. */
+function toast(msg, kind, action){
   /* asistanın yüzü sonuca tepki versin */
   if (typeof Agent !== 'undefined' && Agent.el) Agent.setState(kind === 'err' ? 'err' : kind === 'ok' ? 'ok' : 'idle', 1700);
-  const t=$('#toast'); t.textContent=msg; t.className = kind?kind:'';
+  const t=$('#toast'); t.textContent=msg; t.className = (kind?kind:'') + (action ? ' has-act' : '');
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'toast-act'; b.textContent = action.label;
+    b.onclick = () => { clearTimeout(t._t); t.classList.remove('show'); action.run(); };
+    t.appendChild(b);
+  }
   /* rAF arka plandaki sekmede çalışmıyor ve toast ekranda takılı kalıyordu;
      zorunlu yeniden akış geçişi aynı şekilde başlatır. Hata ve uzun mesaj
      okunabilsin diye daha uzun kalır. */
   void t.offsetWidth; t.classList.add('show');
-  const ms = kind === 'err' ? Math.max(5000, msg.length * 55) : 2600;
+  const ms = action ? 9000 : kind === 'err' ? Math.max(5000, msg.length * 55) : 2600;
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'), ms);
 }
 
@@ -3216,7 +3283,20 @@ function renderDetail(){
         : '')
   + '</div>'
   + '</div>';
+
+  /* Yarım yazılmış güncelleme her yeniden çizimde geri gelir: "Üzerime Al",
+     arka plan yenilemesi ya da başka kayda gidip dönmek metni silmesin. */
+  const cmt = $('#cmtInput');
+  if (cmt) {
+    cmt.value = CommentDrafts[r.code] || '';
+    cmt.addEventListener('input', () => {
+      if (cmt.value) CommentDrafts[r.code] = cmt.value; else delete CommentDrafts[r.code];
+    });
+  }
 }
+
+/* Kayıt numarası → gönderilmemiş güncelleme metni (sekme açık kaldıkça). */
+const CommentDrafts = {};
 
 /* =========================================================================
    12) DETAY AKSİYONLARI
@@ -3324,7 +3404,7 @@ function actComment(r){
 /* =========================================================================
    13) YENİ KAYIT FORMU + ML AKIŞI
    ========================================================================= */
-let form = { type:null, anon:false, files:[], mlDone:false, mlOk:false, matches:[], sig:null };
+let form = { type:null, anon:false, files:[], mlDone:false, matches:[], sig:null, deptTouched:false };
 
 /* Benzer kayıt kontrolünü geçersiz kılan yalnızca içerik: tür, başlık, açıklama.
    Ekip ve öncelik seçimi kontrolü sıfırlamaz — "Son adım: ekibi seçin" diyip
@@ -3362,7 +3442,7 @@ function setFormType(t){
   $$('#typeCards .type-card').forEach(x => x.classList.toggle('active', x.dataset.type === t));
   $$('#typeCards input[name="fType"]').forEach(i => { i.checked = i.value === t; });
   const oneri = t === 'oneri';
-  $('#fTitle').placeholder = oneri ? 'Önerinizi tek cümlede özetleyin' : 'Lütfen başlığı giriniz';
+  $('#fTitle').placeholder = oneri ? 'Önerinizi tek cümlede özetleyin' : 'Ör. Bordro pusulam portalda görünmüyor';
   $('#fDept1Lbl').textContent = oneri ? 'Değerlendirecek Ekip' : 'İlgili Ekip 1';
   $('#createBtn').textContent = oneri ? 'Öneriyi Gönder' : 'Kaydı Oluştur';
   if (oneri) {
@@ -3406,14 +3486,18 @@ function renderOneriPreview(){
     + (n ? ' · '+n+' ek dosya' : '')+'</p>';
 }
 
+/* Asistan paneli boşta ne söyler. Tarama yazarken kendiliğinden çalışır. */
+const ML_IDLE = 'Başlık ve açıklamayı yazdıkça geçmişte çözülmüş benzer kayıtlar ve uygun ekip burada görünür.';
+
 function resetForm(){
-  form = { type:null, anon:false, files:[], mlDone:false, mlOk:false, matches:[], sig:null };
+  clearTimeout(form.scanT);
+  form = { type:null, anon:false, files:[], mlDone:false, matches:[], sig:null, deptTouched:false };
   $('#fTitle').value = ''; $('#fDesc').value = '';
   $('#oCurrent').value = ''; $('#oProposal').value = ''; $('#oBenefitNote').value = '';
   $$('#oBenefits input').forEach(i => { i.checked = false; });
   $('#fDept1').value = ''; $('#fDept2').value = ''; $('#fPrio').value = 'normal';
-  $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
-  $('#mlStatus').innerHTML = 'Başlık ve açıklamayı yazdıktan sonra <b>ML ile Kontrol Et</b>\'e basın. Sistem geçmiş çözümleri tarayıp önerileri gösterir; onayladıktan sonra kaydı iletebilirsiniz.';
+  $('#mlResults').innerHTML = ''; $('#mlDept').innerHTML = '';
+  $('#mlStatus').innerHTML = ML_IDLE;
   if (typeof repaintAttach === 'function') repaintAttach('create');
   setFormType(null);
   updateSlaPreview(); syncCreateBtn();
@@ -3435,14 +3519,14 @@ function nextStepText(){
 }
 
 /* Bilgi talebinde sıradaki eksik adım; boşsa kayıt gönderilebilir. Sunucu
-   kurallarıyla aynı (başlık ≥5, açıklama ≥10, ekip, iki ekip farklı). */
+   kurallarıyla aynı (başlık ≥5, açıklama ≥10, ekip, iki ekip farklı).
+   Benzer çözüm taraması bilinçli olarak adım DEĞİL: eskiden "kontrol et" ve
+   "onayla" zorunluydu; tarama çalışmadığında kimse kayıt açamıyordu. */
 function bilgiStep(){
   const title = $('#fTitle').value.trim(), desc = $('#fDesc').value.trim();
   const d1 = $('#fDept1').value, d2 = $('#fDept2').value;
-  if (title.length < 5 || desc.length < 10) return 'Adım 1/4 · Başlığı (en az 5 karakter) ve açıklamayı (en az 10 karakter) yazın.';
-  if (!form.mlDone)   return 'Adım 2/4 · <b>ML ile Kontrol Et</b>’e basın: benzer çözümler ve doğru ekip önerilir.';
-  if (!form.mlOk)     return 'Adım 3/4 · Asistan panelindeki önerileri inceleyip <b>Onayla ve Devam Et</b>’e basın.';
-  if (!d1)            return 'Adım 4/4 · İlgili ekibi seçin (asistanın önerdiği ekibi “Bu ekibi seç” ile ekleyebilirsiniz).';
+  if (title.length < 5 || desc.length < 10) return 'Başlığı (en az 5 karakter) ve açıklamayı (en az 10 karakter) yazın.';
+  if (!d1)             return 'İlgili ekibi seçin.';
   if (d2 && d2 === d1) return 'İkinci ekip birinciyle aynı olamaz; başka bir ekip seçin ya da boş bırakın.';
   return '';
 }
@@ -3453,125 +3537,158 @@ function syncCreateBtn(){
   const hint = $('#createHint'); if (hint) hint.innerHTML = nextStepText();
 }
 
+/* Metin değişince eski sonuçlar artık geçerli olmayabilir: tarama yeniden
+   planlanır. Ekip ve öncelik değişimi taramayı tetiklemez (imzada yoklar). */
 function invalidateMl(){
-  const s = formSig();
-  if (form.sig && form.sig !== s && form.mlDone) {
-    form.mlDone = false; form.mlOk = false; form.deptApplied = false; form.mlInferenceId = null;
-    $('#mlStatus').innerHTML = 'Form içeriği değişti. Kaydı iletmeden önce tekrar <b>ML ile Kontrol Et</b>\'e basın.';
-    $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
-  }
+  if (form.type === 'bilgi' && formSig() !== form.sig) scheduleScan();
   syncCreateBtn();
 }
 
+/* Yazma durunca (~0,9 sn) tarama başlar; her tuşta istek gitmez. */
+function scheduleScan(){
+  clearTimeout(form.scanT);
+  const title = $('#fTitle').value.trim(), desc = $('#fDesc').value.trim();
+  if (form.type !== 'bilgi' || title.length < 5 || desc.length < 10) return;
+  form.scanT = setTimeout(() => runMl({ auto:true }), 900);
+}
+
 /* ML ekip önerisi. Öneri sunucudan gelir (api-store.js → mlDepartmentSuggestion);
-   sunucusuz prototipte fonksiyon tanımlı değildir ve kutu boş kalır. */
+   sunucusuz prototipte fonksiyon tanımlı değildir ve kutu boş kalır.
+   Yüzdeler ve diğer ekiplerin çubukları gösterilmez: kullanıcı için anlamı
+   "hangi ekip, neden" — gerisi gürültüydü. */
+function deptSuggestion(){
+  return (typeof mlDepartmentSuggestion === 'function') ? mlDepartmentSuggestion() : null;
+}
+
 function renderDeptSuggestion(){
   const box = $('#mlDept'); if (!box) return;
-  const s = (typeof mlDepartmentSuggestion === 'function') ? mlDepartmentSuggestion() : null;
+  const s = deptSuggestion();
   if (!s || !s.candidates || !s.candidates.length) { box.innerHTML = ''; return; }
 
   const top = s.candidates[0];
   const sel = $('#fDept1').value;
   const low = !!s.lowConfidence;
-  const pill = low ? 'yellow' : top.percent >= 60 ? 'green' : 'blue';
+  const why = top.terms && top.terms.length
+    ? '<div class="md-why">Şu kelimelere göre:'+top.terms.map(t => '<span class="kw">'+esc(t)+'</span>').join('')+'</div>' : '';
 
-  let act;
-  if (sel === top.id) {
-    act = '<span class="md-ok">'+icon('check')+' '
-        + (form.deptApplied ? 'Önerilen ekip seçildi.' : 'Seçtiğiniz ekip öneriyle aynı.') + '</span>';
+  let body;
+  if (low) {
+    // Emin değilken tek ekip dayatılmaz: olası ekipler seçenek olarak sunulur.
+    body = '<div class="md-head"><span class="md-lbl">Olası ekipler</span></div>'
+      + '<div class="md-opts">' + s.candidates.slice(0, 3).map(c => sel === c.id
+          ? '<span class="md-ok">'+icon('check')+' '+esc(c.name)+'</span>'
+          : '<button class="btn btn-soft" type="button" data-dept-apply="'+esc(c.id)+'">'+esc(c.name)+'</button>').join('') + '</div>'
+      + '<div class="md-note" style="margin-top:9px">Metin kısa ya da genel; ekibi kendiniz kontrol edin.</div>';
+  } else if (sel === top.id) {
+    body = '<div class="md-head"><span class="md-lbl">Ekip</span><span class="md-name">'+esc(top.name)+'</span></div>'
+      + why
+      + '<div class="md-act"><span class="md-ok">'+icon('check')+' '
+      + (form.deptAuto ? 'Yazdıklarınıza göre seçildi. Değiştirmek için soldaki listeyi kullanın.' : 'Seçtiğiniz ekip öneriyle aynı.')
+      + '</span></div>';
   } else {
-    act = '<button class="btn btn-soft" type="button" id="mlDeptApply">Bu ekibi seç</button>'
-        + (sel ? '<span class="md-note">Şu an seçili: <b>'+esc(deptName(sel))+'</b></span>' : '');
+    body = '<div class="md-head"><span class="md-lbl">Önerilen ekip</span><span class="md-name">'+esc(top.name)+'</span></div>'
+      + why
+      + '<div class="md-act"><button class="btn btn-soft" type="button" data-dept-apply="'+esc(top.id)+'">Bu ekibi seç</button>'
+      + (sel ? '<span class="md-note">Şu an seçili: <b>'+esc(deptName(sel))+'</b></span>' : '') + '</div>';
   }
 
-  box.innerHTML =
-    '<div class="ml-dept'+(low?' low':'')+'">'
-    + '<div class="md-head"><span class="md-lbl">'+(low ? 'Olası ekip' : 'Önerilen ekip')+'</span>'
-    +   '<span class="md-name">'+esc(top.name)+'</span>'
-    +   '<span class="pill '+pill+'">%'+top.percent+'</span></div>'
-    + (top.terms && top.terms.length
-        ? '<div class="md-why">Gerekçe:'+top.terms.map(t => '<span class="kw">'+esc(t)+'</span>').join('')+'</div>' : '')
-    + '<div class="md-bars">'
-    +   s.candidates.map((c,i) =>
-          '<div class="md-row'+(i===0?' top':'')+'"><span>'+esc(c.name)+'</span>'
-          + '<div class="md-track"><div class="md-fill" style="width:'+Math.max(2,c.percent)+'%"></div></div>'
-          + '<b>%'+c.percent+'</b></div>').join('')
-    + '</div>'
-    + (low ? '<div class="md-note" style="margin-top:9px">Metin kısa ya da genel; öneriden emin değilim. Ekibi kendiniz kontrol edin.</div>' : '')
-    + '<div class="md-act">'+act+'</div>'
-    + '</div>';
-
-  const btn = $('#mlDeptApply');
-  if (btn) btn.onclick = () => applyDeptSuggestion(top.id);
+  box.innerHTML = '<div class="ml-dept'+(low?' low':'')+'">' + body + '</div>';
+  $$('#mlDept [data-dept-apply]').forEach(b => { b.onclick = () => applyDeptSuggestion(b.dataset.deptApply); });
 }
 
-function applyDeptSuggestion(id){
+/* Asistan eminse ve kişi ekibi kendisi seçmediyse öneri kendiliğinden
+   uygulanır. Elle seçilmiş (ya da elle boşaltılmış) ekibe dokunulmaz;
+   kendiliğinden seçilmiş ekip, metin değişip öneri değişirse güncellenir. */
+const AUTO_DEPT_MIN = 60;
+function autoApplyDept(){
+  const s = deptSuggestion();
+  const top = s && s.candidates && s.candidates[0];
+  if (!top || s.lowConfidence || top.percent < AUTO_DEPT_MIN || form.deptTouched) return;
+  if ($('#fDept1').value && !form.deptAuto) return;
+  applyDeptSuggestion(top.id, true);
+}
+
+function applyDeptSuggestion(id, auto){
   $('#fDept1').value = id;
   if ($('#fDept2').value === id) $('#fDept2').value = '';
   form.deptApplied = true;
-  // Programatik seçim kontrolü geçersiz kılmasın: imzayı yeni seçimle tazele.
-  form.sig = formSig();
+  form.deptAuto = !!auto;
   renderDeptSuggestion(); syncCreateBtn();
-  toast('Ekip seçildi: ' + deptName(id), 'ok');
+  if (!auto) toast('Ekip seçildi: ' + deptName(id), 'ok');
 }
 
-function runMl(){
+/* Benzerlik yüzdesi kullanıcıya bir şey söylemiyordu ("%28" iyi mi?);
+   nitel etiket gösterilir, sayı ipucunda kalır. */
+const simLabel = p => p >= 35 ? ['green','Çok benzer'] : p >= 20 ? ['blue','Benzer'] : ['yellow','Kısmen benzer'];
+
+function matchCard(m){
+  const sim = simLabel(m.percent);
+  return '<div class="ml-match">'
+    + '<div class="mh"><b>'+typeIcon(m.record.type)+' '+esc(m.record.title)+'</b>'
+    + '<span class="pill '+sim[0]+'" title="Benzerlik %'+m.percent+'">'+sim[1]+'</span></div>'
+    + (m.record.source === 'kb' ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span> '
+        : m.record.verified ? '<span class="src-badge">'+icon('check')+' Onaylı çözüm</span> ' : '')
+    + '<div class="ml-sol"><b>Önerilen çözüm:</b> '+esc(m.record.resolution)
+    + (m.record.url ? ' <a class="ext-link" href="'+esc(m.record.url)+'" target="_blank" rel="noopener noreferrer">Bağlantıya git</a>' : '')
+    + '</div>'
+    + '<div class="ml-meta"><span>'+esc(m.record.code)+'</span><span>'+esc(deptName(m.record.department))+'</span>'
+    + '<span>'+esc(fmtRel(m.record.resolvedAt || m.record.updatedAt))+'</span>'
+    + (m.keywords && m.keywords.length ? '<span>Ortak kelimeler:</span>' + m.keywords.map(k => '<span class="kw">'+esc(k)+'</span>').join('') : '')
+    + '</div>'
+    + '<button class="mini-btn ml-solved" type="button" data-solved="'+esc(m.record.code)+'">'+icon('check')+' Bu çözüm işime yaradı</button>'
+    + '</div>';
+}
+
+/* Önerilen çözüm sorunu çözdüyse kayıt açılmaz ve form temizlenir. Yazılanlar
+   tek tıklamayla kaybolmasın diye bildirimde "Geri al" vardır. */
+function solvedByMatch(){
+  const snap = {
+    type: form.type, title: $('#fTitle').value, desc: $('#fDesc').value,
+    d1: $('#fDept1').value, d2: $('#fDept2').value, prio: $('#fPrio').value,
+    files: (form.files || []).slice(),
+  };
+  resetForm();
+  toast('Kayıt açılmadı — önerilen çözüm işinize yaradı.', 'ok', { label:'Geri al', run(){ restoreForm(snap); } });
+}
+
+function restoreForm(s){
+  setFormType(s.type);
+  $('#fTitle').value = s.title; $('#fDesc').value = s.desc;
+  $('#fDept1').value = s.d1; $('#fDept2').value = s.d2; $('#fPrio').value = s.prio || 'normal';
+  form.files = s.files;
+  form.deptTouched = !!s.d1;
+  if (typeof repaintAttach === 'function') repaintAttach('create');
+  updateSlaPreview(); invalidateMl();
+  if (CURRENT === 'new-ticket') $('#fTitle').focus();
+}
+
+/* Benzer çözülmüş kayıt taraması. Yazarken kendiliğinden (opts.auto) ya da
+   "Tekrar dene" ile çağrılır; kendiliğinden çağrıda eksik alan için uyarı
+   verilmez. Sunucuya bağlıyken eşleşmeler api-store.js'ten gelir. */
+function runMl(opts){
+  const auto = !!(opts && opts.auto);
   const title = $('#fTitle').value.trim(), desc = $('#fDesc').value.trim();
-  if (!form.type) return toast('Önce kayıt türünü seçin','err');
+  if (!form.type) return auto ? undefined : toast('Önce kayıt türünü seçin','err');
   if (form.type !== 'bilgi') return;   // öneride benzer çözüm taraması yok
-  if (title.length < 5 || desc.length < 10) return toast('Başlık en az 5, açıklama en az 10 karakter olmalı','err');
+  if (title.length < 5 || desc.length < 10) return auto ? undefined : toast('Başlık en az 5, açıklama en az 10 karakter olmalı','err');
 
-  $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
-  $('#mlStatus').innerHTML = '<div class="ml-loading"><div class="spin"></div>Geçmiş çözülmüş kayıtlar taranıyor...</div>';
-  if (typeof Agent !== 'undefined' && Agent.el) Agent.setState('think');   // asistan düşünüyor
+  const q = { title, description:desc, department:$('#fDept1').value, type:form.type };
+  const found = findSimilar(q, Store.data.records, 3);
+  form.matches = found; form.mlDone = true; form.sig = formSig();
+  if (typeof Agent !== 'undefined' && Agent.el) Agent.setState(found.length ? 'ok' : 'idle', 1800);
 
-  setTimeout(() => {
-    const q = { title, description:desc, department:$('#fDept1').value, type:form.type };
-    const found = findSimilar(q, Store.data.records, 3);
-    form.matches = found; form.mlDone = true; form.sig = formSig();
-    if (typeof Agent !== 'undefined' && Agent.el) Agent.setState(found.length ? 'ok' : 'idle', 1800);
+  if (!found.length) {
+    $('#mlStatus').innerHTML = 'Geçmişte benzer bir çözülmüş kayıt bulunamadı. Kaydı oluşturabilirsiniz.';
+    $('#mlResults').innerHTML = '';
+  } else {
+    $('#mlStatus').innerHTML = '<b>'+found.length+' benzer çözüm bulundu.</b> Sorununuz bunlardan biriyle çözülüyorsa kayıt açmanıza gerek kalmayabilir.';
+    $('#mlResults').innerHTML = found.map(matchCard).join('');
+    $$('#mlResults [data-solved]').forEach(b => { b.onclick = solvedByMatch; });
+  }
 
-    if (!found.length) {
-      $('#mlStatus').innerHTML = 'Geçmişte benzer bir çözülmüş kayıt bulunamadı. Bu konu yeni görünüyor, kaydı oluşturabilirsiniz.';
-      $('#mlResults').innerHTML = '<div class="ml-empty">Benzer bir kayıt bulunamadı</div>';
-    } else {
-      $('#mlStatus').innerHTML = '<b>'+found.length+' benzer çözülmüş kayıt bulundu.</b> Önerilen çözümler aşağıda; sorununuz burada çözülüyorsa yeni kayıt açmanıza gerek olmayabilir.';
-      $('#mlResults').innerHTML = found.map(m =>
-        '<div class="ml-match">'
-        + '<div class="mh"><b>'+typeIcon(m.record.type)+' '+esc(m.record.title)+'</b>'
-        + '<span class="pill '+(m.percent>=35?'green':m.percent>=20?'blue':'yellow')+'">%'+m.percent+'</span></div>'
-        + (m.record.source === 'kb' ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span> '
-            : m.record.verified ? '<span class="src-badge">'+icon('check')+' Onaylı çözüm</span> ' : '')
-        + '<div class="ml-sol"><b>Önerilen çözüm:</b> '+esc(m.record.resolution)
-        + (m.record.url ? ' <a class="ext-link" href="'+esc(m.record.url)+'" target="_blank" rel="noopener noreferrer">Bağlantıya git</a>' : '')
-        + '</div>'
-        + '<div class="ml-meta"><span>'+esc(m.record.code)+'</span><span>'+esc(deptName(m.record.department))+'</span>'
-        + '<span>'+esc(fmtRel(m.record.resolvedAt || m.record.updatedAt))+'</span>'
-        + m.keywords.map(k => '<span class="kw">'+esc(k)+'</span>').join('')
-        + '</div>'
-        + '<button class="mini-btn ml-solved" data-solved="'+esc(m.record.code)+'">'+icon('check')+' Bu çözüm işime yaradı</button>'
-        + '</div>'
-      ).join('');
-      /* Önerilen çözüm sorunu çözdüyse kullanıcıya kayıt açmadan çıkış yolu. */
-      $$('#mlResults [data-solved]').forEach(b => b.onclick = () => {
-        resetForm();
-        $('#mlStatus').innerHTML = '<b>Harika, sorununuz çözüldü.</b> Yeni kayıt açılmadı; bir sorun kalırsa formu yeniden doldurabilirsiniz.';
-        toast('Kayıt açılmadı — önerilen çözüm işinize yaradı', 'ok');
-      });
-    }
-
-    renderDeptSuggestion();
-
-    $('#mlConfirm').innerHTML =
-      '<div class="ml-confirm">'+icon('spark')+' Önerileri inceledim, yine de yeni kayıt açmak istiyorum.'
-      + '<button class="btn btn-primary" id="mlOkBtn" style="margin-left:auto">Onayla ve Devam Et</button></div>';
-    $('#mlOkBtn').onclick = () => {
-      form.mlOk = true;
-      $('#mlConfirm').innerHTML = '<div class="ml-confirm ok">'+icon('check')+' Kontrol onaylandı.</div>';
-      syncCreateBtn(); toast('Kontrol onaylandı','ok');
-    };
-    syncCreateBtn();
-  }, 700);
+  autoApplyDept();
+  renderDeptSuggestion();
+  syncCreateBtn();
 }
 
 function createRecord(){
@@ -3593,8 +3710,6 @@ function createRecord(){
   if (!desc)      return toast('Açıklama zorunludur','err');
   if (!d1)        return toast('İlgili Ekip 1 seçin','err');
   if (d2 && d2 === d1) return toast('İki ekip farklı olmalıdır','err');
-  if (!form.mlDone) return toast('Önce ML kontrolü yapın','err');
-  if (!form.mlOk)   return toast('Önerileri gördüğünüzü onaylayın','err');
 
   const rec = Store.create({
     type: form.type, title, description: desc,
@@ -3916,7 +4031,13 @@ function renderManagement(){
    16) MODAL
    ========================================================================= */
 /* Erişilebilir pencere (UX denetimi B07): dialog rolü, açılışta odak içeri,
-   Tab pencere içinde döner, Escape kapatır, kapanınca odak tetikleyiciye döner. */
+   Tab pencere içinde döner, Escape kapatır, kapanınca odak tetikleyiciye döner.
+
+   Yazılanlar korunur: içine metin yazılmış pencere dışına tıklanınca, Esc, X
+   ya da İptal ile hemen kapanmaz; önce "yazdıklarınız kaybolur" diye sorar.
+   Kaydetme süren pencere hiç kapanmaz ve düğmeleri kilitlidir: çift tıklama
+   aynı güncellemeyi iki kez göndermesin. Bir düğmenin run() işlevi Promise
+   döndürürse kilit o bitene kadar sürer. */
 let modalReturn = null;
 function openModal(title, bodyHtml, buttons){
   const root = $('#modalRoot');
@@ -3925,24 +4046,49 @@ function openModal(title, bodyHtml, buttons){
     '<div class="modal-bg" id="modalBg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">'
     + '<div class="modal-h"><h3 id="mTitle">'+esc(title)+'</h3><button id="mClose" type="button" aria-label="Pencereyi kapat">'+icon('x')+'</button></div>'
     + '<div class="modal-b">'+bodyHtml+'</div>'
+    + '<div class="modal-discard" id="mDiscard" role="alert" hidden><span>Yazdıklarınız kaydedilmedi; pencere kapanırsa kaybolur.</span>'
+    +   '<button type="button" class="btn btn-ghost" data-keep>Yazmaya dön</button>'
+    +   '<button type="button" class="btn btn-danger" data-discard>Yine de kapat</button></div>'
     + '<div class="modal-f" id="mFoot"></div>'
     + '</div></div>';
   root.hidden = false;
   const foot = $('#mFoot');
   (buttons||[]).forEach(b => {
     const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'btn ' + (b.cls || 'btn-ghost');
     el.textContent = b.label;
-    el.onclick = () => b.run ? b.run() : closeModal();
+    el.onclick = () => {
+      if (foot.dataset.busy) return;
+      if (!b.run) return requestCloseModal();
+      const out = b.run();
+      if (out && typeof out.then === 'function') modalBusy(foot, el, out);
+    };
     foot.appendChild(el);
   });
-  $('#mClose').onclick = closeModal;
-  $('#modalBg').onclick = e => { if (e.target.id === 'modalBg') closeModal(); };
+  $('#mClose').onclick = requestCloseModal;
+  $('#modalBg').onclick = e => { if (e.target.id === 'modalBg') requestCloseModal(); };
   const modal = root.querySelector('.modal');
+  /* Açılıştaki değerler: "kirli mi" sorusu bunlara göre cevaplanır
+     (düzenleme penceresi dolu açılır, yalnızca değişiklik sayılır). */
+  modalFields(modal).forEach(f => { f.dataset.init = f.value; });
+  const bar = $('#mDiscard');
+  bar.querySelector('[data-keep]').onclick = () => {
+    bar.hidden = true;
+    const f = modalFields(modal).find(x => x.value.trim() !== (x.dataset.init || '').trim());
+    (f || modal.querySelector('#mFoot button')).focus();
+  };
+  bar.querySelector('[data-discard]').onclick = closeModal;
+
   const focusables = () => [...modal.querySelectorAll('button,[href],input:not([type="hidden"]):not([hidden]),select,textarea,[tabindex]:not([tabindex="-1"])')]
     .filter(el => !el.disabled && el.offsetParent !== null);
   modal.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (!bar.hidden) bar.querySelector('[data-keep]').click();
+      else requestCloseModal();
+      return;
+    }
     if (e.key !== 'Tab') return;
     const f = focusables(); if (!f.length) return;
     const first = f[0], last = f[f.length - 1];
@@ -3953,6 +4099,45 @@ function openModal(title, bodyHtml, buttons){
   const firstField = modal.querySelector('.modal-b input:not([hidden]),.modal-b select,.modal-b textarea,.modal-b button');
   (firstField || modal.querySelector('#mFoot button') || $('#mClose')).focus();
 }
+
+/* Pencerede kişinin yazabildiği metin alanları */
+function modalFields(modal){
+  return [...modal.querySelectorAll('.modal-b textarea, .modal-b input')]
+    .filter(f => !['hidden','checkbox','radio','file','button','submit'].includes(f.type));
+}
+
+function modalDirty(){
+  const modal = document.querySelector('#modalRoot .modal');
+  return !!modal && modalFields(modal).some(f => f.value.trim() !== (f.dataset.init || '').trim());
+}
+
+/* Kişinin kapatma isteği (İptal, X, Esc, dış tıklama). Kaydetme sürerken
+   yok sayılır; yazılmış metin varsa önce onay ister. Başarılı işlemden sonra
+   kod closeModal()'ı doğrudan çağırır. */
+function requestCloseModal(){
+  const foot = $('#mFoot');
+  if (foot && foot.dataset.busy) return;
+  if (!modalDirty()) return closeModal();
+  const bar = $('#mDiscard');
+  if (bar) { bar.hidden = false; bar.querySelector('[data-keep]').focus(); }
+}
+
+/* İş bitene dek alt düğmeler kilitli, basılan düğme ne yaptığını söyler. */
+function modalBusy(foot, btn, promise){
+  const btns = [...foot.querySelectorAll('button')];
+  const label = btn.textContent;
+  foot.dataset.busy = '1';
+  btns.forEach(x => { x.disabled = true; });
+  btn.textContent = 'Kaydediliyor…'; btn.setAttribute('aria-busy', 'true');
+  const done = () => {
+    if (!document.contains(btn)) return;   // pencere kapandı ya da yenisi açıldı
+    delete foot.dataset.busy;
+    btns.forEach(x => { x.disabled = false; });
+    btn.textContent = label; btn.removeAttribute('aria-busy');
+  };
+  promise.then(done, done);
+}
+
 function closeModal(){
   const r = $('#modalRoot'); r.hidden = true; r.innerHTML = '';
   if (modalReturn && document.contains(modalReturn)) modalReturn.focus({ preventScroll:true });
@@ -4029,20 +4214,35 @@ function init(){
 
     const a = e.target.closest('[data-act]');
     if (a) {
+      if (a.getAttribute('aria-busy') === 'true') return;   // istek sürüyor
       const r = Store.find(DETAIL_CODE); if (!r) return;
       const act = a.dataset.act;
       if (act === 'back')    return show(LAST_VIEW);
-      if (act === 'claim')   return actClaim(r);
+      /* Doğrudan istek gönderen düğmeler (pencere açmayanlar) iş bitene dek
+         kilitlenir: çift tıklama iki güncelleme göndermesin. */
+      if (act === 'claim')   return actBusy(a, actClaim(r));
+      if (act === 'comment') return actBusy(a, actComment(r));
       if (act === 'forward') return actForward(r);
       if (act === 'status')  return actStatus(r);
       if (act === 'resolve') return actResolve(r);
       if (act === 'reject')  return actReject(r);
       if (act === 'close')   return actClose(r);
       if (act === 'reopen' && typeof actReopen === 'function') return actReopen(r);
-      if (act === 'comment') return actComment(r);
       if (act === 'evaluate' && typeof actEvaluate === 'function') return actEvaluate(r);
     }
   });
+
+  function actBusy(btn, out){
+    if (!out || typeof out.then !== 'function') return;
+    const label = btn.textContent;
+    btn.disabled = true; btn.setAttribute('aria-busy', 'true');
+    btn.textContent = btn.dataset.act === 'claim' ? 'Üzerinize alınıyor…' : 'Gönderiliyor…';
+    const done = () => {
+      if (!document.contains(btn)) return;   // ekran yeniden çizildi
+      btn.disabled = false; btn.removeAttribute('aria-busy'); btn.textContent = label;
+    };
+    out.then(done, done);
+  }
 
   /* "Yenilenen kayıt" kutucuğu (detay) */
   document.addEventListener('change', e => {
@@ -4067,17 +4267,24 @@ function init(){
   });
   $('#oBenefits').addEventListener('change', () => { renderOneriPreview(); syncCreateBtn(); });
 
-  /* Form değişimi → ML geçersiz */
+  /* Form değişimi → benzer çözüm taraması yeniden planlanır */
   ['#fTitle','#fDesc','#fDept1','#fDept2','#fPrio'].forEach(sel => {
     $(sel).addEventListener('input', invalidateMl);
     $(sel).addEventListener('change', () => {
       invalidateMl();
       if (sel === '#fPrio') updateSlaPreview();
-      if (sel === '#fDept1') { if (form.mlDone) renderDeptSuggestion(); if (form.type === 'oneri') renderOneriPreview(); }
+      if (sel === '#fDept1') {
+        /* Kod ile yapılan seçim change olayı üretmez: buraya gelen seçim kişinin.
+           Bundan sonra asistan ekibe kendiliğinden dokunmaz. */
+        const s = deptSuggestion(), top = s && s.candidates && s.candidates[0];
+        form.deptTouched = true; form.deptAuto = false;
+        form.deptApplied = !!(form.deptApplied && top && top.id === $('#fDept1').value);
+        if (form.mlDone) renderDeptSuggestion();
+        if (form.type === 'oneri') renderOneriPreview();
+      }
     });
   });
 
-  $('#mlBtn').onclick = runMl;
   $('#createBtn').onclick = createRecord;
 
   /* Global arama → Tüm Kayıtlar */
@@ -4869,7 +5076,7 @@ const Chat = {
     }
 
     if (q === 'yeni') {
-      this.bot('Yeni kayıt ekranını açıyorum. Bilgi talebinde göndermeden önce <b>ML ile Kontrol Et</b> adımı var; öneri doğrudan gönderilir.', 250);
+      this.bot('Yeni kayıt ekranını açıyorum. Bilgi talebinde siz yazdıkça benzer çözümleri ve uygun ekibi sağda gösteririm.', 250);
       return setTimeout(() => { show('new-ticket'); }, 1100);
     }
 

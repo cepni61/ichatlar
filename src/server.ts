@@ -44,7 +44,7 @@ await app.listen({ port: env.PORT, host: '0.0.0.0' });
 
 if (env.devAuth) {
   app.log.warn(
-    `Geliştirme girişi açık: ${env.APP_URL}/auth/dev-login?email=omer.uygun@ornek.com ` +
+    `Geliştirme girişi açık: ${env.APP_URL}/giris adresinde kişi seçilerek girilir ` +
       `(kullanıcılar: ${env.APP_URL}/auth/dev-users)`,
   );
 }

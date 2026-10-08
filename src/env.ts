@@ -48,8 +48,6 @@ const schema = z.object({
 
   /** Doluysa uygulamaya girmeden önce bu kod sorulur (internete açık test yayını). */
   ACCESS_CODE: z.string().trim().default(''),
-  /** Geliştirme girişinde oturum yokken açılan kullanıcı. */
-  DEV_DEFAULT_USER: z.string().email().default('omer.uygun@ornek.com'),
 
   /** Kurumsal arama kaynağı (Cortex). Boşsa arama yalnızca Bilgi Bankası ve kayıtlarla çalışır. */
   CORTEX_URL: z.string().trim().default(''),

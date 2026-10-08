@@ -37,9 +37,17 @@
     });
 
     if (res.status === 401) {
-      // Oturum düştü — girişe gönder, kullanıcı boş ekranla kalmasın.
-      location.href = '/auth/login?returnTo=' + encodeURIComponent(location.pathname);
-      throw new Error('oturum yok');
+      // Açılışta oturum yoksa doğrudan girişe. Uygulama açıkken düşerse
+      // sayfadan atılmaz: kişi yarım kalan yazısını kaybetmesin diye bant
+      // gösterilir, girişe ne zaman gideceğine kendisi karar verir.
+      if (document.getElementById('ih-boot')) {
+        location.href = loginUrl();
+        throw new Error('oturum yok');
+      }
+      sessionExpired();
+      const err = new Error('Oturumunuz sona erdi. Yeniden giriş yapın.');
+      err.status = 401;
+      throw err;
     }
 
     const text = await res.text();
@@ -65,6 +73,23 @@
       throw err;
     }
     return data;
+  }
+
+  /** Girişten sonra aynı ekrana dönülsün (adres çubuğundaki #/... dahil). */
+  const loginUrl = () => '/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.hash);
+
+  let expired = false;
+  function sessionExpired() {
+    if (expired) return;
+    expired = true;
+    const bar = document.createElement('div');
+    bar.className = 'session-bar';
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<span><b>Oturumunuz sona erdi.</b> Yazdıklarınız bu sayfada duruyor; ' +
+      'gerekirse kopyalayın, sonra yeniden giriş yapın.</span>' +
+      '<button type="button" class="btn btn-primary">Yeniden giriş yap</button>';
+    bar.querySelector('button').addEventListener('click', () => { location.href = loginUrl(); });
+    document.body.appendChild(bar);
   }
 
   const Api = {
@@ -232,7 +257,7 @@
 
   let lastRefresh = Date.now();
   async function refreshVisible() {
-    if (document.hidden || Date.now() - lastRefresh < 15000) return;
+    if (expired || document.hidden || Date.now() - lastRefresh < 15000) return;
     if (!$('#modalRoot').hidden) return;
     lastRefresh = Date.now();
     try {
@@ -268,7 +293,11 @@
     if (typeof renderChrome === 'function') renderChrome();
   }
 
-  /** Aksiyon sarmalayıcı — hata mesajını sunucudan gelen metinle gösterir. */
+  /**
+   * Aksiyon sarmalayıcı — hata mesajını sunucudan gelen metinle gösterir.
+   * Hata çoğu zaman kaydın bu arada değiştiği anlamına gelir (ör. başkası
+   * üzerine aldı): kayıt tazelenir ki ekranda geçersiz düğmeler kalmasın.
+   */
   async function run(code, action, payload, okMessage) {
     try {
       const out = await Api.act(code, action, payload);
@@ -277,6 +306,7 @@
       return out.record;
     } catch (err) {
       toast(err.message, 'err');
+      if (err.status !== 401) refreshDetail(code);
       throw err;
     }
   }
@@ -398,14 +428,26 @@
 
     const list = document.querySelector('[data-attach-list="' + slot + '"]');
     if (list) list.insertAdjacentHTML('beforeend', '<span class="attach-chip busy">Yükleniyor…</span>');
-    try {
-      const out = await Api.upload(DETAIL_CODE, ok);
-      drafts(slot).push(...out.attachments);
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-    repaint(slot);
+    const key = draftKey(slot);
+    const job = (async () => {
+      try {
+        const out = await Api.upload(DETAIL_CODE, ok);
+        (Drafts[key] = Drafts[key] || []).push(...out.attachments);
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+      repaint(slot);
+    })();
+    Pending[key] = Promise.all([Pending[key], job]);
+    await job;
   });
+
+  /*
+   * Yükleme sürerken gönderilen güncelleme dosyasız gidiyor, dosya bir
+   * sonraki güncellemeye yapışıyordu. Gönderim önce süren yüklemeleri bekler.
+   */
+  const Pending = {};
+  const uploadsSettled = (slot) => Pending[draftKey(slot)] || Promise.resolve();
 
   const takeDrafts = (slot) => drafts(slot).map((a) => a.id);
   const clearDrafts = (slot) => { Drafts[draftKey(slot)] = []; repaint(slot); };
@@ -413,7 +455,7 @@
   /* ----------------------------------------------- aksiyonlar (override) */
 
   window.actClaim = function (r) {
-    run(r.code, 'claim', {}, 'Kayıt üzerinize alındı');
+    return run(r.code, 'claim', {}, 'Kayıt üzerinize alındı').catch(() => {});
   };
 
   window.actForward = function (r) {
@@ -443,7 +485,7 @@
             if (d && u) return toast('Ekip ya da kişi seçin — ikisi birlikte olmaz', 'err');
             const payload = d ? { departmentId: d } : { assigneeId: u };
             if (note) payload.note = note;
-            run(r.code, 'forward', payload, 'Kayıt yönlendirildi').then(closeModal, () => {});
+            return run(r.code, 'forward', payload, 'Kayıt yönlendirildi').then(closeModal, () => {});
           },
         },
       ],
@@ -471,7 +513,7 @@
             const payload = { status: $('#stSel').value };
             const note = ($('#stNote').value || '').trim();
             if (note) payload.note = note;
-            run(r.code, 'status', payload, 'Durum güncellendi').then(closeModal, () => {});
+            return run(r.code, 'status', payload, 'Durum güncellendi').then(closeModal, () => {});
           },
         },
       ],
@@ -503,8 +545,9 @@
             const t = ($('#resTxt').value || '').trim();
             if (t.length < 10) return toast((oneri ? 'Değerlendirme sonucu' : 'Çözüm açıklaması') + ' en az 10 karakter olmalı', 'err');
             const learnBox = $('#resLearn');
-            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve'), learn: !!(learnBox && learnBox.checked) },
-              oneri ? 'Öneri sonuçlandırıldı' : 'Kayıt çözüldü olarak işaretlendi')
+            return uploadsSettled('resolve').then(() =>
+              run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve'), learn: !!(learnBox && learnBox.checked) },
+                oneri ? 'Öneri sonuçlandırıldı' : 'Kayıt çözüldü olarak işaretlendi'))
               .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
@@ -541,8 +584,9 @@
             if (!sel) return toast('Bir sonuç seçin', 'err');
             if (t.length < 10) return toast('Değerlendirme notunu en az 10 karakter yazın', 'err');
             const label = sel.closest('.outcome').querySelector('b').textContent;
-            run(r.code, 'evaluate', { outcome: sel.value, note: t, attachmentIds: takeDrafts('resolve') },
-              'Değerlendirme tamamlandı: ' + label)
+            return uploadsSettled('resolve').then(() =>
+              run(r.code, 'evaluate', { outcome: sel.value, note: t, attachmentIds: takeDrafts('resolve') },
+                'Değerlendirme tamamlandı: ' + label))
               .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
@@ -577,7 +621,7 @@
           run() {
             const t = ($('#rejTxt').value || '').trim();
             if (t.length < 10) return toast((oneri ? 'Gerekçeyi' : 'Ret sebebini') + ' en az 10 karakter yazın', 'err');
-            run(r.code, 'reject', { reason: t }, oneri ? 'Öneri reddedildi' : 'Kayıt reddedildi').then(closeModal, () => {});
+            return run(r.code, 'reject', { reason: t }, oneri ? 'Öneri reddedildi' : 'Kayıt reddedildi').then(closeModal, () => {});
           },
         },
       ],
@@ -603,7 +647,7 @@
           run() {
             const t = ($('#reoTxt').value || '').trim();
             if (t.length < 10) return toast('Nedeni en az 10 karakterle yazın', 'err');
-            run(r.code, 'reopen', { reason: t }, oneri ? 'Öneri yeniden değerlendirmeye gönderildi' : 'Kayıt yeniden açıldı').then(closeModal, () => {});
+            return run(r.code, 'reopen', { reason: t }, oneri ? 'Öneri yeniden değerlendirmeye gönderildi' : 'Kayıt yeniden açıldı').then(closeModal, () => {});
           },
         },
       ],
@@ -621,22 +665,27 @@
         label: oneri ? 'Öneriyi Kapat' : 'Kaydı Kapat',
         cls: 'btn-primary',
         run() {
-          run(r.code, 'close', {}, oneri ? 'Öneri kapatıldı' : 'Kayıt kapatıldı').then(closeModal, () => {});
+          return run(r.code, 'close', {}, oneri ? 'Öneri kapatıldı' : 'Kayıt kapatıldı').then(closeModal, () => {});
         },
       },
     ]);
   };
 
-  window.actComment = function (r) {
+  window.actComment = async function (r) {
     const el = $('#cmtInput');
     const t = ((el && el.value) || '').trim();
+    await uploadsSettled('comment');
     const ids = takeDrafts('comment');
     if (!t && !ids.length) return toast('Bir güncelleme yazın ya da dosya ekleyin', 'err');
-    run(r.code, 'comments', { text: t, attachmentIds: ids }, 'Güncelleme eklendi').then(() => {
-      clearDrafts('comment');
-      const box = $('#cmtInput');
-      if (box) box.value = '';
-    }, () => {});
+    try {
+      await run(r.code, 'comments', { text: t, attachmentIds: ids }, 'Güncelleme eklendi');
+    } catch (_) {
+      return; // metin kutuda ve taslakta kalır
+    }
+    clearDrafts('comment');
+    if (typeof CommentDrafts !== 'undefined') delete CommentDrafts[r.code];
+    const box = $('#cmtInput');
+    if (box) box.value = '';
   };
 
   /* -------------------------------------------------- yeni kayıt + ML */
@@ -652,12 +701,19 @@
   };
 
   const origRunMl = window.runMl;
-  const scanThenRender = async function () {
-    if (typeof form !== 'undefined' && form && form.type !== 'bilgi') return origRunMl.apply(this, arguments);
+  /*
+   * Tarama yazarken kendiliğinden çalışır (index.html → scheduleScan) ve
+   * kaydı açmayı engellemez. Sunucu yanıt veremezse kişi yine kayıt açabilir;
+   * panelde "Tekrar dene" kalır, her otomatik denemede hata bildirimi çıkmaz.
+   */
+  const scanThenRender = async function (opts) {
+    const f = typeof form !== 'undefined' ? form : null;
+    if (f && f.type !== 'bilgi') return origRunMl.call(this, opts);
     const title = ($('#fTitle').value || '').trim();
     const desc = ($('#fDesc').value || '').trim();
 
     if (title.length >= 5 && desc.length >= 10) {
+      $('#mlStatus').innerHTML = '<div class="ml-loading"><div class="spin"></div>Benzer çözümler aranıyor…</div>';
       try {
         // Departman ve tür skorlamada bonus veriyor (prototipteki mlScore ile
         // aynı), bu yüzden formdaki seçimler birlikte gönderilir.
@@ -668,8 +724,11 @@
           // `form` prototipte `let` ile tanımlı: klasik betikte global
           // SÖZCÜKSEL kapsamda durur, window üzerinde DEĞİL. `window.form`
           // yazmak undefined döndürüyordu ve tür bonusu (+5) hiç gitmiyordu.
-          type: typeof form !== 'undefined' && form ? form.type || null : null,
+          type: f ? f.type || null : null,
         });
+        // Yanıt gelene dek form sıfırlandıysa (kayıt açıldı, "işime yaradı")
+        // eski sonuç boş forma çizilmesin.
+        if (f !== form) return;
         // Prototipin beklediği şekle çevir: { record, percent, keywords }
         similarCache = out.matches.map((m) => ({
           record: {
@@ -689,39 +748,41 @@
         }));
         deptCache = out.department || null;
         // Kayıt açılırsa sonucu ML veritabanındaki bu çalıştırmaya bağlamak için.
-        if (typeof form !== 'undefined' && form) {
-          form.mlInferenceId = out.inferenceId || null;
-          form.deptApplied = false;
-        }
+        f.mlInferenceId = out.inferenceId || null;
+        f.deptApplied = false;
       } catch (err) {
-        // Hata "benzer kayıt bulunamadı" gibi sunulmasın: kontrol tamamlanmış
-        // sayılmaz, form korunur, kullanıcı tekrar dener.
+        if (f !== form) return;
+        // Hata "benzer kayıt bulunamadı" gibi sunulmasın; ama kayıt açmak da
+        // engellenmesin. Yazılanlar olduğu gibi kalır.
         similarCache = null;
         deptCache = null;
-        if (typeof form !== 'undefined' && form) { form.mlDone = false; form.mlOk = false; }
-        $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
-        $('#mlStatus').innerHTML = '<b>Benzer kayıt taraması yapılamadı.</b> Bağlantınızı kontrol edip ' +
-          '<b>ML ile Kontrol Et</b>’e yeniden basın. Yazdıklarınız korunuyor.';
+        f.mlDone = false;
+        f.sig = null;
+        $('#mlResults').innerHTML = ''; $('#mlDept').innerHTML = '';
+        $('#mlStatus').innerHTML = '<b>Benzer çözümler şu an getirilemedi.</b> Kaydı yine de oluşturabilirsiniz. ' +
+          '<button type="button" class="mini-btn" id="mlRetry">Tekrar dene</button>';
+        $('#mlRetry').onclick = () => window.runMl();
         if (typeof syncCreateBtn === 'function') syncCreateBtn();
-        toast('Benzer kayıt taraması yapılamadı: ' + err.message, 'err');
         return;
       }
     }
     // Geri kalan her şeyi prototipin kendi akışı çizer.
-    return origRunMl.apply(this, arguments);
+    return origRunMl.call(this, opts);
   };
 
-  window.runMl = async function () {
-    if (form.mlBusy) return;
+  window.runMl = async function (opts) {
     const f = form;
-    const btn = $('#mlBtn');
+    // Tarama sürerken yeni bir istek gelirse kaybolmasın: bitince bir kez daha.
+    if (f.mlBusy) { f.scanAgain = true; return; }
     f.mlBusy = true;
-    if (btn) btn.disabled = true;
     try {
-      return await scanThenRender.apply(this, arguments);
+      return await scanThenRender.call(this, opts);
     } finally {
-      // Prototip sonucu 700 ms gecikmeyle çiziyor; kilit o bitince açılır.
-      setTimeout(() => { f.mlBusy = false; if (btn) btn.disabled = false; }, 750);
+      f.mlBusy = false;
+      if (f === form && f.scanAgain) {
+        f.scanAgain = false;
+        if (typeof scheduleScan === 'function') scheduleScan();
+      }
     }
   };
 
@@ -851,8 +912,10 @@
       // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
       if (boot.org && boot.org.name) {
         document.title = 'İç Hatlar — ' + boot.org.name;
-        const foot = document.querySelector('.side-foot');
-        if (foot) foot.textContent = '© ' + new Date().getFullYear() + ' ' + boot.org.name;
+        // Yalnızca telif satırı: .side-foot'un tamamı yazılırsa içindeki
+        // "Uygulama için geri bildirim" düğmesi de siliniyordu.
+        const copy = document.querySelector('.side-foot .copy');
+        if (copy) copy.textContent = '© ' + new Date().getFullYear() + ' ' + boot.org.name;
       }
 
       // Rol: yönetim menüsü yalnızca yönetici ve sistem yöneticisine. Yetki

@@ -27,13 +27,10 @@ export default async function authRoutes(app: FastifyInstance) {
     const returnTo = safeReturnTo((req.query as Record<string, unknown>)?.returnTo);
 
     if (!env.entraConfigured && env.devAuth) {
-      // Erişim kodu varsa önce kapı; yoksa prototipteki gibi doğrudan varsayılan
-      // kullanıcıyla aç (kullanıcı arayüzdeki seçiciden değiştirilir).
-      if (env.ACCESS_CODE) return reply.redirect('/giris?returnTo=' + encodeURIComponent(returnTo));
-      return reply.redirect(
-        '/auth/dev-login?email=' + encodeURIComponent(env.DEV_DEFAULT_USER) +
-          '&returnTo=' + encodeURIComponent(returnTo),
-      );
+      // Test ortamında kişi kim olduğunu kendisi seçer (gerekirse önce erişim
+      // kodu sorulur). Eskiden herkes sessizce varsayılan kullanıcıyla açılıyor,
+      // seçmeyi unutan kaydını başkasının adına açıyordu.
+      return reply.redirect('/giris?returnTo=' + encodeURIComponent(returnTo));
     }
 
     if (!env.entraConfigured) {
