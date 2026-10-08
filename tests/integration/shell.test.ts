@@ -44,6 +44,19 @@ describe('ana sayfa', () => {
   });
 });
 
+describe('arayüz sürümü', () => {
+  beforeEach(resetDb);
+
+  it('her yanıt arayüz dosyalarının sürümünü taşır (açık sayfa eskidiğini anlasın)', async () => {
+    const u = await createUser({ name: 'Ayşe' });
+    const h = await loginAs(app, u.id);
+    const a = await app.inject({ method: 'GET', url: '/api/bootstrap', headers: h });
+    const b = await app.inject({ method: 'GET', url: '/api/notifications', headers: h });
+    expect(a.headers['x-ih-build']).toMatch(/^[0-9a-f]{12}$/);
+    expect(b.headers['x-ih-build']).toBe(a.headers['x-ih-build']);
+  });
+});
+
 describe('açılış verisi', () => {
   beforeEach(resetDb);
 

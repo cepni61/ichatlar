@@ -1608,6 +1608,8 @@
     border:1px solid var(--line-2);border-left:4px solid var(--danger);box-shadow:var(--sh-3);font-size:13.5px;
   }
   .session-bar span{flex:1;min-width:220px;line-height:1.5}
+  .session-bar.update{border-left-color:var(--primary)}
+  .session-bar.expired ~ .session-bar.update{top:86px}
   #toast.has-act{display:flex;align-items:center;gap:14px}
   #toast.show.has-act{pointer-events:auto}
   .toast-act{
@@ -2973,7 +2975,12 @@ const Notif = {
   load(){
     if (location.protocol === 'file:') return Promise.resolve();
     return fetch('/api/notifications', { credentials:'same-origin' })
-      .then(res => (res.ok ? res.json() : null))
+      .then(res => {
+        /* Oturum ya da erişim kodu düştüyse bunu sessizce her dakika yeniden
+           denemek yerine kişiye söyle (api-store.js); arayüz eskidiyse de. */
+        if (window.IhNet) { IhNet.checkBuild(res); if (res.status === 401) IhNet.sessionExpired(); }
+        return res.ok ? res.json() : null;
+      })
       .then(d => { if (d) { this.unread = d.unread; this.items = d.items; this.paint(); } })
       .catch(() => {});
   },

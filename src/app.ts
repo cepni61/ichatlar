@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
@@ -26,6 +28,20 @@ import gateRoutes, { gateHook } from './routes/gate.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '..', 'public');
+
+/**
+ * Arayüz sürümü: arayüz dosyalarının özeti. Her yanıtta x-ih-build başlığıyla
+ * gider; açık sayfa bunun değiştiğini görünce "yeni sürüm — yenile" der.
+ * (Sunucu yeni arayüzle yeniden başladığında açık sekmeler saatlerce eski
+ * kodla çalışmaya devam ediyordu.) Yalnızca arayüz değişince değişir.
+ */
+function uiBuild() {
+  const h = createHash('sha256');
+  for (const f of ['index.html', 'api-store.js', 'modules.js', 'theme.js']) {
+    try { h.update(readFileSync(path.join(publicDir, f))); } catch { /* dosya yoksa atla */ }
+  }
+  return h.digest('hex').slice(0, 12);
+}
 
 /**
  * Uygulamayı kurar ama dinlemeye başlamaz. Sunucu (server.ts) ve testler
@@ -86,6 +102,9 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
     // Giriş uçları daha sıkı; kaba kuvvet denemesi pahalı olsun.
     keyGenerator: (req) => req.ip,
   });
+
+  const build = uiBuild();
+  app.addHook('onSend', async (_req, reply) => { reply.header('x-ih-build', build); });
 
   /** ACCESS_CODE doluysa her istek önce erişim kapısından geçer (statik dosyalar dahil). */
   app.addHook('onRequest', gateHook);

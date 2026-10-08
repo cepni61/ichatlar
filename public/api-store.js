@@ -35,6 +35,7 @@
       headers: body && !isForm ? { 'content-type': 'application/json' } : undefined,
       body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
+    checkBuild(res);
 
     if (res.status === 401) {
       // Açılışta oturum yoksa doğrudan girişe. Uygulama açıkken düşerse
@@ -78,19 +79,42 @@
   /** Girişten sonra aynı ekrana dönülsün (adres çubuğundaki #/... dahil). */
   const loginUrl = () => '/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.hash);
 
+  /** Sayfanın üstünde kalıcı bant: kişi ne zaman tıklayacağına kendisi karar verir. */
+  function topBar(cls, html, label, onClick) {
+    const bar = document.createElement('div');
+    bar.className = 'session-bar ' + cls;
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<span>' + html + '</span><button type="button" class="btn btn-primary">' + label + '</button>';
+    bar.querySelector('button').addEventListener('click', onClick);
+    document.body.appendChild(bar);
+  }
+
   let expired = false;
   function sessionExpired() {
     if (expired) return;
     expired = true;
-    const bar = document.createElement('div');
-    bar.className = 'session-bar';
-    bar.setAttribute('role', 'alert');
-    bar.innerHTML = '<span><b>Oturumunuz sona erdi.</b> Yazdıklarınız bu sayfada duruyor; ' +
-      'gerekirse kopyalayın, sonra yeniden giriş yapın.</span>' +
-      '<button type="button" class="btn btn-primary">Yeniden giriş yap</button>';
-    bar.querySelector('button').addEventListener('click', () => { location.href = loginUrl(); });
-    document.body.appendChild(bar);
+    topBar('expired', '<b>Oturumunuz sona erdi.</b> Yazdıklarınız bu sayfada duruyor; ' +
+      'gerekirse kopyalayın, sonra yeniden giriş yapın.', 'Yeniden giriş yap', () => { location.href = loginUrl(); });
   }
+
+  /*
+   * Arayüz sürümü (sunucu her yanıtta x-ih-build gönderir). Sunucu yeni
+   * arayüzle yeniden başladığında açık sekme eski kodla çalışmaya devam
+   * ediyordu: kişi düzeltilmiş ekranı göremiyordu. Sürüm değişince bant çıkar.
+   */
+  let build = null;
+  let outdated = false;
+  function checkBuild(res) {
+    const b = res && res.headers && res.headers.get('x-ih-build');
+    if (!b) return;
+    if (!build) { build = b; return; }
+    if (b === build || outdated) return;
+    outdated = true;
+    topBar('update', '<b>Uygulamanın yeni sürümü hazır.</b> Yazdıklarınızı gönderdiyseniz sayfayı yenileyin.',
+      'Sayfayı yenile', () => location.reload());
+  }
+  // index.html'deki bildirim sorgusu (fetch ile) da aynı denetimden geçer.
+  window.IhNet = { checkBuild, sessionExpired };
 
   const Api = {
     bootstrap: () => req('GET', '/api/bootstrap'),
