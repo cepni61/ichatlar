@@ -1056,15 +1056,6 @@
   .kpis{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px}
   @media(max-width:1199px){ .kpis{grid-template-columns:repeat(3,minmax(0,1fr))} }
   @media(max-width:760px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi{flex-direction:column;gap:10px} }
-  /* Gecikme varsa Genel Bakış'ın en üstünde: en çok aksiyon isteyen bilgi
-     "22 tanesi gecikmiş" diye gri küçük yazıda kalıyordu. */
-  .late-strip{
-    display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:12px 16px;
-    border-radius:var(--r);background:var(--dangerbg);color:var(--danger-ink);
-    border:1px solid color-mix(in srgb, var(--danger) 22%, transparent);font-size:14px;
-  }
-  .late-strip b{font-size:15px}
-  .late-strip span{margin-right:auto}
 
   .card{
     background:var(--panel);
@@ -1964,7 +1955,6 @@
 
     <!-- ---------- DASHBOARD ---------- -->
     <section id="dashboard" class="view active">
-      <div id="dashAlert"></div>
       <div class="grid kpis" id="dashKpis"></div>
       <div class="grid dashboard-layout">
         <div class="card">
@@ -3044,16 +3034,6 @@ function renderDashboard(){
 
   const owned = recs.filter(r => r.assignee && OPEN_STATUSES.includes(r.status)).length;
   const soon = open.filter(r => slaLevel(r) === 'yellow').length;
-
-  /* Gecikme şeridi: kişinin gidip bakabileceği yere yönlendirir */
-  const me = Store.me();
-  const teamLate = me && me.dept ? teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length : 0;
-  $('#dashAlert').innerHTML = late.length
-    ? '<div class="late-strip" role="status">'+icon('clock')+'<span><b>'+late.length+' açık kayıt</b> hedef süreyi aştı'
-      + (teamLate ? '; '+teamLate+' tanesi ekibinizde.' : '.') + '</span>'
-      + (teamLate ? '<button class="btn btn-ghost" type="button" data-view="team-tickets">Ekibime Gelenler’de gör</button>' : '')
-      + '</div>'
-    : '';
 
   $('#dashKpis').innerHTML = [
     ['c1','chat',  'Açık Kayıtlar',   open.length,   (late.length ? late.length + ' tanesi gecikmiş' : 'Gecikme yok'), late.length ? 'down' : ''],
