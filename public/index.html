@@ -689,25 +689,20 @@
      acilir. Kenar cubugunda durdugu icin ICERIK degil CHROME token'larini
      kullanir; yoksa zumrut/soft dark'ta koyu kenar cubugunun uzerinde beyaz
      kutular olarak duruyordu. */
-  .theme-pick{margin-top:12px;position:relative}
+  .theme-pick{margin-top:8px;position:relative}
 
   .theme-trigger{
     width:100%;display:flex;align-items:center;gap:9px;
     border:1px solid var(--chrome-input-line);background:var(--chrome-input-bg);
-    color:var(--chrome-text-hi);border-radius:10px;padding:8px 10px;
+    color:var(--chrome-text-hi);border-radius:10px;padding:6px 9px;
     cursor:pointer;text-align:left;font:inherit;
     transition:background .16s var(--ease), border-color .16s var(--ease);
   }
   .theme-trigger:hover{background:var(--chrome-hover)}
-  .tt-txt{flex:1;min-width:0;display:block}
-  .tt-lbl{
-    display:block;font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);
-    text-transform:uppercase;color:var(--chrome-role);
-  }
-  .tt-cur{
-    display:block;font-size:12px;font-weight:600;margin-top:1px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
+  .tt-txt{flex:1;min-width:0;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  .tt-lbl{display:inline;font-weight:600;color:var(--chrome-role)}
+  .tt-lbl::after{content:': '}
+  .tt-cur{display:inline;font-weight:600}
   .tt-chev{
     width:14px;height:14px;flex:none;color:var(--chrome-role);
     transition:transform .18s var(--ease);
@@ -800,7 +795,7 @@
     color:var(--chrome-text-hi);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto;
     display:flex;flex-direction:column;
   }
-  .brand{display:flex;gap:10px;align-items:center;margin:2px 6px 22px}
+  .brand{display:flex;gap:10px;align-items:center;margin:2px 6px 14px}
   .logo{width:38px;height:38px;flex-shrink:0;display:grid;place-items:center}
   .logo svg{width:100%;height:100%;display:block}
   .brand h1{
@@ -813,20 +808,20 @@
   }
   .nav-section{
     font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
-    color:var(--chrome-section);margin:20px 0 6px 12px;
+    color:var(--chrome-section);margin:12px 0 4px 12px;
   }
   .nav{flex:1}
   .nav button{
     width:100%;border:0;background:transparent;color:var(--chrome-text);
-    position:relative;text-align:left;padding:10px 12px;border-radius:var(--r-sm);
-    display:flex;align-items:center;gap:11px;
-    font-weight:500;cursor:pointer;font-size:13.5px;margin-bottom:2px;
+    position:relative;text-align:left;padding:7px 12px;border-radius:var(--r-sm);
+    display:flex;align-items:center;gap:11px;line-height:1.4;
+    font-weight:500;cursor:pointer;font-size:13.5px;margin-bottom:1px;
     letter-spacing:var(--ls-snug);
     transition:background .16s var(--ease), color .16s var(--ease);
   }
   .nav button:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
   .nav button.active::before{
-    content:'';position:absolute;left:-14px;top:9px;bottom:9px;width:3px;
+    content:'';position:absolute;left:-14px;top:7px;bottom:7px;width:3px;
     border-radius:0 3px 3px 0;background:var(--chrome-active-mark);
   }
   .nav button.active{
@@ -844,32 +839,56 @@
   .nav button.active .badge{background:var(--chrome-badge-on-bg,rgba(255,255,255,.24));color:var(--chrome-badge-on-fg,#fff)}
 
   .profile{
-    margin-top:18px;padding:13px;border-radius:var(--r);
+    margin-top:12px;padding:10px 11px;border-radius:var(--r);
     background:var(--chrome-card);border:1px solid var(--chrome-card-line);
   }
-  .profile .who{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .profile .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .profile .name{font-weight:700;font-size:13px;line-height:1.25;color:var(--chrome-name)}
   .profile .role{color:var(--chrome-role);font-size:12px;margin-top:1px}
   .profile select{
-    width:100%;padding:8px 10px;border-radius:9px;
+    width:100%;padding:6px 9px;border-radius:9px;
     background:var(--chrome-input-bg);color:var(--chrome-input-fg);
     border:1px solid var(--chrome-input-line);font-size:12px;font-weight:500;
   }
+  /* Tek satır: büyük harfli etiket iki satıra taşıp yer kaplıyordu */
   .profile .switch-lbl{
-    font-size:12px;color:var(--chrome-role);margin-bottom:6px;
-    font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
+    font-size:12px;color:var(--chrome-role);margin-bottom:4px;font-weight:600;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .side-foot{
-    border-top:1px solid var(--chrome-line);margin-top:14px;padding:12px 8px 2px;
+    border-top:1px solid var(--chrome-line);margin-top:10px;padding:8px 8px 0;
     font-size:12px;color:var(--chrome-foot);line-height:1.5;
+    display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
   }
   /* Uygulama geri bildirimi: telif satırının üstünde küçük bağlantı */
   .fb-link{
-    display:block;border:0;background:none;padding:0 0 6px;margin:0;cursor:pointer;
+    display:inline;border:0;background:none;padding:0;margin:0;cursor:pointer;
     font:inherit;font-size:12px;font-weight:600;color:var(--chrome-text);text-decoration:underline;
     text-underline-offset:2px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
   }
   .fb-link:hover,.fb-link:focus-visible{color:var(--chrome-text-hi)}
+
+  /* Kısa ekran (ör. 1366×768 dizüstü): menü kaydırma istemesin */
+  @media (max-height:820px) and (min-width:901px){
+    .sidebar{padding:14px 12px}
+    .brand{margin:0 6px 8px}
+    .logo{width:32px;height:32px}
+    .brand h1{font-size:17px}
+    .brand span{display:none}
+    .nav-section{margin:8px 0 2px 12px}
+    .nav button{padding:5px 12px}
+    .nav button.active::before{top:5px;bottom:5px}
+    .profile .avatar.sm{width:30px;height:30px}
+    .profile .role{display:none}
+    .profile .who{margin-bottom:6px}
+  }
+  /* Çok kısa ekran (1366×768'de tarayıcı çubuklarıyla ~650px) */
+  @media (max-height:700px) and (min-width:901px){
+    .nav button{padding:4px 12px}
+    .nav button.active::before{top:4px;bottom:4px}
+    .profile .switch-lbl{display:none}
+    .side-foot .copy{display:none}
+  }
 
   /* ---------- Yeni modüller: SSS, Arama, Bilgi Bankası ---------- */
   .faq-item{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-bottom:10px;box-shadow:var(--sh-1)}
@@ -2017,9 +2036,9 @@
         </div>
       </div>
       <div class="switch-lbl">Kullanıcı olarak görüntüle</div>
-      <select id="userSwitch"></select>
+      <select id="userSwitch" aria-label="Kullanıcı olarak görüntüle"></select>
     </div>
-    <div class="side-foot"><button type="button" class="fb-link" id="fbOpen">Uygulama için geri bildirim</button><span class="copy">© 2026 İç Hatlar<br>Tüm hakları saklıdır.</span></div>
+    <div class="side-foot"><button type="button" class="fb-link" id="fbOpen">Uygulama için geri bildirim</button><span class="copy">© 2026 İç Hatlar</span></div>
   </aside>
 
   <!-- ================= MAIN ================= -->
