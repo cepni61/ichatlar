@@ -63,6 +63,23 @@ describe('öneri oluşturma', () => {
     expect(rec.history[0].text).toContain('değerlendirilmek üzere');
   });
 
+  it('beklenen fayda seçilmeden de oluşur; açıklamada fayda satırı olmaz', async () => {
+    // Formdan "Beklenen fayda" seçimi kaldırıldı (kullanıcı isteği, 2026-10-08).
+    const w = await world();
+    const res = await create(w.opener.id, oneri(w.ik.id, { benefits: undefined }));
+    expect(res.statusCode).toBe(201);
+    const rec = res.json().record;
+    expect(rec.oneri.benefits).toEqual([]);
+    expect(rec.description).not.toContain('Beklenen fayda');
+  });
+
+  it('yalnızca fayda notu yazılırsa açıklamada notu gösterir', async () => {
+    const w = await world();
+    const res = await create(w.opener.id, oneri(w.ik.id, { benefits: [], benefitNote: 'Ayda ~20 saat' }));
+    expect(res.statusCode).toBe(201);
+    expect(res.json().record.description).toContain('Beklenen fayda: Ayda ~20 saat');
+  });
+
   it('gönderilen "kritik" öncelik yok sayılır', async () => {
     const w = await world();
     const res = await create(w.opener.id, oneri(w.ik.id, { priority: 'kritik' }));
@@ -73,7 +90,6 @@ describe('öneri oluşturma', () => {
   it.each([
     ['mevcut durum kısa', { current: 'kısa' }, 'Mevcut durumu'],
     ['öneri eksik', { proposal: undefined }, 'Önerinizi'],
-    ['fayda seçilmemiş', { benefits: [] }, 'beklenen fayda'],
     ['bilinmeyen fayda', { benefits: ['uydurma'] }, ''],
   ])('%s → 400', async (_name, extra, msg) => {
     const w = await world();

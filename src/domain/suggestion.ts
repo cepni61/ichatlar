@@ -31,11 +31,12 @@ export interface SuggestionDetails {
 
 /** Yapısal alanlardan okunur açıklama metni. */
 export function composeDescription(d: SuggestionDetails): string {
-  const benefits = d.benefits.map((k) => BENEFITS[k]).join(', ');
+  // Fayda seçimi isteğe bağlı: seçilmediyse ve not da yoksa satır hiç yazılmaz.
+  const benefit = [d.benefits.map((k) => BENEFITS[k]).join(', '), d.benefitNote ?? ''].filter(Boolean).join(' — ');
   return [
     `Mevcut durum: ${d.current}`,
     `Öneri: ${d.proposal}`,
-    `Beklenen fayda: ${benefits}${d.benefitNote ? ` — ${d.benefitNote}` : ''}`,
+    ...(benefit ? [`Beklenen fayda: ${benefit}`] : []),
   ].join('\n\n');
 }
 

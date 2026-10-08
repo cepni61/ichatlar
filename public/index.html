@@ -2018,10 +2018,6 @@
             <textarea id="oCurrent" class="ta-md" maxlength="3000" placeholder="Bugünkü süreç, yaşanan sorun ya da kaçırılan fırsat. Somut bir örnek verirseniz ekip daha kolay değerlendirir."></textarea></div>
           <div class="field" data-only="oneri"><label for="oProposal">Öneriniz ne?</label>
             <textarea id="oProposal" class="ta-md" maxlength="3000" placeholder="Ne değişsin, nasıl uygulanabilir? İlk adım ne olabilir?"></textarea></div>
-          <fieldset class="benefit-set" data-only="oneri">
-            <legend>Beklenen fayda <span class="opt">— en az bir tane</span></legend>
-            <div class="benefit-chips" id="oBenefits"></div>
-          </fieldset>
           <div class="field" data-only="oneri"><label for="oBenefitNote">Faydanın ölçüsü <span class="opt">(isteğe bağlı)</span></label>
             <input id="oBenefitNote" maxlength="1000" placeholder="Ör. ayda ~20 saat tasarruf, yılda ~50 bin TL" /></div>
 
@@ -3560,7 +3556,6 @@ function oneriMissing(){
   if (o.title.length < 5)     return 'Başlığı yazın (en az 5 karakter).';
   if (o.current.length < 10)  return '“Şu an nasıl?” alanını doldurun (en az 10 karakter).';
   if (o.proposal.length < 10) return '“Öneriniz ne?” alanını doldurun (en az 10 karakter).';
-  if (!o.benefits.length)     return 'En az bir beklenen fayda seçin.';
   if (!$('#fDept1').value)    return 'Öneriyi değerlendirecek ekibi seçin.';
   return '';
 }
@@ -3595,15 +3590,20 @@ function renderBenefitChips(){
 function oneriFlowHtml(o, preview){
   const txt = (v, ph) => v ? esc(v) : (preview ? '<span class="of-empty">'+ph+'</span>' : '—');
   const chips = (o.benefits || []).map(b => '<span class="of-chip">'+esc(benefitLabel(b))+'</span>').join('');
+  /* Fayda seçimi formdan kaldırıldı; eski kayıtlarda seçim, yenilerde yalnızca
+     isteğe bağlı not olabilir. İkisi de yoksa "Beklenen fayda" bölümü çizilmez. */
+  const hasBenefit = chips || o.benefitNote;
   return '<div class="oneri-flow">'
     + '<div class="of-step"><span class="of-k">Şu an</span><p>'+txt(o.current, 'Mevcut durum burada görünecek')+'</p></div>'
     + '<div class="of-arrow" aria-hidden="true">'+icon('down')+'</div>'
     + '<div class="of-step prop"><span class="of-k">Öneri</span><p>'+txt(o.proposal, 'Öneriniz burada görünecek')+'</p></div>'
     + '</div>'
-    + '<div class="of-benefits"><span class="of-k">Beklenen fayda</span>'
-    + (chips ? '<div class="of-chips">'+chips+'</div>' : (preview ? '<span class="of-empty">Seçtiğiniz faydalar</span>' : '—'))
-    + (o.benefitNote ? '<p class="of-note">'+esc(o.benefitNote)+'</p>' : '')
-    + '</div>';
+    + (hasBenefit
+        ? '<div class="of-benefits"><span class="of-k">Beklenen fayda</span>'
+          + (chips ? '<div class="of-chips">'+chips+'</div>' : '')
+          + (o.benefitNote ? '<p class="of-note">'+esc(o.benefitNote)+'</p>' : '')
+          + '</div>'
+        : '');
 }
 
 function renderOneriPreview(){
@@ -4402,7 +4402,6 @@ function init(){
   ['#fTitle','#oCurrent','#oProposal','#oBenefitNote'].forEach(sel => {
     $(sel).addEventListener('input', () => { if (form.type === 'oneri') { renderOneriPreview(); syncCreateBtn(); } });
   });
-  $('#oBenefits').addEventListener('change', () => { renderOneriPreview(); syncCreateBtn(); });
 
   /* Form değişimi → benzer çözüm taraması yeniden planlanır */
   ['#fTitle','#fDesc','#fDept1','#fDept2','#fPrio'].forEach(sel => {

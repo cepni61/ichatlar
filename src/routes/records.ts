@@ -97,7 +97,7 @@ const createBody = z.object({
   } else {
     need((b.current ?? '').length >= 10, 'current', 'Mevcut durumu en az 10 karakter yazın.');
     need((b.proposal ?? '').length >= 10, 'proposal', 'Önerinizi en az 10 karakter yazın.');
-    need(b.benefits.length > 0, 'benefits', 'En az bir beklenen fayda seçin.');
+    // Beklenen fayda seçimi isteğe bağlı (formdan kaldırıldı, 2026-10-08).
     need(!b.department2, 'department2', 'Öneri tek bir ekibe gönderilir.');
   }
 });
