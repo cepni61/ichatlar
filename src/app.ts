@@ -45,7 +45,15 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
     bodyLimit: 1024 * 1024,
   });
 
+  // Kurum içi ağda düz HTTP ile (ör. http://10.8.7.71:3000) yayın yapılabiliyor.
+  // HTTPS'e zorlayan başlıklar orada betikleri ve API çağrılarını https://'e
+  // yükseltip kırıyor; arayüz sunucusuz prototip verisine düşüyordu. Bu yüzden
+  // yalnızca APP_URL https ise açılırlar.
+  const httpsSite = env.APP_URL.startsWith('https://');
+
   await app.register(helmet, {
+    strictTransportSecurity: httpsSite,
+    crossOriginOpenerPolicy: httpsSite,
     // Arayüz tek dosya HTML; stiller ve betikler satır içi. Bu yüzden
     // 'unsafe-inline' gerekiyor. Arayüz parçalanınca CSP sıkılaştırılmalı.
     contentSecurityPolicy: {
@@ -58,6 +66,7 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
         connectSrc: ["'self'"],
         formAction: ["'self'", 'https://login.microsoftonline.com'],
         frameAncestors: ["'none'"],
+        upgradeInsecureRequests: httpsSite ? [] : null,
       },
     },
   });
