@@ -79,7 +79,7 @@ export async function notifySlaBreach(
       userId,
       recordId: rec.id,
       type: NotificationType.SLA_BREACH,
-      text: `${rec.code} SLA hedefini aştı.`,
+      text: `${rec.code} hedef süreyi aştı.`,
     })),
     skipDuplicates: true,
   });

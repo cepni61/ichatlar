@@ -91,7 +91,7 @@
         title: x.kb.title, keywords: x.kb.keywords, answer: x.answer, url: x.url,
       }, {
         title: 'Yanıtı düzenle · ' + x.kb.code,
-        intro: 'Bu yanıt Bilgi Bankası maddesidir; değişiklik Sık Sorulanlar’da, Aramada ve ML önerilerinde de görünür.',
+        intro: 'Bu yanıt Bilgi Bankası maddesidir; değişiklik Sık Sorulanlar’da, Aramada ve yeni kayıttaki önerilerde de görünür.',
         onDone: reload,
       });
     } else {
@@ -199,7 +199,7 @@
             ? out.items.map((x) => {
                 const src = x.source === 'kb' ? 'Bilgi Bankası' + (x.department ? ' · ' + x.department : '')
                   : x.source === 'kayit' ? 'Çözülmüş kayıt' + (x.department ? ' · ' + x.department : '')
-                  : 'Cortex';
+                  : 'Kurumsal kaynak';
                 const lead = x.url
                   ? '<p style="margin:0"><b style="display:inline">' + esc(x.title) + '</b> için ' + linkHtml(x.url)
                     + ' linkine tıklayıp erişebilirsiniz.</p>'
@@ -211,9 +211,12 @@
               }).join('')
             : '<p class="hint">Sonuç bulunamadı. Uygulama adı (ör. SAP) ya da işin adı (ör. izin talebi) ile deneyin.</p>');
       const c = out.sources && out.sources.cortex;
+      // Yapılandırma eksiği yalnızca sistem yöneticisini ilgilendirir; geçici
+      // kesinti ise herkese söylenir (sonuçlar neden az, bilinsin).
+      const admin = document.body.dataset.role === 'ADMIN';
       $('#cortexNote').textContent = c === 'kapali'
-        ? 'Cortex bağlantısı henüz yapılandırılmadı; sonuçlar Bilgi Bankası ve çözülmüş kayıtlardan geliyor.'
-        : c === 'hata' ? 'Cortex şu an yanıt vermedi; sonuçlar yalnızca Bilgi Bankası ve çözülmüş kayıtlardan.' : '';
+        ? (admin ? 'Kurumsal arama kaynağı (Cortex) yapılandırılmadı; sonuçlar Bilgi Bankası ve çözülmüş kayıtlardan geliyor.' : '')
+        : c === 'hata' ? 'Kurumsal kaynaklar şu an yanıt vermedi; sonuçlar yalnızca Bilgi Bankası ve çözülmüş kayıtlardan.' : '';
     } catch (err) {
       if (my === resSeq) $('#resRes').innerHTML = '<p class="hint">Arama yapılamadı: ' + esc(err.message) + '</p>';
     }
@@ -337,7 +340,7 @@
       if (item) await api('PUT', '/api/kb/' + encodeURIComponent(item.id), body);
       else await api('POST', '/api/kb', body);
       closeModal();
-      toast(item ? 'Yanıt güncellendi; ML arka planda yeniden eğitiliyor' : 'Yanıt Bilgi Bankası’na eklendi; ML arka planda yeniden eğitiliyor', 'ok');
+      toast(item ? 'Yanıt güncellendi; birkaç dakika içinde önerilere yansır' : 'Yanıt Bilgi Bankası’na eklendi; birkaç dakika içinde önerilere yansır', 'ok');
       (opts.onDone || loadKb)();
     } catch (err) {
       toast(err.message, 'err');
@@ -350,7 +353,7 @@
     opts = opts || {};
     openModal('Maddeyi kaldır',
       '<p class="hint" style="margin:0"><b>' + esc(item.title) + '</b> Bilgi Bankası’ndan kaldırılsın mı? '
-      + 'Sık Sorulanlar, Arama ve ML önerilerinden de çıkar.</p>',
+      + 'Sık Sorulanlar, Arama ve yeni kayıttaki önerilerden de çıkar.</p>',
       [
         { label: 'Vazgeç', cls: 'btn-ghost', run: () => openKbEditor(item, opts) },
         { label: 'Kaldır', cls: 'btn-danger', run: async () => {

@@ -41,7 +41,8 @@ export const PRIORITY_TO_SLUG: Record<string, string> = {
 
 export const STATUS_LABELS: Record<string, string> = {
   YENI: 'Yeni',
-  UZERIME_ALINDI: 'Üzerime Alındı',
+  // Kaydı açan da görür: "Üzerime" birinci tekil ağzıydı, kime ait olduğu belirsizdi.
+  UZERIME_ALINDI: 'Sahiplenildi',
   INCELENIYOR: 'İnceleniyor',
   CALISILIYOR: 'Çalışılıyor',
   EK_BILGI: 'Ek Bilgi Bekleniyor',

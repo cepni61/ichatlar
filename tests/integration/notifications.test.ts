@@ -87,6 +87,18 @@ describe('SLA ihlal bildirimi', () => {
     expect(ev?.byId).toBeNull();
   });
 
+  it('akış ve bildirim metni kısaltma kullanmaz ("SLA" değil "hedef süre")', async () => {
+    const t = await team();
+    const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });
+
+    await checkSlaBreaches(silentLog);
+
+    const ev = await prisma.recordEvent.findFirst({ where: { recordId: r.id, type: 'SLA_BREACH' } });
+    const n = await prisma.notification.findFirst({ where: { recordId: r.id } });
+    expect(ev?.text).toMatch(/^Hedef süre aşıldı\./);
+    expect(n?.text).toContain('hedef süreyi aştı');
+  });
+
   it('bildirim tablosundan önce işaretlenmiş açık ihlaller tamamlanır', async () => {
     const t = await team();
     const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });

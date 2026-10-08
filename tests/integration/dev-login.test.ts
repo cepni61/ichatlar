@@ -47,6 +47,14 @@ describe('test ortamı girişi', () => {
     expect(res.body).not.toContain('Pasif Kişi');
   });
 
+  it('giriş formu adres parçasını (#/kayit/…) dönüş adresine ekler', async () => {
+    // Parça sunucuya gelmez; form gönderilince kaybolmasın diye sayfa onu
+    // gizli returnTo alanına kendisi ekler.
+    const res = await app.inject({ method: 'GET', url: '/giris?returnTo=%2F' });
+    expect(res.body).toContain('location.hash');
+    expect(res.body).toMatch(/name="returnTo"/);
+  });
+
   it('seçilen kişiyle oturum açar ve istenen sayfaya döner', async () => {
     const u = await h.createUser({ name: 'Ayşe Kaya' });
     const res = await app.inject({

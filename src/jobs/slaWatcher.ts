@@ -50,8 +50,8 @@ export async function checkSlaBreaches(log: FastifyBaseLogger) {
           type: EventType.SLA_BREACH,
           // byId boş: bu bir sistem olayı, kişi değil.
           text: count
-            ? `SLA hedefi aşıldı. ${rec.department.name} ekibinden ${count} kişiye bildirim gönderildi.`
-            : `SLA hedefi aşıldı. ${rec.department.name} ekibinde bildirilecek etkin kullanıcı bulunamadı.`,
+            ? `Hedef süre aşıldı. ${rec.department.name} ekibinden ${count} kişiye bildirim gönderildi.`
+            : `Hedef süre aşıldı. ${rec.department.name} ekibinde bildirilecek etkin kullanıcı bulunamadı.`,
           at: now,
         },
       });

@@ -132,7 +132,16 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
    * sayfa istekleri doğrudan girişe gider.
    */
   app.get('/', async (req, reply) => {
-    if (!req.user) return reply.redirect('/auth/login?returnTo=/');
+    // Ekran adres çubuğunda "#/kayit/KAY-…" olarak durur ve parça sunucuya
+    // gelmez. Düz yönlendirme Entra dönüşünde onu kaybediyordu; küçük bir
+    // sayfa parçayı returnTo'ya ekleyip girişe gönderir.
+    if (!req.user) {
+      return reply.type('text/html; charset=utf-8').send(
+        '<!doctype html><meta charset="utf-8"><title>İç Hatlar</title>' +
+          '<script>location.replace("/auth/login?returnTo=" + encodeURIComponent("/" + location.hash));</script>' +
+          '<noscript><a href="/auth/login?returnTo=/">Giriş yap</a></noscript>',
+      );
+    }
     return reply.sendFile('index.html');
   });
 

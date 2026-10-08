@@ -80,6 +80,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
           id: PRIORITY_TO_SLUG[key],
           label,
           sla: rules.get(key)!.hours,
+          /** "Süre yaklaşıyor" eşiği (hedefin oranı); arayüz rengi buradan hesaplar. */
+          warn: rules.get(key)!.warnRatio,
         };
       }),
       statuses: Object.entries(STATUS_LABELS).map(([k, label]) => {

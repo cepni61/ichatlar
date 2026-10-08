@@ -141,6 +141,14 @@ async function renderPage(opts: { needCode: boolean; returnTo: string; error?: s
     <button type="submit">Giriş yap</button>
   </form>
 </main>
+<script>
+  // Ekran adres parçasında (#/kayit/KAY-…) durur ve sunucuya gelmez; form
+  // gönderilince kaybolmasın diye dönüş adresine eklenir.
+  (function () {
+    var i = document.querySelector('input[name="returnTo"]');
+    if (i && location.hash && i.value.indexOf('#') < 0) i.value += location.hash;
+  })();
+</script>
 </body>
 </html>`;
 }

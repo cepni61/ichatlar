@@ -523,7 +523,7 @@
   window.actResolve = function (r) {
     const oneri = r.type === 'oneri';
     openModal(
-      oneri ? 'Öneriyi Sonuçlandır' : 'Kaydı Çözüldü Yap',
+      oneri ? 'Öneriyi Sonuçlandır' : 'Çözüldü olarak işaretle',
       (oneri
         ? '<div class="field"><label for="resTxt">Değerlendirme sonucu</label>' +
           '<textarea id="resTxt" placeholder="Öneri hayata geçirilecek mi? Karar, gerekçesi ve varsa sonraki adımlar..."></textarea>' +
@@ -534,12 +534,12 @@
         window.attachPicker('resolve') +
         (oneri ? '' :
           '<label class="learn-toggle"><input type="checkbox" id="resLearn" />' +
-          '<div><b>Yenilenen kayıt olarak işaretle</b><span>Çözüm ML hafızasına eklenir: benzer taleplerde onaylı çözüm olarak önerilir, ' +
-          'ekip tahmini bu kayıttan daha güçlü öğrenir.</span></div></label>'),
+          '<div><b>Benzer kayıtlarda öner</b><span>Bu çözüm, benzer bir talep açılırken onaylı çözüm olarak gösterilir; ' +
+          'doğru ekibi önerme de bu kayıttan öğrenir.</span></div></label>'),
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
-          label: oneri ? 'Sonuçlandır' : 'Çözüldü Olarak İşaretle',
+          label: oneri ? 'Sonuçlandır' : 'Çözüldü olarak işaretle',
           cls: 'btn-success',
           run() {
             const t = ($('#resTxt').value || '').trim();
@@ -597,7 +597,7 @@
   /** Detaydaki "Yenilenen kayıt" kutucuğu. */
   window.actLearn = function (r, on) {
     run(r.code, 'learn', { on: !!on },
-      on ? 'Yenilenen kayıt: çözüm ML hafızasına eklendi' : 'Yenilenen kayıt işareti kaldırıldı')
+      on ? 'Çözüm benzer kayıtlarda önerilecek' : 'Çözüm artık önerilmeyecek')
       .catch(() => { if (typeof renderDetail === 'function') renderDetail(); });
   };
 
@@ -911,7 +911,7 @@
 
       // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
       if (boot.org && boot.org.name) {
-        document.title = 'İç Hatlar — ' + boot.org.name;
+        APP_TITLE = 'İç Hatlar — ' + boot.org.name;
         // Yalnızca telif satırı: .side-foot'un tamamı yazılırsa içindeki
         // "Uygulama için geri bildirim" düğmesi de siliniyordu.
         const copy = document.querySelector('.side-foot .copy');
@@ -923,6 +923,8 @@
       const isManager = boot.me.role === 'MANAGER' || boot.me.role === 'ADMIN';
       document.querySelectorAll('[data-role-min="manager"]').forEach((el) => { el.hidden = !isManager; });
       document.body.dataset.role = boot.me.role;
+      // Kurulum ve yapılandırma notları yalnızca sistem yöneticisine.
+      document.querySelectorAll('[data-admin-only]').forEach((el) => { el.hidden = boot.me.role !== 'ADMIN'; });
       window.IH_KB = boot.kb || { view: false, admin: false, edit: [] };
       document.querySelectorAll('[data-kb-gate]').forEach((el) => { el.hidden = !window.IH_KB.view; });
 
@@ -945,7 +947,11 @@
       rewireAfterBoot(boot);
 
       if (typeof renderChrome === 'function') renderChrome();
-      if (typeof show === 'function') show('dashboard');
+      // Adres çubuğundaki ekran açılır (#/kayit/KAY-…, #/raporlar); yoksa Genel Bakış.
+      if (typeof show === 'function') {
+        const r = typeof parseRoute === 'function' ? parseRoute(location.hash) : null;
+        show(r ? r.id : 'dashboard', r && r.param, { history:false });
+      }
 
       // Açılış sırası kaynaklı hata bandını temizle: veri geldiğine göre
       // gerçek bir arıza değildi. Bundan sonraki hatalar görünür kalır.
@@ -981,7 +987,7 @@
     if (prio) {
       prio.innerHTML = PRIORITIES.map(
         (p) => '<option value="' + p.id + '"' + (p.id === 'normal' ? ' selected' : '') + '>' +
-          p.label + ' — SLA ' + p.sla + ' sa</option>',
+          p.label + ' — ' + p.sla + ' saat</option>',
       ).join('');
     }
 
