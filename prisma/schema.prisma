@@ -142,6 +142,12 @@ model Record {
   /// Anonim gönderim: createdById saklanır (denetim ve kötüye kullanım için)
   /// ama ekibe sunulmaz. Gizleme src/lib/serialize.ts içinde yapılır.
   anonymous Boolean @default(false)
+  /// "Yalnızca ilgili ekip görsün" (kayıt açarken işaretlenir). Kayıt zaten
+  /// yalnızca açan, ilgili ekip(ler), sahibi ve sistem yöneticisine görünür;
+  /// işaret içeriğin paylaşılan kanallara sızmasını keser: benzer çözüm
+  /// önerileri, Sık Sorulanlar, arama, öneri havuzu, rapor konuları ve başka
+  /// ekiplerin CSV'si.
+  restricted Boolean @default(false)
 
   resolution String?
 

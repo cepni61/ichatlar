@@ -82,6 +82,8 @@ const createBody = z.object({
   department2: z.string().min(1).nullable().optional(),
   priority: z.enum(['normal', 'yuksek', 'kritik']).default('normal'),
   anonymous: z.boolean().default(false),
+  /** "Yalnızca ilgili ekip görsün": içerik paylaşılan kanallara (öneriler, SSS, arama) çıkmaz. */
+  restricted: z.boolean().default(false),
   /** Kayıt açılırken gösterilen öneriler — modelin işe yararlılığını ölçmek için. */
   shownSuggestions: z.array(z.object({ code: z.string(), score: z.number() })).max(5).optional(),
   /** /api/similar'ın döndürdüğü ML çalıştırma kimliği — sonuç ML veritabanına bağlanır. */
@@ -280,6 +282,7 @@ export default async function recordRoutes(app: FastifyInstance) {
           department2Id: body.department2 ?? null,
           createdById: actor.id,
           anonymous: body.anonymous,
+          restricted: body.restricted,
           createdAt: now,
           slaDueAt,
           events: {

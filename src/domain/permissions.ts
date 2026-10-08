@@ -24,6 +24,8 @@ export interface RecordShape {
   createdById: string;
   assigneeId: string | null;
   anonymous: boolean;
+  /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez. */
+  restricted?: boolean;
 }
 
 export type Action =
@@ -95,9 +97,11 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
       return r.open && (r.isAssignee || r.isAdmin) && rec.type === RecordType.ONERI;
 
     // "Yenilenen kayıt" (ML hafızası): çözümü yazan kişi ya da sistem yöneticisi.
+    // Kısıtlı kayıt öneri havuzuna giremez: çözümü başka ekiplere önerilirdi.
     case 'learn':
       return (
         rec.type !== RecordType.ONERI &&
+        !rec.restricted &&
         (rec.status === RecordStatus.COZULDU || rec.status === RecordStatus.KAPATILDI) &&
         (r.isAssignee || r.isAdmin)
       );

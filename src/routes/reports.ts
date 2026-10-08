@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
-import { requireRole, requireUser } from '../auth/guard.js';
+import { actorOf, requireRole, requireUser } from '../auth/guard.js';
 import {
   DONE_STATUSES,
   HOUR_MS,
@@ -62,6 +62,7 @@ async function gather(deptId: string | null) {
         status: true,
         priority: true,
         anonymous: true,
+        restricted: true,
         departmentId: true,
         department2Id: true,
         createdAt: true,
@@ -147,7 +148,8 @@ export default async function reportRoutes(app: FastifyInstance) {
       // kullanıcıya başlıklarda geçen Türkçe biçimiyle gösterilir.
       const wc = new Map<string, number>();
       const surface = new Map<string, string>();
-      for (const r of rows) {
+      // "Yalnızca ilgili ekip görsün" kayıtların başlık kelimeleri konulara girmez.
+      for (const r of rows.filter((x) => !x.restricted)) {
         for (const w of tokenize(r.title)) wc.set(w, (wc.get(w) ?? 0) + 1);
         for (const [f, raw] of surfaceForms(r.title)) if (!surface.has(f)) surface.set(f, raw);
       }
@@ -213,6 +215,9 @@ export default async function reportRoutes(app: FastifyInstance) {
           priority: true,
           status: true,
           anonymous: true,
+          restricted: true,
+          departmentId: true,
+          department2Id: true,
           createdAt: true,
           updatedAt: true,
           slaDueAt: true,
@@ -231,10 +236,19 @@ export default async function reportRoutes(app: FastifyInstance) {
       const fmt = (d: Date) =>
         d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+      // Kısıtlı kaydın başlığı yalnızca ilgili ekibin yöneticisine ve sistem
+      // yöneticisine yazılır; sayılar tutarlı kalsın diye satır durur.
+      const actor = actorOf(req);
+      const titleFor = (r: (typeof rows)[number]) =>
+        !r.restricted || actor.role === Role.ADMIN ||
+        (actor.departmentId != null && (actor.departmentId === r.departmentId || actor.departmentId === r.department2Id))
+          ? r.title
+          : 'Kısıtlı kayıt';
+
       const body = rows.map((r) => [
         r.code,
         TYPE_LABELS[r.type],
-        r.title,
+        titleFor(r),
         r.department.name,
         r.department2?.name ?? '',
         PRIORITY_LABELS[r.priority],

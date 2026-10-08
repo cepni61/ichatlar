@@ -80,6 +80,7 @@ export async function createRecord(opts: {
   title?: string;
   type?: RecordType;
   resolution?: string | null;
+  restricted?: boolean;
 }) {
   const now = new Date();
   return prisma.record.create({
@@ -96,6 +97,7 @@ export async function createRecord(opts: {
       createdById: opts.createdById,
       assigneeId: opts.assigneeId ?? null,
       anonymous: opts.anonymous ?? false,
+      ...(opts.restricted ? { restricted: true } : {}),
       createdAt: now,
       slaDueAt: opts.slaDueAt ?? new Date(now.getTime() + 48 * 3600 * 1000),
     },

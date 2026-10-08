@@ -957,6 +957,10 @@
   .learn-toggle{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:11px 13px;border:1px dashed var(--line-2);border-radius:var(--r-sm);cursor:pointer;font-size:13px}
   .learn-toggle input{margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0}
   .learn-toggle span{color:var(--muted);display:block;font-size:12px;margin-top:2px}
+  .restrict-toggle{margin:0 0 17px}
+  .restrict-toggle b{display:inline-flex;align-items:center;gap:6px}
+  .restrict-toggle:has(input:checked){border-style:solid;border-color:var(--primary);background:var(--primary2)}
+  .lock-mark{display:inline-flex;vertical-align:-2px;margin-right:5px;color:var(--muted)}
 
   /* ---------- Main ---------- */
   /* --main-layer: soft dark temada ustteki koyu bant. Sabit degil,
@@ -2027,6 +2031,15 @@
               <p class="hint" style="margin-top:6px">Kayıt en fazla 2 ekibe yönlendirilebilir.</p></div>
           </div>
 
+          <!-- Yalnızca ilgili ekip: kayıt zaten başka ekiplere açılmaz; işaret
+               içeriğin benzer çözüm önerilerine, Sık Sorulanlar'a ve aramaya
+               çıkmasını da keser (sunucu: restricted). -->
+          <label class="learn-toggle restrict-toggle" data-only="bilgi oneri">
+            <input type="checkbox" id="fRestricted" />
+            <div><b><svg class="ic ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> Yalnızca ilgili ekip görsün</b>
+              <span>Kaydınızı yalnızca siz, seçtiğiniz ekip ve sistem yöneticisi görür. Kaydın içeriği başka kişilere benzer çözüm önerilerinde, Sık Sorulanlar'da ve aramada gösterilmez.</span></div>
+          </label>
+
           <div class="grid two-col" data-only="bilgi">
             <div class="field"><label for="fPrio">Öncelik</label><select id="fPrio"></select></div>
           </div>
@@ -2036,9 +2049,10 @@
           <div class="field" data-only="bilgi oneri"><span class="lbl">Ek Dosya <span class="opt">(isteğe bağlı)</span></span>
             <div id="fAttach"></div></div>
 
-          <!-- Benzer çözüm taraması ayrı bir düğme değil: yazarken kendiliğinden
-               çalışır ve kaydı açmayı engellemez (bkz. scheduleScan). -->
+          <!-- Benzer çözüm taraması yazarken kendiliğinden de çalışır (scheduleScan);
+               "ML ile Kontrol Et" istendiği an elle tarar. İkisi de kaydı engellemez. -->
           <div class="inline-actions" style="margin-top:6px" data-only="bilgi oneri">
+            <button class="btn btn-soft" id="mlBtn" type="button" data-only="bilgi"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2.5 2.1 6.2 6.2 2.1-6.2 2.1L12 19.1l-2.1-6.2-6.2-2.1 6.2-2.1z"/></svg> ML ile Kontrol Et</button>
             <button class="btn btn-primary" id="createBtn" disabled>Kaydı Oluştur</button>
           </div>
           <!-- Düğme kapalıyken nedenini söyler; dar ekranda yan panel formun altında kalıyor. -->
@@ -2061,7 +2075,7 @@
               <div><b>Akıllı Çözüm Asistanı</b><span>Geçmişte çözülmüş benzer kayıtları tarar.</span></div>
             </div>
             <div class="ml-status" id="mlStatus" aria-live="polite">
-              Başlık ve açıklamayı yazdıkça geçmişte çözülmüş benzer kayıtlar ve uygun ekip burada görünür.
+              Başlık ve açıklamayı yazdıkça geçmişte çözülmüş benzer kayıtlar ve uygun ekip burada görünür; istediğiniz an <b>ML ile Kontrol Et</b>’e de basabilirsiniz.
             </div>
             <div id="mlDept"></div>
             <div id="mlResults"></div>
@@ -2390,6 +2404,7 @@ const ICON = {
   chat:  '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 20.5l1.4-4.1A8.3 8.3 0 0 1 3.6 12a8.4 8.4 0 0 1 8.4-8.4 8.4 8.4 0 0 1 9 7.9z"/>',
   users: '<path d="M16 20v-1.8a3.6 3.6 0 0 0-3.6-3.6H6.2A3.6 3.6 0 0 0 2.6 18.2V20"/><circle cx="9.3" cy="7.4" r="3.4"/><path d="M21.4 20v-1.8a3.6 3.6 0 0 0-2.7-3.5M15.6 4.2a3.6 3.6 0 0 1 0 6.9"/>',
   clock: '<circle cx="12" cy="12" r="9.2"/><path d="M12 7.2V12l3.2 1.9"/>',
+  lock:  '<rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/>',
 };
 const icon = (name, cls) => SVG(ICON[name] || '', cls);
 
@@ -2514,6 +2529,9 @@ function slaPill(r){
   const cls = lv==='red' ? 'red' : lv==='yellow' ? 'yellow' : 'green';
   return '<span class="pill '+cls+'"><span class="dot"></span>'+txt+'</span>';
 }
+/* "Yalnızca ilgili ekip görsün" işaretli kayıt */
+const lockMark = r => r && r.restricted
+  ? '<span class="lock-mark" title="Yalnızca ilgili ekip görür" aria-label="Yalnızca ilgili ekip görür">'+icon('lock')+'</span>' : '';
 const statusPill = s => '<span class="pill '+statusObj(s).cls+'">'+esc(statusObj(s).label)+'</span>';
 const typePill   = t => '<span class="pill '+(t==='bilgi'?'blue':'yellow')+'">'+typeIcon(t)+' '+esc(typeLabel(t))+'</span>';
 
@@ -3081,7 +3099,7 @@ function renderDashboard(){
 
 function rowRecent(r){
   return '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
-    + '<td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
+    + '<td><div class="ticket-title">'+lockMark(r)+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
     + '<td>'+(r.assignee ? esc(userName(r.assignee)) : '<span class="small">Sahiplenilmedi</span>')+'</td>'
@@ -3106,7 +3124,7 @@ function renderMy(){
     : statusPill(r.status);
   $('#myRows').innerHTML = rows.length ? rows.map(r =>
     '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
-    + '<td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
+    + '<td><div class="ticket-title">'+lockMark(r)+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
     + '<td>'+(r.assignee ? esc(userName(r.assignee)) : '<span class="small">Sahiplenilmedi</span>')+'</td>'
@@ -3133,7 +3151,7 @@ function renderOwned(){
   }
   const row = r =>
     '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
-    + '<td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
+    + '<td><div class="ticket-title">'+lockMark(r)+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
     + '<td>'+statusPill(r.status)+'</td>'
@@ -3203,7 +3221,7 @@ function ticketCard(r){
   const st = ['yeni','calisiliyor','ek_bilgi'].includes(r.status) ? '' : statusPill(r.status);
   return '<div class="ticket'+(lv === 'red' ? ' late' : lv === 'yellow' ? ' warn' : '')+'" data-open="'+esc(r.code)+'">'
     + '<div class="tt">'+slaPill(r)+typePill(r.type)+st+'</div>'
-    + '<b>'+esc(r.title)+'</b>'
+    + '<b>'+lockMark(r)+esc(r.title)+'</b>'
     + '<p>'+esc(r.code)+' • '+esc(deptName(r.department))+' • '+esc(prioObj(r.priority).label)+'</p>'
     + '<div class="ticket-foot"><span class="small">'+(r.assignee ? 'Sahip: '+esc(userName(r.assignee)) : 'Sahiplenilmedi')+'</span>'
     + '<button class="mini-btn" data-open="'+esc(r.code)+'">Aç</button></div>'
@@ -3337,6 +3355,7 @@ function renderDetail(){
       + '<div style="min-width:0">'
         + '<div class="inline-actions" style="margin-bottom:8px">'+(isOpen ? slaPill(r) : '')+typePill(r.type)+statusPill(r.status)
           + (r.renewed ? '<span class="pill teal" title="Bu çözüm benzer kayıtlarda önerilir">'+icon('spark')+' Önerilerde</span>' : '')
+          + (r.restricted ? '<span class="pill gray" title="Kayıt ve içeriği yalnızca açan kişiye, ilgili ekibe ve sistem yöneticisine görünür">'+icon('lock')+' Yalnızca ilgili ekip</span>' : '')
           + (isOneri ? '' : '<span class="pill gray">'+esc(prioObj(r.priority).label)+'</span>')+'</div>'
         + '<h3 style="margin:0 0 6px">'+esc(r.title)+'</h3>'
         + '<p class="hint">'+esc(r.code)+' • Kaydı açan: '+esc(openerName)+' • Ekip: '+esc(deptName(r.department))
@@ -3617,7 +3636,7 @@ function renderOneriPreview(){
 }
 
 /* Asistan paneli boşta ne söyler. Tarama yazarken kendiliğinden çalışır. */
-const ML_IDLE = 'Başlık ve açıklamayı yazdıkça geçmişte çözülmüş benzer kayıtlar ve uygun ekip burada görünür.';
+const ML_IDLE = 'Başlık ve açıklamayı yazdıkça geçmişte çözülmüş benzer kayıtlar ve uygun ekip burada görünür; istediğiniz an <b>ML ile Kontrol Et</b>’e de basabilirsiniz.';
 
 function resetForm(){
   clearTimeout(form.scanT);
@@ -3626,6 +3645,7 @@ function resetForm(){
   $('#oCurrent').value = ''; $('#oProposal').value = ''; $('#oBenefitNote').value = '';
   $$('#oBenefits input').forEach(i => { i.checked = false; });
   $('#fDept1').value = ''; $('#fDept2').value = ''; $('#fPrio').value = 'normal';
+  $('#fRestricted').checked = false;
   $('#mlResults').innerHTML = ''; $('#mlDept').innerHTML = '';
   $('#mlStatus').innerHTML = ML_IDLE;
   if (typeof repaintAttach === 'function') repaintAttach('create');
@@ -3775,6 +3795,7 @@ function solvedByMatch(){
   const snap = {
     type: form.type, title: $('#fTitle').value, desc: $('#fDesc').value,
     d1: $('#fDept1').value, d2: $('#fDept2').value, prio: $('#fPrio').value,
+    restricted: $('#fRestricted').checked,
     files: (form.files || []).slice(),
   };
   resetForm();
@@ -3785,6 +3806,7 @@ function restoreForm(s){
   setFormType(s.type);
   $('#fTitle').value = s.title; $('#fDesc').value = s.desc;
   $('#fDept1').value = s.d1; $('#fDept2').value = s.d2; $('#fPrio').value = s.prio || 'normal';
+  $('#fRestricted').checked = !!s.restricted;
   form.files = s.files;
   form.deptTouched = !!s.d1;
   if (typeof repaintAttach === 'function') repaintAttach('create');
@@ -4086,7 +4108,7 @@ function paintReports(m){
 
   const geciken = m.lateRows.length
     ? '<div class="table-wrap"><table class="table compact"><tbody>'
-      + m.lateRows.map(r => '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'"><td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td><td>'+esc(deptName(r.department))+(r.department2 ? ' + '+esc(deptName(r.department2)) : '')+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
+      + m.lateRows.map(r => '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'"><td><div class="ticket-title">'+lockMark(r)+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td><td>'+esc(deptName(r.department))+(r.department2 ? ' + '+esc(deptName(r.department2)) : '')+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
       + '</tbody></table></div>'
       + (m.lateHidden ? '<p class="hint">Görüntüleme kapsamınız dışında '+m.lateHidden+' geciken kayıt daha var.</p>' : '')
     : (m.late
@@ -4422,6 +4444,21 @@ function init(){
   });
 
   $('#createBtn').onclick = createRecord;
+
+  /* ML ile Kontrol Et: yazarken yapılan taramayı beklemeden hemen tarar ve
+     asistan panelini gösterir (dar ekranda panel formun altında kalıyor).
+     Kaydı açmayı engellemez. */
+  $('#mlBtn').onclick = () => {
+    const b = $('#mlBtn');
+    if (b.disabled) return;
+    clearTimeout(form.scanT);
+    b.disabled = true;
+    Promise.resolve(runMl()).finally(() => {
+      b.disabled = false;
+      const card = $('.ml-card');
+      if (card && card.getBoundingClientRect().top > window.innerHeight - 80) card.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+  };
 
   /* Üstteki arama → Tüm Kayıtlar. Yazdıkça süzer (eskiden yalnızca Enter ile
      çalışıyordu ve bunu söyleyen bir şey yoktu); imleç kutuda kalır. */
@@ -5215,7 +5252,7 @@ const Chat = {
     }
 
     if (q === 'yeni') {
-      this.bot('Yeni kayıt ekranını açıyorum. Bilgi talebinde siz yazdıkça benzer çözümleri ve uygun ekibi sağda gösteririm.', 250);
+      this.bot('Yeni kayıt ekranını açıyorum. Bilgi talebinde siz yazdıkça benzer çözümleri ve uygun ekibi sağda gösteririm; <b>ML ile Kontrol Et</b> ile hemen de taratabilirsiniz.', 250);
       return setTimeout(() => { show('new-ticket'); }, 1100);
     }
 

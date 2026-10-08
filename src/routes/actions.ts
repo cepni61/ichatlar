@@ -46,6 +46,8 @@ async function mutate(
       assigneeId: string | null;
       firstResponseAt: Date | null;
       createdById: string;
+      /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez. */
+      restricted: boolean;
     }) => {
       data: Prisma.RecordUpdateInput;
       event: { type: EventType; text: string; meta?: unknown };
@@ -76,6 +78,8 @@ async function mutate(
         createdById: true,
         assigneeId: true,
         anonymous: true,
+        // Yetki kuralı (ör. kısıtlı kayıt öneri havuzuna giremez) bu alana bakar.
+        restricted: true,
         firstResponseAt: true,
       },
     });
@@ -364,7 +368,8 @@ export default async function actionRoutes(app: FastifyInstance) {
           resolution,
           resolvedAt: new Date(),
           ...stampFirstResponse(r),
-          ...(learn ? { renewed: true, renewedAt: new Date(), renewedById: a.id } : {}),
+          // Kısıtlı kayıt öneri havuzuna giremez: kutu işaretli gelse de yok sayılır.
+          ...(learn && !r.restricted ? { renewed: true, renewedAt: new Date(), renewedById: a.id } : {}),
         },
         event: { type: EventType.COMMENT, text: resolution },
         attachmentIds: parsed.data.attachmentIds,

@@ -146,6 +146,8 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
     where: {
       status: { in: [RecordStatus.COZULDU, RecordStatus.KAPATILDI] },
       resolution: { not: null },
+      // "Yalnızca ilgili ekip görsün" kayıtları öneri olarak kimseye gösterilmez.
+      restricted: false,
     },
     select: {
       code: true,

@@ -46,6 +46,8 @@ export default async function faqRoutes(app: FastifyInstance) {
           type: RecordType.BILGI,
           status: { in: [RecordStatus.COZULDU, RecordStatus.KAPATILDI] },
           resolution: { not: null },
+          // "Yalnızca ilgili ekip görsün" kayıtları Sık Sorulanlar'a çıkmaz.
+          restricted: false,
           ...(dept ? { OR: [{ departmentId: dept }, { department2Id: dept }] } : {}),
         },
         orderBy: { resolvedAt: 'desc' },

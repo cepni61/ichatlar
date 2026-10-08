@@ -556,7 +556,8 @@
           '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
           '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>') +
         window.attachPicker('resolve') +
-        (oneri ? '' :
+        // Kısıtlı kayıt öneri havuzuna giremez (sunucu da yok sayar): kutu gösterilmez.
+        (oneri || r.restricted ? '' :
           '<label class="learn-toggle"><input type="checkbox" id="resLearn" />' +
           '<div><b>Benzer kayıtlarda öner</b><span>Bu çözüm, benzer bir talep açılırken onaylı çözüm olarak gösterilir; ' +
           'doğru ekibi önerme de bu kayıttan öğrenir.</span></div></label>'),
@@ -843,6 +844,7 @@
         benefitNote: o.benefitNote || undefined,
         department: d1,
         anonymous: !!form.anon,
+        restricted: !!($('#fRestricted') && $('#fRestricted').checked),
       };
     } else {
       const desc = ($('#fDesc').value || '').trim();
@@ -858,6 +860,7 @@
         department2: d2 || null,
         priority: $('#fPrio').value || 'normal',
         anonymous: !!form.anon,
+        restricted: !!($('#fRestricted') && $('#fRestricted').checked),
         shownSuggestions: (form.matches || []).map((m) => ({
           code: m.record.code,
           score: m.percent / 100,
