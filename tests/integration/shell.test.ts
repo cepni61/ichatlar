@@ -44,6 +44,16 @@ describe('ana sayfa', () => {
   });
 });
 
+describe('kaldırılan özellikler', () => {
+  beforeEach(resetDb);
+
+  it('Sık Sorulanlar kaldırıldı (2026-10-09, kullanıcı isteği): uç yok', async () => {
+    const u = await createUser({ name: 'Ayşe' });
+    const res = await app.inject({ method: 'GET', url: '/api/faq', headers: await loginAs(app, u.id) });
+    expect(res.statusCode).toBe(404);
+  });
+});
+
 describe('arayüz sürümü', () => {
   beforeEach(resetDb);
 

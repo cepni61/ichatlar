@@ -82,7 +82,7 @@ const createBody = z.object({
   department2: z.string().min(1).nullable().optional(),
   priority: z.enum(['normal', 'yuksek', 'kritik']).default('normal'),
   anonymous: z.boolean().default(false),
-  /** "Yalnızca ilgili ekip görsün": içerik paylaşılan kanallara (öneriler, SSS, arama) çıkmaz. */
+  /** "Yalnızca ilgili ekip görsün": içerik paylaşılan kanallara (öneriler, arama) çıkmaz. */
   restricted: z.boolean().default(false),
   /** Kayıt açılırken gösterilen öneriler — modelin işe yararlılığını ölçmek için. */
   shownSuggestions: z.array(z.object({ code: z.string(), score: z.number() })).max(5).optional(),

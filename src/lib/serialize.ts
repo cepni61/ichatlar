@@ -64,7 +64,7 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     createdBy: showCreator ? rec.createdById : null,
     assignee: rec.assigneeId,
     anonymous: rec.anonymous,
-    /** Yalnızca ilgili ekip görsün: paylaşılan kanallarda (öneriler, SSS, arama) çıkmaz. */
+    /** Yalnızca ilgili ekip görsün: paylaşılan kanallarda (öneriler, arama) çıkmaz. */
     restricted: rec.restricted,
 
     resolution: rec.resolution,

@@ -378,9 +378,7 @@
      okunmuyordu: krem bir şeride oturtulur. */
   html[data-theme="zumrut"] .res-head,
   html[data-theme="zumrut"] .rep-scope,
-  html[data-theme="zumrut"] .view > .hint,
-  html[data-theme="zumrut"] #faqList > .hint,
-  html[data-theme="zumrut"] #faqReady > .hint{
+  html[data-theme="zumrut"] .view > .hint{
     background:var(--panel);border:1px solid var(--line);border-radius:10px;
     padding:6px 12px;width:fit-content;max-width:100%;box-shadow:var(--sh-1);
   }
@@ -890,28 +888,7 @@
     .side-foot .copy{display:none}
   }
 
-  /* ---------- Yeni modüller: SSS, Arama, Bilgi Bankası ---------- */
-  .faq-item{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);margin-bottom:10px;box-shadow:var(--sh-1)}
-  .faq-item > summary{
-    list-style:none;cursor:pointer;display:flex;gap:12px;align-items:center;padding:14px 16px;
-  }
-  .faq-item > summary::-webkit-details-marker{display:none}
-  .faq-item > summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:var(--r)}
-  .faq-item .faq-n{
-    flex-shrink:0;min-width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
-    background:var(--primary2);color:var(--on-soft);font-weight:800;font-size:15px;line-height:1;text-align:center;
-  }
-  .faq-item .faq-n small{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;margin-top:2px}
-  .faq-item .faq-q{flex:1;min-width:0}
-  .faq-item .faq-q b{display:block;font-size:14px}
-  .faq-item .faq-q span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-  .faq-item .chev{transition:transform .2s var(--ease);color:var(--muted)}
-  .faq-item[open] .chev{transform:rotate(180deg)}
-  .faq-a{padding:0 16px 16px 72px}
-  .faq-a p{margin:0 0 10px;white-space:pre-wrap;line-height:1.6}
-  .faq-a .inline-actions{gap:8px}
-  .faq-edit{margin-top:4px;padding-top:12px;border-top:1px dashed var(--line-2)}
-  @media(max-width:640px){ .faq-a{padding:0 14px 14px} }
+  /* ---------- Yeni modüller: Arama, Bilgi Bankası ---------- */
   .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--successbg);color:var(--success)}
   .src-badge.kb{background:var(--primary2);color:var(--on-soft)}
   .src-badge.plain{background:var(--slatebg);color:var(--slate)}
@@ -2008,9 +1985,6 @@
       <button data-view="all-records">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="5" rx="1.6"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9M10 13.5h4"/></svg>
         <span class="lbl">Tüm Kayıtlar</span></button>
-      <button data-view="faq">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.4-2.6 4M12 17.3h.01"/></svg>
-        <span class="lbl">Sık Sorulanlar</span></button>
       <button data-view="search">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
         <span class="lbl">Kişi ve Kaynak Ara</span></button>
@@ -2136,12 +2110,12 @@
           </div>
 
           <!-- Yalnızca ilgili ekip: kayıt zaten başka ekiplere açılmaz; işaret
-               içeriğin benzer çözüm önerilerine, Sık Sorulanlar'a ve aramaya
+               içeriğin benzer çözüm önerilerine ve aramaya
                çıkmasını da keser (sunucu: restricted). -->
           <label class="learn-toggle restrict-toggle" data-only="bilgi oneri">
             <input type="checkbox" id="fRestricted" />
             <div><b><svg class="ic ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> Yalnızca ilgili ekip görsün</b>
-              <span>Kaydınızı yalnızca siz, seçtiğiniz ekip ve sistem yöneticisi görür. Kaydın içeriği başka kişilere benzer çözüm önerilerinde, Sık Sorulanlar'da ve aramada gösterilmez.</span></div>
+              <span>Kaydınızı yalnızca siz, seçtiğiniz ekip ve sistem yöneticisi görür. Kaydın içeriği başka kişilere benzer çözüm önerilerinde ve aramada gösterilmez.</span></div>
           </label>
 
           <div class="grid two-col" data-only="bilgi">
@@ -2296,16 +2270,6 @@
     </section>
 
     <!-- ---------- SIK SORULANLAR ---------- -->
-    <section id="faq" class="view">
-      <div class="card rep-filter">
-        <label for="faqDept">Ekip</label>
-        <select id="faqDept"><option value="">Tüm ekipler</option></select>
-        <input id="faqQ" class="search-box" type="search" style="flex:1;min-width:200px;width:auto" placeholder="Sorularda ara… (ör. izin, VPN, bordro)" aria-label="Sık sorulanlarda ara" />
-      </div>
-      <div id="faqList" aria-live="polite"></div>
-      <div id="faqReady"></div>
-    </section>
-
     <!-- ---------- ARAMA ----------
          İki ayrı arama: kişiler (ML ile konuyla ilgili kişiler) ve kurumsal
          uygulama / süreç / bilgi (Bilgi Bankası, çözülmüş kayıtlar, Cortex). -->
@@ -2357,7 +2321,7 @@
           <div id="kbEditors"></div>
         </div>
       </div>
-      <p class="hint" style="margin-top:14px">Maddeler; yeni kayıttaki çözüm ve ekip önerilerini, Sık Sorulanları, Aramayı ve asistanı besler. Değişiklik birkaç dakika içinde önerilere yansır.</p>
+      <p class="hint" style="margin-top:14px">Maddeler; yeni kayıttaki çözüm ve ekip önerilerini, Aramayı ve asistanı besler. Değişiklik birkaç dakika içinde önerilere yansır.</p>
     </section>
 
     <!-- ---------- YÖNETİM ---------- -->
@@ -2957,7 +2921,6 @@ const TITLES = {
   'all-records':   ['Tüm Kayıtlar','Görme yetkiniz olan tüm kayıtları arayın ve filtreleyin.'],
   'reports':       ['Raporlar','Kayıt sayıları, hedef sürelere uyum ve ekip performansı.'],
   'management':    ['Yönetim','Ekipler, ekip üyeleri, hedef süreler ve uygulama geri bildirimleri.'],
-  'faq':           ['Sık Sorulanlar','En sık gelen talepler ve çözümleri — kayıt açmadan önce bakın.'],
   'search':        ['Kişi ve Kaynak Ara','Kişileri ve kurumsal uygulama, süreç, bilgi kaynaklarını arayın.'],
   'kb':            ['Bilgi Bankası','Ekiplerin hazır yanıtları ve uygulama bağlantıları.'],
   'login':         ['Giriş','Kurumsal giriş ekranı önizlemesi.'],
@@ -2978,7 +2941,7 @@ let HOME_VIEW = 'dashboard';
 const ROUTES = {
   'dashboard':'genel-bakis', 'new-ticket':'yeni-kayit', 'my-tickets':'actiklarim',
   'team-tickets':'ekibime-gelenler', 'owned-tickets':'uzerimdekiler', 'all-records':'tum-kayitlar',
-  'reports':'raporlar', 'management':'yonetim', 'faq':'sik-sorulanlar', 'search':'arama', 'kb':'bilgi-bankasi',
+  'reports':'raporlar', 'management':'yonetim', 'search':'arama', 'kb':'bilgi-bankasi',
 };
 const ROUTE_VIEW = Object.fromEntries(Object.entries(ROUTES).map(([v, slug]) => [slug, v]));
 
@@ -3056,7 +3019,6 @@ function renderView(id){
   if (id === 'reports')       renderReports();
   if (id === 'management')    renderManagement();
   /* Yeni modüller modules.js içinde (API'ye bağlı) */
-  if (id === 'faq'    && typeof renderFaq === 'function')    renderFaq();
   if (id === 'search' && typeof renderSearch === 'function') renderSearch();
   if (id === 'kb'     && typeof renderKb === 'function')     renderKb();
   if (id === 'management' && typeof renderFeedbackAdmin === 'function') renderFeedbackAdmin();

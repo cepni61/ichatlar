@@ -1,6 +1,5 @@
 /* =========================================================================
    İç Hatlar — API'ye bağlı modüller:
-     - Sık Sorulanlar     (/api/faq)
      - Arama              (/api/search/people, /api/search/resources)
      - Bilgi Bankası      (/api/kb, /api/kb/editors)
      - Uygulama geri bildirimi (/api/feedback) ve Yönetim'deki listesi
@@ -16,7 +15,6 @@
     let t;
     return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
   };
-  const trFold = (s) => String(s || '').toLocaleLowerCase('tr-TR');
   const clip = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
   const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2)
     .map((w) => w[0].toLocaleUpperCase('tr-TR')).join('');
@@ -31,120 +29,6 @@
   const linkHtml = (u) =>
     '<a class="ext-link" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(shortUrl(u)) + '</a>';
   const LOADING = '<p class="hint">Yükleniyor…</p>';
-  const CHEVRON = '<svg class="ic chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
-
-  /* ================================================================ SSS */
-
-  let faqData = null;
-  let faqDept = '';
-  let faqShown = [];
-  let faqBound = false;
-
-  window.renderFaq = async function () {
-    const sel = $('#faqDept');
-    if (!faqBound) {
-      faqBound = true;
-      sel.addEventListener('change', () => { faqDept = sel.value; faqData = null; window.renderFaq(); });
-      $('#faqQ').addEventListener('input', debounce(paintFaq, 150));
-      $('#faq').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-faq-kb]');
-        if (b) editFaqAnswer(faqShown[+b.dataset.faqKb]);
-      });
-    }
-    sel.innerHTML = deptOptions('Tüm ekipler', faqDept);
-    if (!faqData) {
-      $('#faqList').innerHTML = LOADING;
-      $('#faqReady').innerHTML = '';
-      try {
-        faqData = await api('GET', '/api/faq' + (faqDept ? '?department=' + encodeURIComponent(faqDept) : ''));
-      } catch (err) {
-        $('#faqList').innerHTML = '<p class="hint">Sık sorulanlar yüklenemedi: ' + esc(err.message) + '</p>';
-        return;
-      }
-    }
-    paintFaq();
-  };
-
-  /*
-   * "Yanıtı düzenle / Sık sorulanlara ekle": yalnızca yöneticiler ve Bilgi
-   * Bankası yetkilileri, yalnızca düzenleyebildikleri ekiplerin sorularında
-   * görür. Yanıt Bilgi Bankası maddesi olarak kaydedilir; SSS onu resmi
-   * yanıt olarak gösterir. (Yetkiyi sunucu da ayrıca denetler.)
-   */
-  const canEditDept = (id) => {
-    const a = kbAccess();
-    return a.edit === 'all' || (a.edit || []).includes(id);
-  };
-  function faqAction(x, i) {
-    const own = x.kb ? x.kb.department.id : x.department.id;
-    if (!canEditDept(own)) return '';
-    return '<div class="faq-edit"><button class="btn btn-soft" type="button" data-faq-kb="' + i + '">'
-      + (x.kb ? 'Yanıtı düzenle' : 'Sık sorulanlara ekle') + '</button></div>';
-  }
-
-  function editFaqAnswer(x) {
-    if (!x) return;
-    const reload = () => { faqData = null; window.renderFaq(); };
-    if (x.kb) {
-      openKbEditor({
-        id: x.kb.id, code: x.kb.code, kind: x.kb.kind, department: x.kb.department,
-        title: x.kb.title, keywords: x.kb.keywords, answer: x.answer, url: x.url,
-      }, {
-        title: 'Yanıtı düzenle · ' + x.kb.code,
-        intro: 'Bu yanıt Bilgi Bankası maddesidir; değişiklik Sık Sorulanlar’da, Aramada ve yeni kayıttaki önerilerde de görünür.',
-        onDone: reload,
-      });
-    } else {
-      openKbEditor(null, {
-        prefill: { kind: 'BILGI', department: x.department, title: x.title, keywords: '', answer: x.answer, url: '' },
-        title: 'Sık sorulanlara ekle',
-        intro: 'Kaydedince bu yanıt Bilgi Bankası’na eklenir ve bu sorunun resmi yanıtı olur. Çalışanın anlayacağı şekilde düzenleyebilirsiniz.',
-        onDone: reload,
-      });
-    }
-  }
-
-  function faqItem(x, i, opened) {
-    const badge = x.source === 'kb'
-      ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span>'
-      : x.verified ? '<span class="src-badge">' + icon('check') + ' Onaylı çözüm</span>'
-      : '<span class="src-badge plain">Çözülmüş kayıttan</span>';
-    return '<details class="faq-item"' + (opened ? ' open' : '') + '>'
-      + '<summary>'
-      +   (x.count
-            ? '<span class="faq-n" aria-hidden="true">' + x.count + '<small>KEZ</small></span>'
-            : '<span class="faq-n" aria-hidden="true">' + icon('info') + '</span>')
-      +   '<span class="faq-q"><b>' + esc(x.title) + '</b><span>' + esc(x.department.name)
-      +     (x.count ? ' · ' + x.count + ' kez soruldu' : ' · ekibin hazır yanıtı') + '</span></span>'
-      +   CHEVRON
-      + '</summary>'
-      + '<div class="faq-a">'
-      +   '<p style="margin-bottom:8px">' + badge + '</p>'
-      +   '<p>' + esc(x.answer) + '</p>'
-      +   (x.url ? '<p>Bağlantı: ' + linkHtml(x.url) + '</p>' : '')
-      +   faqAction(x, i)
-      + '</div></details>';
-  }
-
-  function paintFaq() {
-    if (!faqData) return;
-    const q = trFold($('#faqQ').value.trim());
-    const match = (x) => !q || trFold(x.title + ' ' + x.answer).includes(q);
-    const items = faqData.items.filter(match);
-    // Hazır yanıtlar Bilgi Bankası maddesidir (sunucu kaynak alanı göndermiyor).
-    const ready = faqData.ready.filter(match).map((x) => Object.assign({ source: 'kb' }, x));
-    faqShown = items.concat(ready);
-
-    $('#faqList').innerHTML =
-      '<div class="res-head" style="margin-top:4px">En sık sorulan talepler · ' + items.length + '</div>'
-      + (items.length
-          ? items.map((x, i) => faqItem(x, i, i === 0 && !q)).join('')
-          : '<p class="hint">' + (q ? 'Aramanıza uyan sık sorulan talep yok.' : 'Henüz tekrar eden talep yok.') + '</p>');
-    $('#faqReady').innerHTML = ready.length
-      ? '<div class="res-head">Ekiplerin hazır yanıtları · ' + ready.length + '</div>'
-        + ready.map((x, k) => faqItem(x, items.length + k, false)).join('')
-      : '';
-  }
 
   /* ============================================================== Arama */
 
@@ -292,7 +176,7 @@
   }
 
   /*
-   * opts (Sık Sorulanlar'dan açılınca): prefill — dolu yeni madde, title /
+   * opts: prefill — dolu yeni madde, title /
    * intro — pencere başlığı ve açıklaması, onDone — kayıt / silme sonrası
    * yenilenecek ekran (varsayılan: Bilgi Bankası listesi).
    */
@@ -353,7 +237,7 @@
     opts = opts || {};
     openModal('Maddeyi kaldır',
       '<p class="hint" style="margin:0"><b>' + esc(item.title) + '</b> Bilgi Bankası’ndan kaldırılsın mı? '
-      + 'Sık Sorulanlar, Arama ve yeni kayıttaki önerilerden de çıkar.</p>',
+      + 'Arama ve yeni kayıttaki önerilerden de çıkar.</p>',
       [
         { label: 'Vazgeç', cls: 'btn-ghost', run: () => openKbEditor(item, opts) },
         { label: 'Kaldır', cls: 'btn-danger', run: async () => {

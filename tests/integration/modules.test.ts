@@ -5,7 +5,7 @@ import { createDept, createRecord, createUser, loginAs, makeApp, prisma, resetDb
 
 /*
  * Yeni modüller: öneri değerlendirme durumları, yenilenen kayıt (ML hafızası),
- * uygulama geri bildirimi, Bilgi Bankası yetkileri, Sık Sorulanlar ve Arama.
+ * uygulama geri bildirimi, Bilgi Bankası yetkileri ve Arama.
  */
 
 let app: FastifyInstance;
@@ -148,7 +148,7 @@ describe('Bilgi Bankası', () => {
     expect(bad.statusCode).toBe(400);
   });
 
-  it('madde benzer kayıt aramasına, Sık Sorulanlara ve Aramaya girer', async () => {
+  it('madde benzer kayıt aramasına ve Aramaya girer', async () => {
     const w = await world();
     await post(w.ikManager.id, '/api/kb', article(w.ik.id));
 
@@ -161,39 +161,6 @@ describe('Bilgi Bankası', () => {
     const sample = (await get(w.opener.id, '/api/search/resources')).json();
     expect(sample.sample).toBe(true);
     expect(sample.items.length).toBe(1);
-  });
-});
-
-describe('Sık Sorulanlar', () => {
-  it('aynı soru kümelenir, sayı ve çözüm döner; tek sefer sorulan listeye girmez', async () => {
-    const w = await world();
-    for (const t of ['VPN bağlantısı sürekli kopuyor', 'VPN bağlantısı kopuyor', 'Yazıcı çalışmıyor']) {
-      await createRecord({
-        createdById: w.opener.id, departmentId: w.bt.id, assigneeId: w.btMember.id,
-        status: RecordStatus.KAPATILDI, title: t, resolution: 'VPN istemcisi güncellendi, sorun giderildi.',
-      });
-    }
-    const faq = (await get(w.opener.id, '/api/faq')).json();
-    expect(faq.items).toHaveLength(1);
-    expect(faq.items[0]).toMatchObject({ count: 2, department: { name: 'Bilgi Teknolojileri' }, source: 'kayit' });
-  });
-
-  it('kümenin Bilgi Bankası karşılığı varsa yanıt ve madde kimliği ondan gelir', async () => {
-    const w = await world();
-    for (const t of ['VPN bağlantısı sürekli kopuyor', 'VPN bağlantısı kopuyor']) {
-      await createRecord({
-        createdById: w.opener.id, departmentId: w.bt.id, assigneeId: w.btMember.id,
-        status: RecordStatus.KAPATILDI, title: t, resolution: 'İstemci güncellendi.',
-      });
-    }
-    expect((await post(w.admin.id, '/api/kb', {
-      kind: 'BILGI', departmentId: w.bt.id, title: 'VPN bağlantısı kopuyor',
-      answer: 'VPN istemcisini güncelleyip profili yeniden indirin.',
-    })).statusCode).toBe(201);
-    const faq = (await get(w.opener.id, '/api/faq')).json();
-    expect(faq.items[0]).toMatchObject({ source: 'kb', answer: 'VPN istemcisini güncelleyip profili yeniden indirin.' });
-    expect(faq.items[0].kb).toMatchObject({ code: 'BB-' + faq.items[0].kb.code.slice(3), department: { id: w.bt.id } });
-    expect(faq.ready).toHaveLength(0);
   });
 });
 

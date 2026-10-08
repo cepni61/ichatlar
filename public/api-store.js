@@ -289,7 +289,7 @@
       if (CURRENT === 'new-ticket') return;
       // Kayıt listesine bağlı olmayan ekranlar tazelenmez: yeniden çizim
       // yarım kalmış seçimleri (ör. yetki verilecek kişi) silerdi.
-      if (CURRENT === 'kb' || CURRENT === 'faq' || CURRENT === 'search') return;
+      if (CURRENT === 'kb' || CURRENT === 'search') return;
       await refreshRecords();
       if (typeof renderView === 'function') renderView(CURRENT);
       if (typeof renderChrome === 'function') renderChrome();
@@ -979,7 +979,8 @@
       if (boot.me.role === 'USER') HOME_VIEW = 'my-tickets';
       if (typeof show === 'function') {
         const r = typeof parseRoute === 'function' ? parseRoute(location.hash) : null;
-        show(r ? r.id : HOME_VIEW, r && r.param, { history:false });
+        // Tanınmayan eski adres (ör. kaldırılan #/sik-sorulanlar) açılan ekranınkiyle değişir.
+        show(r ? r.id : HOME_VIEW, r && r.param, r || !location.hash ? { history:false } : { replace:true });
       }
 
       // Açılış sırası kaynaklı hata bandını temizle: veri geldiğine göre

@@ -10,7 +10,7 @@ import type { Actor } from './permissions.js';
  *   - Sistem yöneticisi: her ekibin maddesini yönetir, düzenleme yetkisi verir.
  *   - Yönetici (departman müdürü): bütün maddeleri görür, kendi ekibininkini yönetir.
  *   - Yetki verilen kişi: yetkili olduğu ekip(ler)in maddelerini görür ve yönetir.
- *   - Diğerleri yönetim ekranını görmez; maddeler onlara Sık Sorulanlar, Arama,
+ *   - Diğerleri yönetim ekranını görmez; maddeler onlara Arama,
  *     benzer kayıt önerileri ve asistan üzerinden ulaşır.
  */
 export const KB_KINDS = {

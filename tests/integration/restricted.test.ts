@@ -7,7 +7,7 @@ import { createDept, createRecord, createUser, loginAs, makeApp, resetDb } from 
  * "Yalnızca ilgili ekip görsün" işareti (2026-10-08, kullanıcı isteği).
  * Kaydın kendisini zaten yalnızca açan, ilgili ekip(ler), sahibi ve sistem
  * yöneticisi görüyor. İşaret, içeriğin başka ekiplere sızdığı paylaşılan
- * kanalları kapatır: benzer çözüm önerileri, Sık Sorulanlar, arama, öneri
+ * kanalları kapatır: benzer çözüm önerileri, arama, öneri
  * havuzu ("Önerilerde"), rapor konuları ve başka ekiplerin CSV'si.
  */
 
@@ -69,17 +69,6 @@ describe('yalnızca ilgili ekip (kısıtlı kayıt)', () => {
     const codes = (res.json().matches as { code: string }[]).map((m) => m.code);
     expect(codes).toContain(open.code);
     expect(codes).not.toContain(secret.code);
-  });
-
-  it('Sık Sorulanlar\'da çıkmaz', async () => {
-    // SSS yalnızca en az iki kez gelen konuları listeler: her birinden bir tane daha.
-    const w = await world();
-    await solvedPair(w);
-    await solvedPair(w);
-    const res = await app.inject({ method: 'GET', url: '/api/faq', headers: await loginAs(app, w.kaliteMember.id) });
-    const titles = JSON.stringify(res.json());
-    expect(titles).toContain('Bordro pusulası portalda görünmüyor');
-    expect(titles).not.toContain('Maaş haczi');
   });
 
   it('öneri havuzuna eklenemez', async () => {
