@@ -1,0 +1,19 @@
+{
+  "name": "İç Hatlar — Bilgi ve Öneri Sistemi",
+  "short_name": "İç Hatlar",
+  "description": "Kurum içi bilgi ve öneri kayıtları",
+  "lang": "tr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fc",
+  "theme_color": "#f6f8fc",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

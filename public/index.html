@@ -2,7 +2,14 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<!-- Telefonda ana ekrana eklenince uygulama gibi açılır (manifest.webmanifest) -->
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<meta name="theme-color" content="#f6f8fc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="İç Hatlar">
 <title>İç Hatlar — Bilgi ve Öneri Sistemi</title>
 <!-- Yazı tipleri uygulamayla gelir (public/fonts); temaya özgü aileler yalnızca o tema seçiliyken indirilir. -->
 <link rel="stylesheet" href="/fonts/fonts.css">
@@ -1343,7 +1350,6 @@
   .next-step{margin:12px 0 0;font-size:12.5px;color:var(--muted)}
   /* Yeni Kayıt sayfasındayken üstteki "Yeni Kayıt" düğmesi gereksiz */
   body[data-page="new-ticket"] .topbar [data-view="new-ticket"],
-  body[data-page="new-ticket"] .mobile-top [data-view="new-ticket"]{display:none}
   .next-step b{color:var(--text-2);font-weight:700}
   /* Ek dosyalar: seçici, taslak etiketleri, indirme bağlantıları */
   .attach{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
@@ -1554,7 +1560,13 @@
     .rep-mason{column-count:2}
   }
   @media(max-width:760px){ .rep-mason{column-count:1} }
-  .mobile-top{display:none}
+  /* Tüm Kayıtlar süzgeçleri */
+  .flt-row{display:flex;gap:10px;flex-wrap:wrap}
+  .flt-row input,.flt-row select{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px;font:inherit;font-size:14px}
+  .flt-row input{flex:1;min-width:200px}
+
+  /* Alt gezinme çubuğu: yalnızca sol menü gizliyken (≤900px) */
+  .mobile-tabs{display:none}
 
   /* ---------- Modal / Toast ---------- */
   .modal-bg{
@@ -1853,17 +1865,97 @@
     .sidebar{display:none}
     .sidebar.open{display:flex;position:fixed;left:0;top:0;width:274px;z-index:70;
       box-shadow:0 0 0 100vmax rgba(8,20,40,.38)}
-    .mobile-top{display:flex;gap:9px}
-    /* Yeni Kayıt zaten üst çubukta var; ikinci kopya gizlenir */
-    .mobile-top .btn-primary{display:none}
     .settings-grid,.metric-list{grid-template-columns:1fr}
   }
   @media(max-width:640px){
     .main{padding:15px}
-    .kpi .value{font-size:31px}
+    .kpi{padding:14px}
+    .kpi .ico{width:34px;height:34px}
+    .kpi .value{font-size:24px}
     .card-head{align-items:flex-start;gap:12px;flex-direction:column}
     .actions .btn{flex:1;justify-content:center}
     .type-cards{grid-template-columns:1fr}
+  }
+
+  /* =====================================================================
+     TELEFON
+     Sol menü yerine altta sabit çubuk; üst alan inceldi; tablolar kart
+     listesine döner (yatay kaydırma ve sayfanın küçülmesi kalktı);
+     pencereler alttan açılır; form alanları 16px (iOS odakta yakınlaştırmasın).
+     ===================================================================== */
+  @media(max-width:900px){
+    .mobile-tabs{
+      display:grid;grid-template-columns:repeat(5,1fr);align-items:end;
+      position:fixed;left:0;right:0;bottom:0;z-index:60;
+      padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+      background:color-mix(in srgb, var(--panel) 94%, transparent);
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+      border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(18,39,92,.06);
+    }
+    .mobile-tabs button{
+      position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;
+      border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:600;
+      padding:6px 2px;border-radius:12px;cursor:pointer;min-height:52px;
+    }
+    .mobile-tabs button .ic{width:22px;height:22px}
+    .mobile-tabs button.active{color:var(--primary)}
+    .mobile-tabs .mt-new .ic{
+      width:44px;height:44px;padding:11px;border-radius:50%;margin-top:-18px;
+      background:var(--primary);color:#fff;box-shadow:0 6px 16px var(--glow);
+    }
+    .mobile-tabs .mt-new{color:var(--text)}
+    .mobile-tabs .badge{
+      position:absolute;top:2px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;
+      border-radius:999px;background:var(--danger);color:#fff;font-size:11px;font-style:normal;
+      display:grid;place-items:center;line-height:1;
+    }
+    .mobile-tabs .badge[hidden]{display:none}
+    .main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+    /* Yeni Kayıt alt çubukta; üstteki kopya gizlenir */
+    .topbar .actions .btn-primary[data-view="new-ticket"]{display:none}
+    #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+    .chat{bottom:calc(80px + env(safe-area-inset-bottom))}
+  }
+
+  @media(max-width:640px){
+    /* Üst alan: başlık küçük, açıklama gizli, arama ve zil tek satır */
+    .topbar{margin-bottom:14px;gap:10px}
+    .page-title h2{font-size:23px}
+    .page-title p{display:none}
+    .topbar .actions{flex-wrap:nowrap}
+    .search{min-width:0}
+    .actions .btn{flex:0 0 auto}
+
+    /* Tablolar → kart listesi */
+    .table-wrap{overflow:visible}
+    .table thead{display:none}
+    .table,.table tbody,.table tr,.table td{display:block;width:100%}
+    .table tbody tr{padding:12px 4px;border-bottom:1px solid var(--line)}
+    .table tbody tr:last-child{border-bottom:0}
+    .table th,.table td{padding:0;border:0}
+    .table tbody tr.row-link td{display:inline-flex;width:auto;align-items:center;margin:6px 8px 0 0;font-size:12.5px;color:var(--muted)}
+    .table tbody tr.row-link td:first-child{display:block;width:100%;margin:0 0 2px;font-size:14px;color:var(--text)}
+    .table tbody tr.row-link td:has(> .mini-btn[data-open]){display:none}
+    .table td.empty{padding:28px 8px}
+    .owned-grp th,.owned-sub td{padding:10px 4px 4px}
+
+    /* Süzgeçler iki sütun */
+    .flt-row{display:grid;grid-template-columns:1fr 1fr}
+    .flt-row input{grid-column:1 / -1;min-width:0}
+    .flt-row select{min-width:0}
+
+    /* iOS odaklanınca yakınlaştırmasın */
+    .field input,.field select,.field textarea,.flt-row input,.flt-row select,.search input,.chat-f input{font-size:16px}
+
+    /* Pencere alttan açılan sayfa */
+    .modal-bg{align-items:flex-end;padding:0}
+    .modal{max-width:none;max-height:92vh;border-radius:var(--r-lg) var(--r-lg) 0 0;padding-bottom:env(safe-area-inset-bottom)}
+    .modal-b{padding:18px}
+    .modal-h{padding:16px 18px}
+    .modal-f{padding:12px 18px}
+
+    .form-card{padding:18px}
+    .inline-actions .btn{flex:1;justify-content:center}
   }
 </style>
 </head>
@@ -1932,13 +2024,6 @@
 
   <!-- ================= MAIN ================= -->
   <main class="main">
-    <div class="mobile-top actions" style="margin-bottom:14px">
-      <button class="btn btn-ghost" data-menu-toggle>
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Menü</button>
-      <button class="btn btn-primary" data-view="new-ticket">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Yeni Kayıt</button>
-    </div>
-
     <header class="topbar">
       <div class="page-title">
         <h2 id="pageTitle">Dashboard</h2>
@@ -2148,11 +2233,11 @@
     <!-- ---------- TÜM KAYITLAR ---------- -->
     <section id="all-records" class="view">
       <div class="card" style="margin-bottom:16px">
-        <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
-          <input id="fltText" class="" placeholder="Ara..." style="flex:1;min-width:200px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px" />
-          <select id="fltType" style="border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px"><option value="">Tüm türler</option></select>
-          <select id="fltDept" style="border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px"><option value="">Tüm ekipler</option></select>
-          <select id="fltStatus" style="border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:13px;padding:10px 13px"><option value="">Tüm durumlar</option></select>
+        <div class="card-body flt-row">
+          <input id="fltText" type="search" aria-label="Kayıtlarda ara" placeholder="Ara..." />
+          <select id="fltType" aria-label="Tür"><option value="">Tüm türler</option></select>
+          <select id="fltDept" aria-label="Ekip"><option value="">Tüm ekipler</option></select>
+          <select id="fltStatus" aria-label="Durum"><option value="">Tüm durumlar</option></select>
         </div>
       </div>
       <div class="card">
@@ -2300,6 +2385,17 @@
       </div>
     </section>
   </main>
+
+  <!-- ================= ALT GEZİNME (telefon) =================
+       Sol menü dar ekranda gizli; sık kullanılan ekranlar başparmak
+       mesafesinde. Geri kalanı "Menü" açar. Rozetler kenar çubuğuyla aynı. -->
+  <nav class="mobile-tabs" aria-label="Hızlı gezinme">
+    <button type="button" data-view="dashboard"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/></svg><span>Özet</span></button>
+    <button type="button" data-view="my-tickets"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>Açtıklarım</span><i class="badge" data-badge-for="bMy" hidden></i></button>
+    <button type="button" class="mt-new" data-view="new-ticket" aria-label="Yeni kayıt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Yeni</span></button>
+    <button type="button" data-view="team-tickets"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16.5 3.63a4 4 0 0 1 0 7.75"/></svg><span>Ekibim</span><i class="badge" data-badge-for="bTeam" hidden></i></button>
+    <button type="button" data-menu-toggle aria-expanded="false" aria-controls="sidebar"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Menü</span></button>
+  </nav>
 </div>
 
 <!-- ================= GEZİCİ ASİSTAN =================
@@ -2901,7 +2997,7 @@ function show(id, param, opts){
   document.body.dataset.page = id;
   $$('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(id); if (el) el.classList.add('active');
-  $$('.nav button').forEach(b => {
+  $$('.nav button, .mobile-tabs [data-view]').forEach(b => {
     const on = b.dataset.view === id;
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
@@ -2917,7 +3013,7 @@ function show(id, param, opts){
     }
   }
 
-  $('#sidebar').classList.remove('open');
+  setMenu(false);
   renderView(id);
   window.scrollTo({ top:0, behavior:'smooth' });
 }
@@ -2998,10 +3094,29 @@ const Notif = {
   }
 };
 
+/* Dar ekran menüsü (kenar çubuğu üstte açılır) */
+function setMenu(open){
+  const sb = $('#sidebar');
+  sb.classList.toggle('open', open);
+  $$('[data-menu-toggle]').forEach(b => b.setAttribute('aria-expanded', String(open)));
+  if (open) { const first = sb.querySelector('.nav button:not([hidden])'); if (first) first.focus(); }
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#sidebar').classList.contains('open')) {
+    setMenu(false);
+    const t = document.querySelector('.mobile-tabs [data-menu-toggle]'); if (t) t.focus();
+  }
+});
+
 function setBadge(sel, n, what){
   const b = $(sel); if (!b) return;
   b.textContent = n; b.hidden = !n;
   b.setAttribute('aria-label', n + ' ' + what);
+  /* Telefondaki alt çubukta aynı rozetin kopyası */
+  $$('[data-badge-for="' + b.id + '"]').forEach(m => {
+    m.textContent = n > 99 ? '99+' : n; m.hidden = !n;
+    m.setAttribute('aria-label', n + ' ' + what);
+  });
 }
 
 /* Zilde sayı tek başına okunuyordu ("1"); ekran okuyucu için anlamlı ad. */
@@ -4354,10 +4469,10 @@ function init(){
   /* Menü / görünüm butonları (delegasyon) */
   document.addEventListener('click', e => {
     /* Dar ekran menüsü: satır içi onclick CSP (script-src-attr 'none') ile engelleniyor */
-    if (e.target.closest('[data-menu-toggle]')) { $('#sidebar').classList.toggle('open'); return; }
+    if (e.target.closest('[data-menu-toggle]')) { setMenu(!$('#sidebar').classList.contains('open')); return; }
     /* Menü açıkken dışarı dokunmak yalnızca menüyü kapatır, alttaki öğeye tıklamaz */
     if (!e.target.closest('#sidebar') && $('#sidebar').classList.contains('open')) {
-      e.preventDefault(); $('#sidebar').classList.remove('open'); return;
+      e.preventDefault(); setMenu(false); return;
     }
 
     const v = e.target.closest('[data-view]');
@@ -4600,6 +4715,10 @@ const Agent = {
   dockAt:0, docking:false, docked:false,
 
   reduced(){ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; },
+  tabBarH(){
+    const t = document.querySelector('.mobile-tabs');
+    return t && getComputedStyle(t).display !== 'none' ? t.offsetHeight : 0;
+  },
   clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); },
 
   /* Dolaşım alanı: YALNIZCA sağ bölge — sol menünün üstüne çıkmaz */
@@ -4611,7 +4730,8 @@ const Agent = {
       minX: left,
       maxX: Math.max(left, window.innerWidth  - this.W - 24),
       minY: 100,                                    // üst başlığın altı
-      maxY: Math.max(150, window.innerHeight - this.H - 24),
+      // Telefonda alt gezinme çubuğunun üstünde kalır
+      maxY: Math.max(150, window.innerHeight - this.H - 24 - this.tabBarH()),
     };
   },
 
