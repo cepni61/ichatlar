@@ -24,6 +24,12 @@ if (typeof loadEnvFile === 'function' && existsSync('.env')) {
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
+  /**
+   * Sunucunun dinlediği adres. 0.0.0.0: ağdaki diğer bilgisayarlar da
+   * erişir (http://<ip>:3000). 127.0.0.1: yalnızca bu bilgisayar ve aynı
+   * makinedeki tünel (Cloudflare) erişir.
+   */
+  HOST: z.string().trim().min(1).default('0.0.0.0'),
   APP_URL: z.string().url(),
 
   DATABASE_URL: z.string().min(1),
