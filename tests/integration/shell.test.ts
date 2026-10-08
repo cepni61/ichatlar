@@ -30,6 +30,18 @@ describe('ana sayfa', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('id="detailBody"');
   });
+
+  it('yazı tipleri uygulamadan gelir; dış yazı tipi sunucusuna izin yok', async () => {
+    const u = await createUser({ name: 'Ayşe' });
+    const page = await app.inject({ method: 'GET', url: '/', headers: await loginAs(app, u.id) });
+    expect(page.body).toContain('/fonts/fonts.css');
+    expect(page.body).not.toContain('fonts.googleapis.com');
+    expect(String(page.headers['content-security-policy'])).not.toMatch(/googleapis|gstatic/);
+
+    const css = await app.inject({ method: 'GET', url: '/fonts/fonts.css' });
+    expect(css.statusCode).toBe(200);
+    expect(css.body).toContain("font-family: 'Inter'");
+  });
 });
 
 describe('açılış verisi', () => {

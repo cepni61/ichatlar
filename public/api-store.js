@@ -947,10 +947,12 @@
       rewireAfterBoot(boot);
 
       if (typeof renderChrome === 'function') renderChrome();
-      // Adres çubuğundaki ekran açılır (#/kayit/KAY-…, #/raporlar); yoksa Genel Bakış.
+      // Adres çubuğundaki ekran açılır (#/kayit/KAY-…, #/raporlar); yoksa ana
+      // sayfa: ekip üyesi ve yöneticiye Genel Bakış, çalışana Açtıklarım.
+      if (boot.me.role === 'USER') HOME_VIEW = 'my-tickets';
       if (typeof show === 'function') {
         const r = typeof parseRoute === 'function' ? parseRoute(location.hash) : null;
-        show(r ? r.id : 'dashboard', r && r.param, { history:false });
+        show(r ? r.id : HOME_VIEW, r && r.param, { history:false });
       }
 
       // Açılış sırası kaynaklı hata bandını temizle: veri geldiğine göre
@@ -995,10 +997,17 @@
     // seçim yerel durumu değil, sunucudaki oturumu değiştirir.
     const sw = $('#userSwitch');
     if (sw && boot.devAuth) {
-      sw.innerHTML = USERS.map((u) =>
-        '<option value="' + u.id + '"' + (u.id === boot.me.id ? ' selected' : '') + '>' +
-          esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>',
-      ).join('');
+      // Giriş sayfasıyla aynı düzen: sistem yöneticileri en üstte kendi
+      // grubunda, sonra ekipler, en sonda ekibi atanmamışlar. Eskiden sistem
+      // yöneticisi alfabetik sırada "Sistem Yöneticisi — —" diye kayboluyordu.
+      const opt = (u) => '<option value="' + u.id + '"' + (u.id === boot.me.id ? ' selected' : '') + '>' +
+        esc(u.name) + (u.dept ? '' : ' · ' + esc(u.role)) + '</option>';
+      const grp = (label, list) => list.length ? '<optgroup label="' + esc(label) + '">' + list.map(opt).join('') + '</optgroup>' : '';
+      const isSys = (u) => u.role === 'Sistem Yöneticisi';
+      sw.innerHTML =
+        grp('Sistem yönetimi', USERS.filter(isSys)) +
+        DEPARTMENTS.map((d) => grp(d.name, USERS.filter((u) => !isSys(u) && u.dept === d.id))).join('') +
+        grp('Ekibi atanmamış', USERS.filter((u) => !isSys(u) && !DEPARTMENTS.some((d) => d.id === u.dept)));
       sw.onchange = (e) => {
         location.href = '/auth/dev-login?userId=' + encodeURIComponent(e.target.value) + '&returnTo=/';
       };

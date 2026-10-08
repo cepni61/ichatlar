@@ -60,8 +60,9 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        // Yazı tipleri uygulamadan gelir (public/fonts): dış kaynağa izin yok.
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", 'data:'],
         imgSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
         formAction: ["'self'", 'https://login.microsoftonline.com'],

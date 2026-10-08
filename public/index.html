@@ -4,9 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>İç Hatlar — Bilgi ve Öneri Sistemi</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&family=Fraunces:SOFT,WONK,opsz,wght@0,0,9..144,500;0,0,9..144,600;0,0,9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- Yazı tipleri uygulamayla gelir (public/fonts); temaya özgü aileler yalnızca o tema seçiliyken indirilir. -->
+<link rel="stylesheet" href="/fonts/fonts.css">
 <!-- Temayi ilk boyamadan ONCE uygula: aksi halde aydinlik tema bir kare
      gorunur ve koyu temaya gecerken goz alan bir sicrama olur. -->
 <script>
@@ -695,7 +694,7 @@
   .theme-trigger:hover{background:var(--chrome-hover)}
   .tt-txt{flex:1;min-width:0;display:block}
   .tt-lbl{
-    display:block;font-size:9px;font-weight:700;letter-spacing:var(--ls-wide);
+    display:block;font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);
     text-transform:uppercase;color:var(--chrome-role);
   }
   .tt-cur{
@@ -802,11 +801,11 @@
     font-weight:800;letter-spacing:-.03em;
   }
   .brand span{
-    display:block;color:var(--chrome-brand-2);font-size:10.5px;margin-top:2px;
+    display:block;color:var(--chrome-brand-2);font-size:12px;margin-top:2px;
     font-weight:500;letter-spacing:.01em;
   }
   .nav-section{
-    font-size:10px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
+    font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
     color:var(--chrome-section);margin:20px 0 6px 12px;
   }
   .nav{flex:1}
@@ -830,7 +829,7 @@
   .nav button .lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .badge{
     background:var(--chrome-badge-bg);color:var(--chrome-badge-fg);border-radius:999px;
-    padding:1px 8px;font-size:11px;font-weight:700;
+    padding:1px 8px;font-size:12px;font-weight:700;
     font-variant-numeric:tabular-nums;
   }
   .badge[hidden]{display:none}
@@ -843,24 +842,24 @@
   }
   .profile .who{display:flex;align-items:center;gap:10px;margin-bottom:12px}
   .profile .name{font-weight:700;font-size:13px;line-height:1.25;color:var(--chrome-name)}
-  .profile .role{color:var(--chrome-role);font-size:11px;margin-top:1px}
+  .profile .role{color:var(--chrome-role);font-size:12px;margin-top:1px}
   .profile select{
     width:100%;padding:8px 10px;border-radius:9px;
     background:var(--chrome-input-bg);color:var(--chrome-input-fg);
     border:1px solid var(--chrome-input-line);font-size:12px;font-weight:500;
   }
   .profile .switch-lbl{
-    font-size:10px;color:var(--chrome-role);margin-bottom:6px;
+    font-size:12px;color:var(--chrome-role);margin-bottom:6px;
     font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
   }
   .side-foot{
     border-top:1px solid var(--chrome-line);margin-top:14px;padding:12px 8px 2px;
-    font-size:10.5px;color:var(--chrome-foot);line-height:1.5;
+    font-size:12px;color:var(--chrome-foot);line-height:1.5;
   }
   /* Uygulama geri bildirimi: telif satırının üstünde küçük bağlantı */
   .fb-link{
     display:block;border:0;background:none;padding:0 0 6px;margin:0;cursor:pointer;
-    font:inherit;font-size:11px;font-weight:600;color:var(--chrome-text);text-decoration:underline;
+    font:inherit;font-size:12px;font-weight:600;color:var(--chrome-text);text-decoration:underline;
     text-underline-offset:2px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
   }
   .fb-link:hover,.fb-link:focus-visible{color:var(--chrome-text-hi)}
@@ -876,7 +875,7 @@
     flex-shrink:0;min-width:44px;height:44px;border-radius:12px;display:grid;place-items:center;
     background:var(--primary2);color:var(--on-soft);font-weight:800;font-size:15px;line-height:1;text-align:center;
   }
-  .faq-item .faq-n small{display:block;font-size:9px;font-weight:600;letter-spacing:.04em;margin-top:2px}
+  .faq-item .faq-n small{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;margin-top:2px}
   .faq-item .faq-q{flex:1;min-width:0}
   .faq-item .faq-q b{display:block;font-size:14px}
   .faq-item .faq-q span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
@@ -887,7 +886,7 @@
   .faq-a .inline-actions{gap:8px}
   .faq-edit{margin-top:4px;padding-top:12px;border-top:1px dashed var(--line-2)}
   @media(max-width:640px){ .faq-a{padding:0 14px 14px} }
-  .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--successbg);color:var(--success)}
+  .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--successbg);color:var(--success)}
   .src-badge.kb{background:var(--primary2);color:var(--on-soft)}
   .src-badge.plain{background:var(--slatebg);color:var(--slate)}
   .ext-link{font-weight:600;color:var(--b-700);overflow-wrap:anywhere}
@@ -902,11 +901,11 @@
     background:var(--panel);color:var(--text);
   }
   .search-box:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
-  .res-head{font-size:11px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+  .res-head{font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
   .person,.resource{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);margin-bottom:8px}
   .person b,.resource b{display:block;font-size:13.5px}
   .person .meta,.resource .meta{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-  .person .why{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:600;color:var(--on-soft);background:var(--primary2);padding:2px 8px;border-radius:999px}
+  .person .why{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;color:var(--on-soft);background:var(--primary2);padding:2px 8px;border-radius:999px}
   .person a{font-size:12px;color:var(--b-700)}
   .resource p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--text-2)}
 
@@ -948,7 +947,7 @@
 
   /* Değerlendirme sonucu seçimi */
   .outcome-set{border:0;padding:0;margin:0 0 14px;display:grid;gap:8px}
-  .outcome-set legend{padding:0;margin-bottom:8px;font-size:11px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2)}
+  .outcome-set legend{padding:0;margin-bottom:8px;font-size:12px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2)}
   .outcome{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border:1.5px solid var(--line-2);border-radius:var(--r-sm);cursor:pointer;background:var(--panel)}
   .outcome:has(input:checked){border-color:var(--primary);background:var(--b-50)}
   .outcome:has(input:focus-visible){outline:2px solid var(--primary);outline-offset:2px}
@@ -1012,26 +1011,15 @@
 
   /* ---------- Sayfa geçişleri ---------- */
   .view{display:none}
-  .view.active{display:block;animation:viewIn .44s cubic-bezier(.22,1,.36,1) both}
-  @keyframes viewIn{
-    from{opacity:0;transform:translateY(16px) scale(.994);filter:blur(4px)}
-    to  {opacity:1;transform:none;filter:blur(0)}
-  }
-  /* içerik blokları sırayla belirsin — akışı yumuşatır */
-  .view.active > *{animation:blockIn .52s cubic-bezier(.22,1,.36,1) both}
-  .view.active > *:nth-child(1){animation-delay:.03s}
-  .view.active > *:nth-child(2){animation-delay:.09s}
-  .view.active > *:nth-child(3){animation-delay:.15s}
-  .view.active > *:nth-child(4){animation-delay:.21s}
-  .view.active > *:nth-child(n+5){animation-delay:.26s}
-  @keyframes blockIn{
-    from{opacity:0;transform:translateY(14px)}
-    to  {opacity:1;transform:none}
-  }
+  /* Kısa ve sade: gün içinde onlarca kez geçilen bir iş ekranında bulanıklaşan,
+     sırayla beliren ~0,8 sn'lik giriş yavaş hissettiriyor, zayıf dizüstlerinde
+     de takılıyordu. */
+  .view.active{display:block;animation:viewIn .16s ease-out both}
+  @keyframes viewIn{from{opacity:0}to{opacity:1}}
   /* KPI kartları tek tek gelsin */
   /* Rapor ekip filtresi */
   .rep-filter{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:12px 16px;margin-bottom:16px}
-  .rep-filter label{font-size:11px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2)}
+  .rep-filter label{font-size:12px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2)}
   .rep-filter select{
     min-width:260px;border:1px solid var(--line-2);border-radius:var(--r-sm);
     background:var(--panel);color:var(--text);padding:9px 12px;font-size:14px;
@@ -1039,16 +1027,10 @@
   .rep-filter select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
   .rep-filter .mini-btn[hidden]{display:none}
   @media(max-width:640px){ .rep-filter select{min-width:0;flex:1} }
-  .kpis .kpi, .report-kpis .metric-box{animation:kpiIn .5s cubic-bezier(.22,1,.36,1) both}
-  .kpis .kpi:nth-child(1),.report-kpis .metric-box:nth-child(1){animation-delay:.06s}
-  .kpis .kpi:nth-child(2),.report-kpis .metric-box:nth-child(2){animation-delay:.12s}
-  .kpis .kpi:nth-child(3),.report-kpis .metric-box:nth-child(3){animation-delay:.18s}
-  .kpis .kpi:nth-child(4),.report-kpis .metric-box:nth-child(4){animation-delay:.24s}
-  @keyframes kpiIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
 
   /* Hareket azaltma tercihi olan kullanıcılar için animasyonları kapat */
   @media (prefers-reduced-motion: reduce){
-    .view.active, .view.active > *, .kpis .kpi, .report-kpis .metric-box,
+    .view.active,
     .modal, .modal-bg, .chat, .msg{animation:none !important}
     *{transition-duration:.01ms !important}
   }
@@ -1070,7 +1052,19 @@
   :where(a, button, summary, select, [tabindex]):focus-visible{outline:2px solid var(--primary);outline-offset:2px}
   .notif-row{width:100%;border:0;background:transparent;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:var(--r-sm)}
   .notif-row:hover,.notif-row:focus-visible{background:var(--panel2)}
-  .kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));margin-bottom:18px}
+  /* Beş kutu geniş ekranda tek sırada; 1366px'te 4+1 sarkıyordu. */
+  .kpis{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-bottom:18px}
+  @media(max-width:1199px){ .kpis{grid-template-columns:repeat(3,minmax(0,1fr))} }
+  @media(max-width:760px){ .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .kpi{flex-direction:column;gap:10px} }
+  /* Gecikme varsa Genel Bakış'ın en üstünde: en çok aksiyon isteyen bilgi
+     "22 tanesi gecikmiş" diye gri küçük yazıda kalıyordu. */
+  .late-strip{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding:12px 16px;
+    border-radius:var(--r);background:var(--dangerbg);color:var(--danger-ink);
+    border:1px solid color-mix(in srgb, var(--danger) 22%, transparent);font-size:14px;
+  }
+  .late-strip b{font-size:15px}
+  .late-strip span{margin-right:auto}
 
   .card{
     background:var(--panel);
@@ -1078,9 +1072,9 @@
     border-radius:var(--r);
     box-shadow:var(--sh-2);
   }
-  .kpi{padding:18px 18px;position:relative;display:flex;gap:14px;align-items:flex-start}
+  .kpi{padding:16px;position:relative;display:flex;gap:12px;align-items:flex-start}
   .kpi .ico{
-    width:46px;height:46px;border-radius:50%;flex-shrink:0;
+    width:40px;height:40px;border-radius:50%;flex-shrink:0;
     display:grid;place-items:center;color:#fff;
   }
   .kpi .ico.c1{background:var(--brand-blue)}
@@ -1097,6 +1091,8 @@
     color:var(--text);
   }
   .kpi .trend{font-size:12px;font-weight:500;color:var(--muted)}
+  /* .kpi .trend özgüllüğü .down'ı eziyordu: gecikme hiç kırmızı görünmüyordu */
+  .kpi .trend.down{color:var(--danger-ink);font-weight:600}
   .up{color:var(--success)}.down{color:var(--danger)}
 
   .dashboard-layout{grid-template-columns:1.3fr .7fr}
@@ -1121,7 +1117,7 @@
   .avatar{
     width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
     background:var(--primary2);color:var(--on-soft);
-    font-weight:700;font-size:11px;flex-shrink:0;letter-spacing:.02em;
+    font-weight:700;font-size:12px;flex-shrink:0;letter-spacing:.02em;
   }
   .avatar.sm{width:36px;height:36px;border-radius:11px;font-size:11.5px}
   .avatar.grad{
@@ -1141,11 +1137,13 @@
   /* Satırın tamamı kaydı açar (tıklama yönlendiricisi [data-open]) */
   .table tbody tr.row-link{cursor:pointer}
   .table th{
-    color:var(--muted);font-size:10.5px;text-transform:uppercase;
+    color:var(--muted);font-size:12px;text-transform:uppercase;
     letter-spacing:var(--ls-wide);font-weight:600;
     border-bottom-color:var(--line-2);
   }
-  .ticket-title{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+  /* Kayıt başlığı önde, numara altında: kişiler kaydı başlığından tanıyor */
+  .ticket-title{font-weight:600;line-height:1.4;color:var(--text)}
+  .rec-code{font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
   .btn-back{margin:-4px 0 14px;padding:7px 13px}
   .small{font-size:12px;color:var(--muted)}
   .empty{padding:48px;text-align:center;color:var(--muted);font-size:13px}
@@ -1153,7 +1151,7 @@
   /* ---------- Pill ---------- */
   .pill{
     display:inline-flex;align-items:center;gap:6px;border-radius:8px;
-    padding:4px 9px;font-size:11.5px;font-weight:600;white-space:nowrap;
+    padding:4px 9px;font-size:12px;font-weight:600;white-space:nowrap;
     letter-spacing:var(--ls-snug);
   }
   .pill .ic-sm{width:13px;height:13px}
@@ -1171,9 +1169,11 @@
   .form-card{padding:24px}
   .form-card>h3{margin:0 0 6px;font-size:20px;letter-spacing:var(--ls-tight)}
   .field{margin-bottom:17px}
+  /* Form etiketleri normal yazımla: büyük harfli 11px etiket okunmuyor,
+     "İLGİLİ EKİP 1" gibi bağırıyordu. */
   .field label,.field .lbl{
-    display:block;font-size:11px;font-weight:600;margin-bottom:8px;
-    letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2);
+    display:block;font-size:13px;font-weight:600;margin-bottom:7px;
+    letter-spacing:0;color:var(--text-2);
   }
   .field input,.field select,.field textarea{
     width:100%;border:1px solid var(--line-2);border-radius:var(--r-sm);
@@ -1251,7 +1251,7 @@
   /* Beklenen fayda: çoklu seçim, gerçek onay kutusu */
   .benefit-set{border:0;padding:0;margin:0 0 17px;min-width:0}
   .benefit-set legend{
-    padding:0;font-size:11px;font-weight:600;margin-bottom:8px;
+    padding:0;font-size:12px;font-weight:600;margin-bottom:8px;
     letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--text-2);
   }
   .benefit-chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -1272,7 +1272,7 @@
   /* Öneri gövdesi: "şu an" → "öneri" dönüşümü, altında beklenen fayda.
      Detay ekranı ve formdaki önizleme aynı çizimi kullanır. */
   .of-step{border:1px solid var(--line);border-radius:var(--r-sm);padding:14px 16px;background:var(--panel2)}
-  .of-k{display:block;font-size:11px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .of-k{display:block;font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin-bottom:6px}
   .of-step p{margin:0;white-space:pre-wrap;line-height:1.6;overflow-wrap:anywhere}
   .of-step.prop{background:var(--ideabg);border-color:transparent}
   .of-step.prop .of-k{color:var(--idea)}
@@ -1326,10 +1326,10 @@
     border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.6;color:var(--text-2);
   }
   .ml-sol b{color:var(--b-800)}
-  .ml-meta{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--muted);align-items:center}
+  .ml-meta{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted);align-items:center}
   .kw{
     background:var(--panel2);border:1px solid var(--line);border-radius:6px;
-    padding:2px 7px;font-size:10.5px;font-weight:500;color:var(--text-2);
+    padding:2px 7px;font-size:12px;font-weight:500;color:var(--text-2);
   }
   .ml-empty{
     padding:22px;text-align:center;font-size:12.5px;color:var(--muted);
@@ -1353,7 +1353,7 @@
   /* Ek dosyalar: seçici, taslak etiketleri, indirme bağlantıları */
   .attach{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
   .btn-attach{padding:7px 13px}
-  .attach-hint{font-size:11.5px;color:var(--muted)}
+  .attach-hint{font-size:12px;color:var(--muted)}
   .attach-list{display:flex;flex-wrap:wrap;gap:6px;width:100%}
   .attach-list:empty{display:none}
   .attach-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 6px 5px 10px;border-radius:999px;
@@ -1382,7 +1382,7 @@
   }
   .ml-dept.low{border-style:dashed;box-shadow:none}
   .ml-dept .md-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .ml-dept .md-lbl{font-size:10.5px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);width:100%}
+  .ml-dept .md-lbl{font-size:12px;font-weight:600;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);width:100%}
   .ml-dept .md-name{font-size:15px;font-weight:700;color:var(--text);margin-right:auto}
   .ml-dept .md-why{margin-top:8px;font-size:12px;color:var(--text-2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
   .ml-dept .md-bars{margin-top:11px;display:grid;gap:6px}
@@ -1393,7 +1393,7 @@
   .ml-dept .md-row.top .md-fill{background:var(--b-700);opacity:1}
   .ml-dept .md-row b{text-align:right;font-variant-numeric:tabular-nums;color:var(--text);font-weight:600}
   .ml-dept .md-act{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text-2)}
-  .ml-dept .md-note{color:var(--muted);font-size:11.5px;line-height:1.5}
+  .ml-dept .md-note{color:var(--muted);font-size:12px;line-height:1.5}
   .ml-dept .md-ok{color:var(--success);font-weight:600;display:inline-flex;gap:6px;align-items:center}
   .ml-dept .md-opts{margin-top:9px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 
@@ -1431,11 +1431,11 @@
   .ticket:hover{transform:translateY(-2px);box-shadow:var(--sh-2);border-color:var(--b-300)}
   .ticket .tt{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
   .ticket b{font-size:13.5px;display:block;line-height:1.4;font-weight:600}
-  .ticket p{color:var(--muted);font-size:11.5px;line-height:1.5;margin:7px 0 0}
+  .ticket p{color:var(--muted);font-size:12px;line-height:1.5;margin:7px 0 0}
   .ticket-foot{display:flex;align-items:center;justify-content:space-between;margin-top:13px;gap:8px}
   .mini-btn{
     border:1px solid var(--line-2);border-radius:9px;padding:6px 11px;
-    font-weight:600;font-size:11.5px;cursor:pointer;
+    font-weight:600;font-size:12px;cursor:pointer;
     background:var(--panel);color:var(--b-700);letter-spacing:var(--ls-snug);
     transition:background .16s var(--ease), border-color .16s var(--ease);
   }
@@ -1455,7 +1455,7 @@
   .event.assign:before{background:var(--violet);box-shadow:0 0 0 3.5px var(--violetbg)}
   .event.comment:before{background:#0f766e;box-shadow:0 0 0 3.5px #dcf3f0}
   .event b{display:block;font-size:13px;font-family:var(--f-sans);font-weight:500;line-height:1.55;color:var(--text)}
-  .event span{font-size:11.5px;color:var(--muted)}
+  .event span{font-size:12px;color:var(--muted)}
   .comment{background:var(--b-50);border:1px solid var(--hair);border-radius:var(--r-sm);padding:14px;margin-top:12px;font-size:13px;line-height:1.6}
   .progress{height:8px;background:var(--panel2);border-radius:999px;overflow:hidden}
   .progress span{display:block;height:100%;background:linear-gradient(90deg,#15803d,#b45309);transition:width .5s var(--ease)}
@@ -1478,7 +1478,7 @@
   .report-kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-bottom:14px;gap:14px}
   .metric-box{padding:16px 18px;position:relative}
   .metric-box>span:first-of-type{
-    font-size:11px;color:var(--muted);font-weight:600;
+    font-size:12px;color:var(--muted);font-weight:600;
     letter-spacing:var(--ls-wide);text-transform:uppercase;
   }
   .metric-box b{
@@ -1487,7 +1487,7 @@
     font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;
     color:var(--text);
   }
-  .metric-box span{font-size:11.5px;color:var(--muted)}
+  .metric-box span{font-size:12px;color:var(--muted)}
 
   /* Rapor panelleri */
   .rep-card{display:flex;flex-direction:column;overflow:hidden}
@@ -1515,7 +1515,7 @@
     font-family:var(--f-num);font-size:23px;font-weight:800;line-height:1;
     letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--text);
   }
-  .donut-hole span{font-size:10.5px;color:var(--muted);margin-top:2px}
+  .donut-hole span{font-size:12px;color:var(--muted);margin-top:2px}
   .donut-legend{list-style:none;margin:0;padding:0;flex:1;min-width:180px}
   .donut-legend li{
     display:flex;align-items:center;gap:8px;font-size:12.5px;
@@ -1525,7 +1525,7 @@
   .donut-legend .lg-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .donut-legend b{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);min-width:24px;text-align:right}
   .donut-legend em{
-    font-style:normal;color:var(--muted);font-size:11.5px;
+    font-style:normal;color:var(--muted);font-size:12px;
     min-width:44px;text-align:right;font-variant-numeric:tabular-nums;
   }
 
@@ -1544,7 +1544,7 @@
     letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--text);z-index:1;
   }
   .ring b{display:block;font-size:12px;font-weight:700}
-  .ring em{display:block;font-style:normal;font-size:11px;color:var(--muted);margin-top:1px}
+  .ring em{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:1px}
 
   /* Sıkı tablo */
   .table.compact th,.table.compact td{padding:9px 8px;font-size:12.5px}
@@ -1688,7 +1688,7 @@
     position:absolute;bottom:calc(100% + 12px);left:50%;
     transform:translateX(-50%) translateY(6px) scale(.94);
     background:var(--ag-deep);color:var(--ag-tip-fg);padding:7px 12px;border-radius:11px;
-    font-size:11.5px;font-weight:600;white-space:nowrap;letter-spacing:var(--ls-snug);
+    font-size:12px;font-weight:600;white-space:nowrap;letter-spacing:var(--ls-snug);
     opacity:0;pointer-events:none;box-shadow:var(--sh-2);z-index:2;
     transition:opacity .22s var(--ease), transform .22s cubic-bezier(.34,1.4,.5,1);
   }
@@ -1756,7 +1756,7 @@
     box-shadow:inset 0 1px 0 rgba(255,255,255,.3);
   }
   .chat-h b{display:block;font-size:14px;font-family:var(--f-display);font-weight:600;letter-spacing:var(--ls-tight)}
-  .chat-h small{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ag-on);margin-top:1px}
+  .chat-h small{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ag-on);margin-top:1px}
   .chat-h small i{width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block}
   .chat-h button{
     margin-left:auto;border:0;background:rgba(255,255,255,.12);color:#fff;
@@ -1786,14 +1786,14 @@
     background:var(--b-50);border:1px solid var(--hair);
   }
   .msg .kpi-box .k{
-    font-size:10px;font-weight:600;letter-spacing:var(--ls-wide);
+    font-size:12px;font-weight:600;letter-spacing:var(--ls-wide);
     text-transform:uppercase;color:var(--muted);
   }
   .msg .kpi-box .v{
     font-family:var(--f-num);font-size:26px;font-weight:700;line-height:1.1;
     letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:var(--b-800);margin:4px 0 2px;
   }
-  .msg .kpi-box .d{font-size:11.5px;color:var(--text-2)}
+  .msg .kpi-box .d{font-size:12px;color:var(--text-2)}
   .msg ul{margin:7px 0 0;padding-left:17px}
   .msg li{margin-bottom:3px}
 
@@ -1808,7 +1808,7 @@
   .chat-chips{display:flex;gap:7px;flex-wrap:wrap;padding:0 16px 13px;background:var(--panel2)}
   .chip{
     border:1px solid var(--line-2);background:var(--panel);border-radius:999px;
-    padding:6px 12px;font-size:11.5px;font-weight:600;color:var(--b-700);cursor:pointer;
+    padding:6px 12px;font-size:12px;font-weight:600;color:var(--b-700);cursor:pointer;
     transition:background .16s var(--ease), border-color .16s var(--ease), transform .16s var(--ease);
   }
   .chip:hover{background:var(--b-50);border-color:var(--b-400);transform:translateY(-1px)}
@@ -1962,6 +1962,7 @@
 
     <!-- ---------- DASHBOARD ---------- -->
     <section id="dashboard" class="view active">
+      <div id="dashAlert"></div>
       <div class="grid kpis" id="dashKpis"></div>
       <div class="grid dashboard-layout">
         <div class="card">
@@ -1977,7 +1978,7 @@
         <div class="card-head"><h3>Son güncellenen kayıtlar</h3><button class="btn btn-soft" data-view="team-tickets">Ekibime Gelenler’e git</button></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Süre</th><th><span class="sr-only">İşlem</span></th></tr></thead>
             <tbody id="recentRows"></tbody>
           </table>
         </div>
@@ -2132,7 +2133,7 @@
         <div class="card-head"><h3>Kayıtlar</h3><span class="pill purple" id="ownedCount">0 aktif kayıt</span></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Durum</th><th>Son Güncelleme</th><th>Süre</th><th><span class="sr-only">İşlem</span></th></tr></thead>
             <tbody id="ownedRows"></tbody>
           </table>
         </div>
@@ -2156,7 +2157,7 @@
         <div class="card-head"><h3>Kayıtlar</h3><span class="pill gray" id="allCount">0 kayıt</span></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Süre</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Kayıt</th><th>Tür</th><th>Ekip</th><th>Sahip</th><th>Durum</th><th>Süre</th><th><span class="sr-only">İşlem</span></th></tr></thead>
             <tbody id="allRows"></tbody>
           </table>
         </div>
@@ -2234,7 +2235,7 @@
           <button class="btn btn-primary" type="button" id="kbNew">Yeni madde</button></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Madde</th><th>Tür</th><th>Ekip</th><th>Son güncelleme</th><th>Aksiyon</th></tr></thead>
+            <thead><tr><th>Madde</th><th>Tür</th><th>Ekip</th><th>Son güncelleme</th><th><span class="sr-only">İşlem</span></th></tr></thead>
             <tbody id="kbRows"></tbody>
           </table>
         </div>
@@ -2845,6 +2846,9 @@ const TITLES = {
 let CURRENT = 'dashboard', DETAIL_CODE = null, LAST_VIEW = 'dashboard';
 /* Sekme başlığının sabit kısmı; kuruluş adı gelince api-store.js günceller. */
 let APP_TITLE = 'İç Hatlar';
+/* Adres boşken açılan ekran. Ekibi olmayan çalışan için Genel Bakış'tan
+   çok kendi kayıtları anlamlı: api-store.js rolüne göre Açtıklarım yapar. */
+let HOME_VIEW = 'dashboard';
 
 /* Adres çubuğu: her ekranın kendi adresi var (#/ekibime-gelenler,
    #/kayit/KAY-2026-0198). Böylece tarayıcının Geri/İleri tuşu uygulama
@@ -2882,7 +2886,7 @@ function viewAllowed(id){
 function show(id, param, opts){
   opts = opts || {};
   /* Adres çubuğu da düzelsin: açılan ekran neyse o yazsın. */
-  if (!viewAllowed(id)) { id = 'dashboard'; param = null; opts = { replace:true }; }
+  if (!viewAllowed(id)) { id = HOME_VIEW; param = null; opts = { replace:true }; }
   if (id === 'detail') { if (CURRENT !== 'detail') LAST_VIEW = CURRENT; DETAIL_CODE = param || DETAIL_CODE; }
   CURRENT = id;
   /* Sayfaya özel CSS için (ör. Yeni Kayıt'ta üstteki düğme). Adı bilerek
@@ -2915,7 +2919,7 @@ function show(id, param, opts){
 /* Tarayıcının Geri/İleri tuşu */
 window.addEventListener('popstate', () => {
   const r = parseRoute(location.hash);
-  show(r ? r.id : 'dashboard', r && r.param, { history:false });
+  show(r ? r.id : HOME_VIEW, r && r.param, { history:false });
 });
 
 function renderView(id){
@@ -3032,15 +3036,27 @@ function renderDashboard(){
   const avgResp = resp.length ? resp.reduce((a,b)=>a+b,0)/resp.length : null;
 
   const owned = recs.filter(r => r.assignee && OPEN_STATUSES.includes(r.status)).length;
+  const soon = open.filter(r => slaLevel(r) === 'yellow').length;
+
+  /* Gecikme şeridi: kişinin gidip bakabileceği yere yönlendirir */
+  const me = Store.me();
+  const teamLate = me && me.dept ? teamRecords(me).filter(r => OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red').length : 0;
+  $('#dashAlert').innerHTML = late.length
+    ? '<div class="late-strip" role="status">'+icon('clock')+'<span><b>'+late.length+' açık kayıt</b> hedef süreyi aştı'
+      + (teamLate ? '; '+teamLate+' tanesi ekibinizde.' : '.') + '</span>'
+      + (teamLate ? '<button class="btn btn-ghost" type="button" data-view="team-tickets">Ekibime Gelenler’de gör</button>' : '')
+      + '</div>'
+    : '';
+
   $('#dashKpis').innerHTML = [
-    ['c1','chat',  'Açık Kayıtlar',   open.length,   (late.length ? late.length + ' tanesi gecikmiş' : 'Gecikme yok'), late.length ? 'down' : 'up'],
-    ['c2','users', 'Üzerinde Çalışılan', owned,      'Sahiplenilmiş kayıtlar', 'up'],
-    ['c3','clock', 'Süresi Yaklaşan', open.filter(r => slaLevel(r) === 'yellow').length, 'Hedef süre dolmak üzere', 'down'],
+    ['c1','chat',  'Açık Kayıtlar',   open.length,   (late.length ? late.length + ' tanesi gecikmiş' : 'Gecikme yok'), late.length ? 'down' : ''],
+    ['c2','users', 'Üzerinde Çalışılan', owned,      'Sahiplenilmiş kayıtlar', ''],
+    ['c3','clock', 'Süresi Yaklaşan', soon, soon ? 'Hedef süre dolmak üzere' : 'Yaklaşan yok', soon ? 'down' : ''],
     /* Çözüldü ile Kapatıldı ayrı söylenir: çözülen kayıt, açan onaylayana dek
        kapanmış sayılmaz (UX denetimi B04). */
     ['c4','check', 'Çözülen / Kapatılan', closed.length,
       closed.filter(r => r.status === 'cozuldu').length + ' onay bekliyor · ' + closed.filter(r => r.status !== 'cozuldu').length + ' sonuçlandı', 'up'],
-    ['c5','clock', 'Ort. İlk Dönüş',  fmtDur(avgResp), (avgResp != null && avgResp < 24) ? 'Hedef içinde' : 'İyileştirme alanı', (avgResp != null && avgResp < 24) ? 'up' : 'down'],
+    ['c5','clock', 'Ort. İlk Dönüş',  fmtDur(avgResp), avgResp == null ? 'Henüz veri yok' : avgResp < 24 ? 'İlk gün içinde' : 'Bir günden uzun', avgResp != null && avgResp >= 24 ? 'down' : ''],
   ].map(k =>
     '<div class="card kpi"><div class="ico '+k[0]+'">'+icon(k[1],'ic')+'</div>'
     + '<div class="kpi-txt"><div class="label">'+esc(k[2])+'</div>'
@@ -3070,9 +3086,9 @@ function renderDashboard(){
   /* Sıralamalar yalnızca kullanıcının görebildiği kayıtlardan; başlık kapsamı söyler (UX denetimi B11). */
   $('#highlights').innerHTML =
     '<p class="hint" style="margin:0 0 8px">Görebildiğiniz kayıtlardaki ekipler arasında.</p>' +
-    '<div class="leader"><div class="avatar">%</div><div><b>Hedef süreye en çok uyan ekip</b><span>'+(bestSla ? esc(bestSla.d.name)+' • %'+bestSla.sla : 'Henüz sonuçlanmış kayıt yok')+'</span></div></div>' +
-    '<div class="leader"><div class="avatar">AK</div><div><b>En Çok Aksiyona Dönüşen Öneri</b><span>'+esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri fayda sağladı</span></div></div>' +
-    '<div class="leader"><div class="avatar">HIZ</div><div><b>En Hızlı İlk Geri Dönüş</b><span>'+(fastest ? esc(fastest.d.name)+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
+    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('check')+'</div><div><b>Hedef süreye en çok uyan ekip</b><span>'+(bestSla ? esc(bestSla.d.name)+' • %'+bestSla.sla : 'Henüz sonuçlanmış kayıt yok')+'</span></div></div>' +
+    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('bulb')+'</div><div><b>En çok öneriyi hayata geçiren ekip</b><span>'+(topOneri && topOneri.oneri ? esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri fayda sağladı' : 'Henüz fayda sağlayan öneri yok')+'</span></div></div>' +
+    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('clock')+'</div><div><b>En hızlı ilk geri dönüş</b><span>'+(fastest ? esc(fastest.d.name)+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
 
   /* Son kayıtlar */
   const recent = recs.slice().sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0,6);
@@ -3082,7 +3098,7 @@ function renderDashboard(){
 
 function rowRecent(r){
   return '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
-    + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
+    + '<td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
     + '<td>'+(r.assignee ? esc(userName(r.assignee)) : '<span class="small">Sahiplenilmedi</span>')+'</td>'
@@ -3107,7 +3123,7 @@ function renderMy(){
     : statusPill(r.status);
   $('#myRows').innerHTML = rows.length ? rows.map(r =>
     '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
-    + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
+    + '<td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
     + '<td>'+(r.assignee ? esc(userName(r.assignee)) : '<span class="small">Sahiplenilmedi</span>')+'</td>'
@@ -3134,7 +3150,7 @@ function renderOwned(){
   }
   const row = r =>
     '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'">'
-    + '<td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td>'
+    + '<td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td>'
     + '<td>'+typePill(r.type)+'</td>'
     + '<td>'+esc(deptName(r.department))+'</td>'
     + '<td>'+statusPill(r.status)+'</td>'
@@ -4083,7 +4099,7 @@ function paintReports(m){
 
   const geciken = m.lateRows.length
     ? '<div class="table-wrap"><table class="table compact"><tbody>'
-      + m.lateRows.map(r => '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'"><td><div class="ticket-title">'+esc(r.code)+'</div><div class="small">'+esc(r.title)+'</div></td><td>'+esc(deptName(r.department))+(r.department2 ? ' + '+esc(deptName(r.department2)) : '')+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
+      + m.lateRows.map(r => '<tr class="row-link" tabindex="0" data-open="'+esc(r.code)+'"><td><div class="ticket-title">'+esc(r.title)+'</div><div class="small rec-code">'+esc(r.code)+'</div></td><td>'+esc(deptName(r.department))+(r.department2 ? ' + '+esc(deptName(r.department2)) : '')+'</td><td>'+statusPill(r.status)+'</td></tr>').join('')
       + '</tbody></table></div>'
       + (m.lateHidden ? '<p class="hint">Görüntüleme kapsamınız dışında '+m.lateHidden+' geciken kayıt daha var.</p>' : '')
     : (m.late

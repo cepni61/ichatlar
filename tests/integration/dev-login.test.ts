@@ -11,6 +11,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
  * için değişken, uygulama dinamik olarak yüklenmeden ÖNCE verilir (vitest her
  * test dosyasını ayrı modül kaydıyla çalıştırır).
  */
+// Test dosyaları aynı süreçte sırayla çalışır: değişken dosya bitince geri alınır.
+const before = process.env.DEV_AUTH_BYPASS;
 process.env.DEV_AUTH_BYPASS = 'true';
 
 let app: FastifyInstance;
@@ -22,6 +24,8 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await app.close();
+  if (before === undefined) delete process.env.DEV_AUTH_BYPASS;
+  else process.env.DEV_AUTH_BYPASS = before;
 });
 
 describe('test ortamı girişi', () => {
@@ -45,6 +49,20 @@ describe('test ortamı girişi', () => {
     expect(res.body).toContain('Kim olarak gireceksiniz?');
     expect(res.body).toContain('Ayşe Kaya');
     expect(res.body).not.toContain('Pasif Kişi');
+  });
+
+  it('sistem yöneticisi listenin başında ve ekip yöneticisinden ayrı etiketle', async () => {
+    const { Role } = await import('../../src/domain/enums.js');
+    const d = await h.createDept('Bilgi Teknolojileri');
+    await h.createUser({ name: 'Ayşe Kaya', role: Role.MANAGER, departmentId: d.id });
+    await h.createUser({ name: 'Zeki Sistem', role: Role.ADMIN });
+
+    const body = (await app.inject({ method: 'GET', url: '/giris' })).body;
+    expect(body).toContain('Zeki Sistem · Sistem yöneticisi');
+    expect(body).toContain('Ayşe Kaya · Ekip yöneticisi');
+    // Ekipsiz yönetici en sonda "Genel" altında kayboluyordu.
+    expect(body.indexOf('Zeki Sistem')).toBeLessThan(body.indexOf('Ayşe Kaya'));
+    expect(body).toContain('<optgroup label="Sistem yönetimi">');
   });
 
   it('giriş formu adres parçasını (#/kayit/…) dönüş adresine ekler', async () => {
