@@ -180,7 +180,7 @@ describe('raporlar', () => {
     expect(admin.statusCode).toBe(200);
   });
 
-  it('ekip filtresi: yalnızca o ekibin (asıl ya da ikincil) kayıtları sayılır', async () => {
+  it('departman filtresi (ekipsiz departman): yalnızca onun (asıl ya da ikincil) kayıtları sayılır', async () => {
     const w = await world();
     await createRecord({ createdById: w.opener.id, departmentId: w.ik.id });
     await createRecord({ createdById: w.opener.id, departmentId: w.kalite.id, department2Id: w.ik.id });
@@ -194,7 +194,8 @@ describe('raporlar', () => {
     const res = await app.inject({ method: 'GET', url: `/api/reports/summary?department=${w.ik.id}`, ...h });
     expect(res.statusCode).toBe(200);
     const ik = res.json();
-    expect(ik.filter.department).toEqual({ id: w.ik.id, name: 'İnsan Kaynakları' });
+    expect(ik.filter.department).toMatchObject({ id: w.ik.id, name: 'İnsan Kaynakları' });
+    expect(ik.filter.team).toBeNull();
     expect(ik.totals.records).toBe(2);
     expect(ik.byDepartment.map((d: { id: string }) => d.id)).toEqual([w.ik.id]);
     expect(ik.byPriority.find((p: { id: string }) => p.id === 'normal').n).toBe(2);

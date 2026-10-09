@@ -1,18 +1,121 @@
 {
   "departments": [
-    { "id": "bt", "name": "Bilgi Teknolojileri", "short": "BT" },
-    { "id": "finans", "name": "Finans", "short": "Finans" },
-    { "id": "gm", "name": "Genel Müdürlük", "short": "Genel Müdürlük" },
-    { "id": "ik", "name": "İnsan Kaynakları", "short": "İK" },
-    { "id": "isgel", "name": "İş Geliştirme ve Uluslararası Pazarlar", "short": "İş Geliştirme" },
-    { "id": "ismuk", "name": "İş Mükemmelliği ve Ticari Operasyonlar", "short": "İş Mükemmelliği" },
-    { "id": "kalite", "name": "Kalite Güvence", "short": "Kalite Güvence" },
-    { "id": "kamu", "name": "Kamu İlişkileri ve Pazar Erişim", "short": "Kamu İlişkileri" },
-    { "id": "medikal", "name": "Medikal", "short": "Medikal" },
-    { "id": "spesifik", "name": "Spesifik Tedaviler Grubu", "short": "Spesifik Tedaviler" },
-    { "id": "tedarik", "name": "Tedarik Zinciri", "short": "Tedarik Zinciri" },
-    { "id": "temel", "name": "Temel Tedaviler ve Kişisel Bakım Grubu", "short": "Temel Tedaviler" },
-    { "id": "tuketici", "name": "Tüketici Sağlığı Grubu", "short": "Tüketici Sağlığı" }
+    {
+      "id": "bt", "name": "Bilgi Teknolojileri", "short": "BT",
+      "teams": [
+        { "id": "bt-bilgi-teknolojileri", "name": "Bilgi Teknolojileri", "short": "Bilgi Teknolojileri", "main": true },
+        { "id": "bt-kurumsal-uygulamalar", "name": "Kurumsal Uygulamalar", "short": "Kurumsal Uygulamalar" },
+        { "id": "bt-satis-uygulamalari", "name": "Satış Uygulamaları", "short": "Satış Uygulamaları" },
+        { "id": "bt-veri-analitigi", "name": "Veri Analitiği", "short": "Veri Analitiği" }
+      ]
+    },
+    {
+      "id": "finans", "name": "Finans", "short": "Finans",
+      "teams": [
+        { "id": "finans-finans", "name": "Finans", "short": "Finans", "main": true },
+        { "id": "finans-kontrol-planlama", "name": "Finansal Kontrol, Planlama ve Hazine", "short": "Kontrol ve Hazine" },
+        { "id": "finans-operasyonlar", "name": "Finansal Operasyonlar", "short": "Finansal Operasyonlar" },
+        { "id": "finans-satin-alma", "name": "Satın Alma", "short": "Satın Alma" }
+      ]
+    },
+    {
+      "id": "gm", "name": "Genel Müdürlük", "short": "Genel Müdürlük",
+      "teams": [
+        { "id": "gm-genel-mudurluk", "name": "Genel Müdürlük", "short": "Genel Müdürlük", "main": true }
+      ]
+    },
+    {
+      "id": "ik", "name": "İnsan Kaynakları", "short": "İK",
+      "teams": [
+        { "id": "ik-insan-kaynaklari", "name": "İnsan Kaynakları", "short": "İnsan Kaynakları", "main": true },
+        { "id": "ik-is-sagligi", "name": "İş Sağlığı", "short": "İş Sağlığı" },
+        { "id": "ik-sosyal-isler", "name": "Sosyal İşler", "short": "Sosyal İşler" }
+      ]
+    },
+    {
+      "id": "isgel", "name": "İş Geliştirme ve Uluslararası Pazarlar", "short": "İş Geliştirme",
+      "teams": [
+        { "id": "isgel-is-gelistirme", "name": "İş Geliştirme", "short": "İş Geliştirme" },
+        { "id": "isgel-is-gelistirme-up", "name": "İş Geliştirme ve Uluslararası Pazarlar", "short": "İş Gel. ve Uls. Pazarlar", "main": true },
+        { "id": "isgel-uluslararasi-pazarlar", "name": "Uluslararası Pazarlar", "short": "Uluslararası Pazarlar" }
+      ]
+    },
+    {
+      "id": "ismuk", "name": "İş Mükemmelliği ve Ticari Operasyonlar", "short": "İş Mükemmelliği",
+      "teams": [
+        { "id": "ismuk-is-mukemmelligi", "name": "İş Mükemmelliği ve Ticari Operasyonlar", "short": "İş Mükemmelliği", "main": true },
+        { "id": "ismuk-kongre-etkinlik", "name": "Kongre ve Etkinlik", "short": "Kongre ve Etkinlik" },
+        { "id": "ismuk-pazarlama-mukemmelligi", "name": "Pazarlama Mükemmelliği", "short": "Pazarlama Mükemmelliği" },
+        { "id": "ismuk-saha-egitim", "name": "Saha Eğitim", "short": "Saha Eğitim" },
+        { "id": "ismuk-satis-gucu-etkinligi", "name": "Satış Gücü Etkinliği", "short": "Satış Gücü Etkinliği" },
+        { "id": "ismuk-satis-operasyonlari", "name": "Satış Operasyonları", "short": "Satış Operasyonları" },
+        { "id": "ismuk-ticari-bolgeler", "name": "Ticari Bölgeler", "short": "Ticari Bölgeler" },
+        { "id": "ismuk-ticari-operasyonlar", "name": "Ticari Operasyonlar", "short": "Ticari Operasyonlar" }
+      ]
+    },
+    {
+      "id": "kalite", "name": "Kalite Güvence", "short": "Kalite Güvence",
+      "teams": [
+        { "id": "kalite-kalite-guvence", "name": "Kalite Güvence", "short": "Kalite Güvence", "main": true }
+      ]
+    },
+    {
+      "id": "kamu", "name": "Kamu İlişkileri ve Pazar Erişim", "short": "Kamu İlişkileri",
+      "teams": [
+        { "id": "kamu-geri-odeme", "name": "Geri Ödeme ve Fiyatlandırma", "short": "Geri Ödeme" },
+        { "id": "kamu-kamu-iliskileri", "name": "Kamu İlişkileri ve Pazar Erişim", "short": "Kamu İlişkileri", "main": true },
+        { "id": "kamu-pazar-erisim", "name": "Pazar Erişim", "short": "Pazar Erişim" },
+        { "id": "kamu-ruhsatlandirma", "name": "Ruhsatlandırma", "short": "Ruhsatlandırma" }
+      ]
+    },
+    {
+      "id": "medikal", "name": "Medikal", "short": "Medikal",
+      "teams": [
+        { "id": "medikal-medikal", "name": "Medikal", "short": "Medikal", "main": true },
+        { "id": "medikal-spesifik", "name": "Medikal - Spesifik Tedaviler", "short": "Medikal - Spesifik" },
+        { "id": "medikal-temel", "name": "Medikal - Temel Tedaviler", "short": "Medikal - Temel" },
+        { "id": "medikal-tuketici", "name": "Medikal - Tüketici Sağlığı", "short": "Medikal - Tüketici" }
+      ]
+    },
+    {
+      "id": "spesifik", "name": "Spesifik Tedaviler Grubu", "short": "Spesifik Tedaviler",
+      "teams": [
+        { "id": "spesifik-mss-pazarlama", "name": "Merkezi Sinir Sistemi - Pazarlama", "short": "MSS - Pazarlama" },
+        { "id": "spesifik-mss-satis", "name": "Merkezi Sinir Sistemi - Satış", "short": "MSS - Satış" },
+        { "id": "spesifik-onkoloji-pazarlama", "name": "Onkoloji - Pazarlama", "short": "Onkoloji - Pazarlama" },
+        { "id": "spesifik-onkoloji-satis", "name": "Onkoloji - Satış", "short": "Onkoloji - Satış" },
+        { "id": "spesifik-onkoloji-1", "name": "Onkoloji 1", "short": "Onkoloji 1" },
+        { "id": "spesifik-onkoloji-2", "name": "Onkoloji 2", "short": "Onkoloji 2" },
+        { "id": "spesifik-ozel-uzmanlik-pazarlama", "name": "Özel Uzmanlık - Pazarlama", "short": "Özel Uzm. - Pazarlama" },
+        { "id": "spesifik-ozel-uzmanlik-satis", "name": "Özel Uzmanlık - Satış", "short": "Özel Uzmanlık - Satış" },
+        { "id": "spesifik-ozel-uzmanlik-is-birimi", "name": "Özel Uzmanlık İş Birimi", "short": "Özel Uzmanlık İş Birimi" },
+        { "id": "spesifik-spesifik-tedaviler", "name": "Spesifik Tedaviler Grubu", "short": "Spesifik Tedaviler", "main": true }
+      ]
+    },
+    {
+      "id": "tedarik", "name": "Tedarik Zinciri", "short": "Tedarik Zinciri",
+      "teams": [
+        { "id": "tedarik-tedarik-zinciri", "name": "Tedarik Zinciri", "short": "Tedarik Zinciri", "main": true }
+      ]
+    },
+    {
+      "id": "temel", "name": "Temel Tedaviler ve Kişisel Bakım Grubu", "short": "Temel Tedaviler",
+      "teams": [
+        { "id": "temel-kisisel-bakim", "name": "Kişisel Bakım", "short": "Kişisel Bakım" },
+        { "id": "temel-pazarlama", "name": "Temel Tedaviler Pazarlama", "short": "Temel Ted. Pazarlama" },
+        { "id": "temel-satis", "name": "Temel Tedaviler Satış", "short": "Temel Tedaviler Satış" },
+        { "id": "temel-temel-tedaviler", "name": "Temel Tedaviler ve Kişisel Bakım Grubu", "short": "Temel Tedaviler", "main": true }
+      ]
+    },
+    {
+      "id": "tuketici", "name": "Tüketici Sağlığı Grubu", "short": "Tüketici Sağlığı",
+      "teams": [
+        { "id": "tuketici-ticari-pazarlama", "name": "Ticari Pazarlama", "short": "Ticari Pazarlama" },
+        { "id": "tuketici-pazarlama", "name": "Tüketici Sağlığı - Pazarlama", "short": "Tüketici - Pazarlama" },
+        { "id": "tuketici-satis", "name": "Tüketici Sağlığı - Satış", "short": "Tüketici - Satış" },
+        { "id": "tuketici-tuketici-sagligi", "name": "Tüketici Sağlığı Grubu", "short": "Tüketici Sağlığı", "main": true }
+      ]
+    }
   ],
   "sla": {
     "NORMAL": 48,

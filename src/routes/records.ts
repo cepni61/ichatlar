@@ -10,10 +10,11 @@ import {
   STATUS_FROM_SLUG,
   TYPE_FROM_SLUG,
 } from '../domain/constants.js';
-import { can } from '../domain/permissions.js';
+import { can, type Actor } from '../domain/permissions.js';
+import { actorInTree, inDepartmentTree, inTeam, isAssignableUnit, loadOrgTree, withRoots } from '../domain/org.js';
 import { dueDateFor } from '../domain/sla.js';
 import { findSimilar } from '../domain/similarity.js';
-import { logInference, recordOutcome, suggestDepartment } from '../ml/service.js';
+import { forgetInference, logInference, recordOutcome, suggestDepartment } from '../ml/service.js';
 import { nextRecordCode } from '../lib/code.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
@@ -27,13 +28,8 @@ const withDetail = detailInclude;
  * bellekte filtrelemek hem yavaş hem güvensiz olurdu: kullanıcının
  * görmemesi gereken kayıtlar hiç sorgudan dönmemeli.
  */
-function scopeWhere(
-  scope: string,
-  actor: { id: string; role: string; departmentId: string | null },
-): Prisma.RecordWhereInput {
-  const teamFilter: Prisma.RecordWhereInput = actor.departmentId
-    ? { OR: [{ departmentId: actor.departmentId }, { department2Id: actor.departmentId }] }
-    : { id: '__none__' };
+function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
+  const teamFilter: Prisma.RecordWhereInput = actor.departmentId ? inTeam(actor.departmentId) : { id: '__none__' };
 
   switch (scope) {
     case 'mine':
@@ -44,17 +40,14 @@ function scopeWhere(
       return teamFilter;
     case 'all':
     default:
-      // ADMIN her şeyi görür — "yalnızca ilgili ekip" işaretli kayıtlar hariç
-      // (onlarda diğerleriyle aynı kural). Diğerleri: kendi açtıkları +
-      // ekiplerine düşenler + üzerlerine aldıkları.
-      if (actor.role === Role.ADMIN) {
-        return {
-          OR: [{ restricted: false }, { createdById: actor.id }, { assigneeId: actor.id }, ...(actor.departmentId ? [teamFilter] : [])],
-        };
-      }
-      return {
-        OR: [{ createdById: actor.id }, { assigneeId: actor.id }, ...(actor.departmentId ? [teamFilter] : [])],
-      };
+      // Tüm Kayıtlar (kullanıcı isteği, 2026-10-09): kişinin departmanındaki
+      // bütün ekiplerin kayıtları; sistem yöneticisi bütün departmanları görür.
+      // "Yalnızca ilgili ekip görsün" işaretli kayıtlar burada hiç görünmez —
+      // ilgili ekip onları Ekibime Gelenler'de, açan kişi Açtıklarım'da görür.
+      if (actor.role === Role.ADMIN) return { restricted: false };
+      return actor.departmentRootId
+        ? { AND: [{ restricted: false }, inDepartmentTree(actor.departmentRootId)] }
+        : { id: '__none__' };
   }
 }
 
@@ -62,7 +55,10 @@ const listQuery = z.object({
   scope: z.enum(['all', 'team', 'mine', 'opened']).default('all'),
   type: z.enum(['bilgi', 'oneri']).optional(),
   status: z.string().optional(),
+  /** Ekip süzgeci. */
   dept: z.string().optional(),
+  /** Departman süzgeci (altındaki bütün ekipler). */
+  root: z.string().optional(),
   q: z.string().max(200).optional(),
   open: z.coerce.boolean().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -114,15 +110,16 @@ export default async function recordRoutes(app: FastifyInstance) {
 
   /** Liste. */
   app.get('/api/records', async (req) => {
-    const actor = actorOf(req);
     const parsed = listQuery.safeParse(req.query);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
-    const { scope, type, status, dept, q, open, page, pageSize } = parsed.data;
+    const { scope, type, status, dept, root, q, open, page, pageSize } = parsed.data;
+    const actor = actorInTree(actorOf(req), await loadOrgTree(prisma));
 
     const and: Prisma.RecordWhereInput[] = [scopeWhere(scope, actor)];
 
     if (type) and.push({ type: TYPE_FROM_SLUG[type] });
-    if (dept) and.push({ OR: [{ departmentId: dept }, { department2Id: dept }] });
+    if (root) and.push(inDepartmentTree(root));
+    if (dept) and.push(inTeam(dept));
     if (status) {
       const mapped = STATUS_FROM_SLUG[status];
       if (!mapped) throw badRequest('Geçersiz durum.');
@@ -164,9 +161,10 @@ export default async function recordRoutes(app: FastifyInstance) {
 
     const rec = await prisma.record.findUnique({ where: { code }, include: withDetail });
     if (!rec) throw notFound();
-    if (!can('view', rec, actor)) throw forbidden('Bu kaydı görme yetkiniz yok.');
+    const tree = await loadOrgTree(prisma);
+    if (!can('view', withRoots(rec, tree), actorInTree(actor, tree))) throw forbidden('Bu kaydı görme yetkiniz yok.');
 
-    return { record: await serializeRecord(rec, actor) };
+    return { record: await serializeRecord(rec, actor, tree) };
   });
 
   /**
@@ -181,6 +179,8 @@ export default async function recordRoutes(app: FastifyInstance) {
         description: z.string().max(5000).default(''),
         department: z.string().max(64).nullish(),
         type: z.enum(['bilgi', 'oneri']).nullish(),
+        /** "Yalnızca ilgili ekip görsün" işaretliyse metin ML veritabanına yazılmaz. */
+        restricted: z.boolean().default(false),
       })
       .safeParse(req.body);
     if (!body.success) throw badRequest('Geçersiz istek.');
@@ -201,7 +201,8 @@ export default async function recordRoutes(app: FastifyInstance) {
     const suggestion = suggestDepartment(body.data.title, body.data.description);
 
     // ML veritabanına: çalıştırma + her ekip önerisi + her eşleşme ayrı satır.
-    const inferenceId = await logInference(req.log, {
+    // Kısıtlı kayıt taslağı yazılmaz: ML hafızasına girmemeli.
+    const inferenceId = body.data.restricted ? null : await logInference(req.log, {
       userId: actor.id,
       title: body.data.title,
       description: body.data.description,
@@ -251,7 +252,11 @@ export default async function recordRoutes(app: FastifyInstance) {
       where: { id: { in: deptIds }, active: true },
       select: { id: true, name: true },
     });
-    if (depts.length !== deptIds.length) throw badRequest('Seçilen ekip bulunamadı.');
+    // Kayıt ekibe düşer: ekipleri olan bir departman doğrudan seçilemez.
+    const tree = await loadOrgTree(prisma);
+    if (depts.length !== deptIds.length || !deptIds.every((id) => isAssignableUnit(tree, id))) {
+      throw badRequest('Seçilen ekip bulunamadı.');
+    }
 
     const primaryName = depts.find((d) => d.id === body.department)!.name;
     const secondName = body.department2 ? depts.find((d) => d.id === body.department2)!.name : null;
@@ -351,7 +356,10 @@ export default async function recordRoutes(app: FastifyInstance) {
     app.log.info({ code: created.code, by: actor.id }, 'kayıt oluşturuldu');
 
     // İşlem bittikten SONRA ve ayrı veritabanına: yazılamazsa kayıt yine açılmış olur.
-    if (body.mlInferenceId) {
+    // Kısıtlı kayıt ML hafızasına girmez: taslağın kontrol kaydı da silinir.
+    if (body.mlInferenceId && body.restricted) {
+      await forgetInference(req.log, body.mlInferenceId);
+    } else if (body.mlInferenceId) {
       await recordOutcome(req.log, {
         inferenceId: body.mlInferenceId,
         userId: actor.id,
@@ -363,6 +371,6 @@ export default async function recordRoutes(app: FastifyInstance) {
     }
 
     reply.code(201);
-    return { record: await serializeRecord(created, actor) };
+    return { record: await serializeRecord(created, actor, tree) };
   });
 }

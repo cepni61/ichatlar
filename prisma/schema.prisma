@@ -24,11 +24,19 @@ datasource db {
 // Kuruluş
 // ---------------------------------------------------------------------------
 
+/// Kuruluş birimi, iki seviye: departman (ünite) ve altındaki ekip (işletme
+/// bölümü). parentId boşsa departman, doluysa o departmanın ekibidir.
+/// Kayıtlar ve kişiler ekibe bağlanır (bkz. src/domain/org.ts). Ekibi
+/// olmayan departman kendisi ekip gibi kullanılır.
 model Department {
-  /// Prototipteki kısa kodlar korunur: ik, ki, idari, fin, sat, kalite
+  /// Kalıcı kısa kimlik (ör. ik, ik-is-sagligi) — kuruluş dosyasından gelir.
   id    String @id
   name  String
   short String
+
+  parentId String?
+  parent   Department?  @relation("unitTree", fields: [parentId], references: [id])
+  children Department[] @relation("unitTree")
 
   /// Entra ID grup nesne kimliği. Kullanıcı girişinde departman ve ekip
   /// üyeliği bu gruptan türetilir; boşsa atama elle yapılır.
@@ -45,6 +53,8 @@ model Department {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([parentId])
 }
 
 model User {

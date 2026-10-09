@@ -31,7 +31,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
       prisma.department.findMany({
         where: { active: true },
         orderBy: [{ order: 'asc' }, { name: 'asc' }],
-        select: { id: true, name: true, short: true },
+        select: { id: true, name: true, short: true, parentId: true },
       }),
       // Kullanıcı listesi kayıt sahibi/atama adlarını göstermek için gerekli.
       // E-posta paylaşılmaz — arayüzde kullanılmıyor.
@@ -63,7 +63,11 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
         dept: me.departmentId,
         departmentName: me.departmentName,
       },
-      departments: departments.map((d) => ({ id: d.id, name: d.name, short: d.short })),
+      /**
+       * Departmanlar ve ekipleri tek listede: parent boşsa departman, doluysa o
+       * departmanın ekibi. Kayıt ve kişi ekibe bağlıdır (bkz. src/domain/org.ts).
+       */
+      departments: departments.map((d) => ({ id: d.id, name: d.name, short: d.short, parent: d.parentId })),
       users: users.map((u) => ({
         id: u.id,
         name: u.name,

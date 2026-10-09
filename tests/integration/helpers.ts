@@ -42,9 +42,10 @@ export async function resetDb() {
 let seq = 0;
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(seq++).toString(36)}`;
 
-export async function createDept(name: string) {
+/** Departman; parentId verilirse o departmanın ekibi (bkz. src/domain/org.ts). */
+export async function createDept(name: string, parentId: string | null = null) {
   return prisma.department.create({
-    data: { id: uid('dept'), name, short: name.slice(0, 3).toUpperCase(), order: seq },
+    data: { id: uid('dept'), name, short: name.slice(0, 3).toUpperCase(), order: seq, parentId },
   });
 }
 

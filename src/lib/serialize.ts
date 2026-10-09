@@ -6,6 +6,8 @@ import {
   TYPE_TO_SLUG,
 } from '../domain/constants.js';
 import { maySeeCreator, permissionsFor, type Actor } from '../domain/permissions.js';
+import { actorInTree, loadOrgTree, rootOf, withRoots, type OrgTree } from '../domain/org.js';
+import { prisma } from '../db.js';
 import { slaStatus } from '../domain/sla.js';
 import { parseDetails } from '../domain/suggestion.js';
 
@@ -43,8 +45,12 @@ const viewAttachment = (a: AttachmentView) => ({ id: a.id, name: a.name, size: a
  * Anonim kayıtta createdById tarayıcıya hiç gönderilmez. Gizlemeyi arayüze
  * bırakmak yeterli değildi: ağ sekmesini açan biri kimliği görebilirdi.
  */
-export async function serializeRecord(rec: FullRecord, actor: Actor) {
-  const showCreator = maySeeCreator(rec, actor);
+export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: OrgTree) {
+  // Yetkiler departman genelinde görme kuralına bakar: ekiplerin departmanı gerekir.
+  const tree = orgTree ?? (await loadOrgTree(prisma));
+  const shaped = withRoots(rec, tree);
+  const a = actorInTree(actor, tree);
+  const showCreator = maySeeCreator(shaped, a);
   const sla = await slaStatus(
     { priority: rec.priority, createdAt: rec.createdAt, slaDueAt: rec.slaDueAt, status: STATUS_TO_SLUG[rec.status] ?? rec.status },
     openSlugs,
@@ -58,8 +64,11 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     priority: PRIORITY_TO_SLUG[rec.priority],
     status: STATUS_TO_SLUG[rec.status],
 
+    /** Ekip kimlikleri (kayıt ekibe düşer); departmanları ayrıca. */
     department: rec.departmentId,
     department2: rec.department2Id,
+    departmentRoot: rootOf(tree, rec.departmentId),
+    department2Root: rootOf(tree, rec.department2Id),
 
     createdBy: showCreator ? rec.createdById : null,
     assignee: rec.assigneeId,
@@ -94,10 +103,11 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
 
     attachments: (rec.attachments ?? []).map(viewAttachment),
 
-    permissions: permissionsFor(rec, actor),
+    permissions: permissionsFor(shaped, a),
   };
 }
 
 export async function serializeList(recs: FullRecord[], actor: Actor) {
-  return Promise.all(recs.map((r) => serializeRecord(r, actor)));
+  const tree = await loadOrgTree(prisma);
+  return Promise.all(recs.map((r) => serializeRecord(r, actor, tree)));
 }

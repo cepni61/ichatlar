@@ -10,7 +10,10 @@ import { isOpen, ONERI_OUTCOMES, ONERI_WORK_STATUSES, WORK_STATUSES } from './co
 export interface Actor {
   id: string;
   role: string;
+  /** Kişinin ekibi (bkz. domain/org.ts). */
   departmentId: string | null;
+  /** Ekibin departmanı. Verilmezse departman genelinde görme kuralı uygulanmaz. */
+  departmentRootId?: string | null;
 }
 
 /** Veritabanından okunan kayıt. Kolonlar String olduğu için tipler geniş;
@@ -24,8 +27,11 @@ export interface RecordShape {
   createdById: string;
   assigneeId: string | null;
   anonymous: boolean;
-  /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez. */
+  /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez, yönlendirilemez. */
   restricted?: boolean;
+  /** Ekiplerin departmanları (withRoots ile doldurulur). */
+  departmentRootId?: string | null;
+  department2RootId?: string | null;
 }
 
 export type Action =
@@ -47,8 +53,10 @@ export interface Relation {
   isAssignee: boolean;
   inTeam: boolean;
   isAdmin: boolean;
-  /** Yönetici, kendi departmanının tüm kayıtlarını görür. */
+  /** Yönetici, kendi ekibinin tüm kayıtlarını görür. */
   isDeptManager: boolean;
+  /** Kişinin departmanındaki bir ekibe düşmüş kayıt (Tüm Kayıtlar kapsamı). */
+  inDepartment: boolean;
   open: boolean;
 }
 
@@ -69,6 +77,9 @@ export function relate(rec: RecordShape, actor: Actor): Relation {
       actor.role === Role.MANAGER &&
       actor.departmentId != null &&
       (actor.departmentId === rec.departmentId || actor.departmentId === rec.department2Id),
+    inDepartment:
+      actor.departmentRootId != null &&
+      (actor.departmentRootId === rec.departmentRootId || actor.departmentRootId === rec.department2RootId),
     open: isOpen(rec.status),
   };
 }
@@ -77,13 +88,20 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
   const r = relate(rec, actor);
 
   switch (action) {
+    // Departmandaki diğer ekiplerin kayıtları Tüm Kayıtlar'da görünür ve
+    // okunabilir; "yalnızca ilgili ekip" işaretli olanlar hariç.
     case 'view':
-      return r.isCreator || r.isAssignee || r.inTeam || r.isAdmin || r.isDeptManager;
+      return (
+        r.isCreator || r.isAssignee || r.inTeam || r.isAdmin || r.isDeptManager ||
+        (r.inDepartment && !rec.restricted)
+      );
 
     // Kayıt kişiye değil ekibe düşer; ekipten biri sahiplenir.
     case 'claim':
       return r.open && r.inTeam && rec.assigneeId == null;
 
+    // Kısıtlı kayıt başka EKİBE yönlendirilemez (ilgili ekip dışına çıkardı);
+    // bu kontrol yönlendirme ucunda. Ekip içinde kişiye devir serbest.
     case 'forward':
       return r.open && (r.inTeam || r.isAdmin);
 
@@ -117,9 +135,11 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
     case 'reopen':
       return rec.status === RecordStatus.COZULDU && (r.isCreator || r.isAdmin);
 
+    // Departman genelinde görme yalnızca okumadır: yorum ve dosya ilgili
+    // ekipte, kaydı açanda ve üzerine alanda kalır.
     case 'comment':
     case 'attach':
-      return can('view', rec, actor);
+      return r.isCreator || r.isAssignee || r.inTeam || r.isAdmin || r.isDeptManager;
 
     default:
       return false;

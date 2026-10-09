@@ -13,6 +13,7 @@ import { detailInclude, serializeRecord } from '../lib/serialize.js';
 import { MAX_FILES } from '../domain/attachments.js';
 import { lockRecordByCode, toJsonText } from '../lib/dialect.js';
 import { recordForward, relearn } from '../ml/service.js';
+import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { notifyUsers } from '../lib/notify.js';
 
 /** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
@@ -224,7 +225,8 @@ export default async function actionRoutes(app: FastifyInstance) {
         where: { id: departmentId, active: true },
         select: { name: true },
       });
-      if (!dept) throw badRequest('Ekip bulunamadı.');
+      // Kayıt ekibe gider: ekibi olan bir departman seçilemez, ekibi seçilmeli.
+      if (!dept || !isAssignableUnit(await loadOrgTree(prisma), departmentId)) throw badRequest('Ekip bulunamadı.');
 
       // Ekip değişince kayıt yeniden sahipsiz kalır — yeni ekipten biri alır.
       nextStatus = RecordStatus.YENI;
@@ -262,6 +264,11 @@ export default async function actionRoutes(app: FastifyInstance) {
       action: 'forward',
       ip: req.ip,
       plan: (r) => {
+        // "Yalnızca ilgili ekip görsün" kaydı başka ekibe gidemez (kullanıcı
+        // isteği, 2026-10-09). Ekip içinde kişiye devir serbest.
+        if (departmentId && r.restricted) {
+          throw forbidden('Yalnızca ilgili ekibin gördüğü kayıt başka ekibe yönlendirilemez.');
+        }
         // Kişiye devir yalnızca kaydın ekibindeki birine: aksi hâlde kayıt,
         // görmemesi gereken birinin üzerine düşüp ona görünür olurdu.
         if (assigneeId && (!mateDept || (mateDept !== r.departmentId && mateDept !== r.department2Id))) {

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
+import { actorInTree, loadOrgTree, withRoots } from '../domain/org.js';
 import { env } from '../env.js';
 import { actorOf, requireUser } from '../auth/guard.js';
 import { can } from '../domain/permissions.js';
@@ -10,9 +11,11 @@ import { openStream, remove, saveStream } from '../lib/storage.js';
 const tooLarge = () =>
   new AppError(413, 'TOO_LARGE', `Dosya en fazla ${env.MAX_UPLOAD_MB} MB olabilir; bir seferde en fazla ${MAX_FILES} dosya.`);
 
+// restricted okunmazsa kural "kısıtlı değil" sayar ve sistem yöneticisine
+// kısıtlı kaydın eklerini açardı.
 const recordForPermission = {
   id: true, status: true, departmentId: true, department2Id: true,
-  createdById: true, assigneeId: true, anonymous: true,
+  createdById: true, assigneeId: true, anonymous: true, restricted: true,
 } as const;
 
 /**
@@ -129,7 +132,8 @@ export default async function attachmentRoutes(app: FastifyInstance) {
       },
     });
     // Görme yetkisi olmayana "yok" denir; varlığı bile sızmasın.
-    if (!a || !can('view', a.record, actor)) throw notFound('Ek');
+    const tree = await loadOrgTree(prisma);
+    if (!a || !can('view', withRoots(a.record, tree), actorInTree(actor, tree))) throw notFound('Ek');
     if (a.eventId == null && a.uploadedById !== actor.id) throw notFound('Ek');
 
     return reply

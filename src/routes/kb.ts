@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db.js';
+import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { actorOf, requireRole, requireUser } from '../auth/guard.js';
 import { Role } from '../domain/enums.js';
 import { canEditDept, isHttpUrl, KB_KIND_KEYS, KB_KINDS, kbAccess } from '../domain/kb.js';
@@ -81,9 +82,10 @@ export default async function kbRoutes(app: FastifyInstance) {
     return { items, access: { admin: access.admin, edit: access.edit } };
   });
 
+  // Bilgi Bankası maddesi ve düzenleme yetkisi ekibe bağlanır (kayıtlar gibi):
+  // ekipleri olan bir departman doğrudan seçilemez.
   async function activeDept(id: string) {
-    const d = await prisma.department.findFirst({ where: { id, active: true }, select: { id: true } });
-    if (!d) throw badRequest('Ekip bulunamadı.');
+    if (!isAssignableUnit(await loadOrgTree(prisma), id)) throw badRequest('Ekip bulunamadı.');
   }
 
   app.post('/api/kb', async (req, reply) => {

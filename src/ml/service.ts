@@ -69,13 +69,17 @@ let training: Promise<ActiveModel | null> | null = null;
 
 async function loadTrainingData(params: Params) {
   const [departments, records, kb] = await Promise.all([
+    // Sınıflar ekiplerdir: kayıt açılabilen birimler (etkin, etkin ekibi olmayan).
     prisma.department.findMany({
-      where: { active: true },
+      where: { active: true, children: { none: { active: true } } },
       select: { id: true, name: true },
-      orderBy: { order: 'asc' },
+      orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
     }),
+    // "Yalnızca ilgili ekip görsün" işaretli kayıtlar ML hafızasına girmez:
+    // metinleri modelin terim ağırlıklarına ve eğitim örneklerine yazılırdı
+    // (kullanıcı isteği, 2026-10-09).
     prisma.record.findMany({
-      where: { status: { notIn: EXCLUDED_FROM_TRAINING } },
+      where: { status: { notIn: EXCLUDED_FROM_TRAINING }, restricted: false },
       select: {
         code: true,
         title: true,
@@ -455,6 +459,20 @@ export async function recordOutcome(
     ]);
   } catch (err) {
     log.warn({ err: (err as Error).message }, 'ML sonuç kaydı yazılamadı');
+  }
+}
+
+/**
+ * Kısıtlı kayıt açıldı: kayıt öncesi "ML ile Kontrol Et" çağrısının metni ve
+ * önerileri ML veritabanından silinir. Kayıt ML hafızasına hiç girmez.
+ */
+export async function forgetInference(log: FastifyBaseLogger, inferenceId: string) {
+  const ml = mlDb();
+  if (!ml) return;
+  try {
+    await ml.inference.deleteMany({ where: { id: inferenceId } });
+  } catch (err) {
+    log.warn({ err: (err as Error).message }, 'ML kontrol kaydı silinemedi');
   }
 }
 

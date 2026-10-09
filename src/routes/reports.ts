@@ -18,6 +18,7 @@ import {
 import { surfaceForms, tokenize } from '../domain/similarity.js';
 import { toJsonText } from '../lib/dialect.js';
 import { badRequest } from '../lib/errors.js';
+import { inDepartmentTree, inTeam, loadOrgTree, rootOf, teamsOf } from '../domain/org.js';
 
 /**
  * Raporlar ekip ve kurum düzeyinde toplu sayılar üretir; kayıt gövdesi
@@ -31,30 +32,63 @@ import { badRequest } from '../lib/errors.js';
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 
 /**
- * Ekip filtresi (?department=<id>). Kayıt, asıl ya da ikincil ekibi o ekipse
- * sayılır — ekip tablosundaki sayılarla aynı kural.
+ * İki filtre (kullanıcı isteği, 2026-10-09): ?department=<departman> ve
+ * ?team=<o departmanın ekibi>. Kayıt, asıl ya da ikincil ekibi eşleşirse
+ * sayılır — dağılım tablosundaki sayılarla aynı kural.
  */
-const reportQuery = z.object({ department: z.string().trim().min(1).max(64).optional() });
+const reportQuery = z.object({
+  department: z.string().trim().min(1).max(64).optional(),
+  team: z.string().trim().min(1).max(64).optional(),
+});
 
-async function departmentFilter(req: FastifyRequest) {
-  const q = reportQuery.safeParse(req.query);
-  if (!q.success) throw badRequest('Geçersiz rapor filtresi.');
-  if (!q.data.department) return null;
-  const d = await prisma.department.findUnique({
-    where: { id: q.data.department },
-    select: { id: true, name: true },
-  });
-  if (!d) throw badRequest('Seçilen ekip bulunamadı.');
-  return d;
+type Unit = { id: string; name: string; short: string };
+interface ReportFilter {
+  department: Unit | null;
+  team: Unit | null;
 }
 
-const inDepartment = (deptId: string | null) =>
-  deptId ? { OR: [{ departmentId: deptId }, { department2Id: deptId }] } : undefined;
+async function reportFilter(req: FastifyRequest): Promise<ReportFilter> {
+  const q = reportQuery.safeParse(req.query);
+  if (!q.success) throw badRequest('Geçersiz rapor filtresi.');
+  const { department, team } = q.data;
+  if (!department && !team) return { department: null, team: null };
+  const ids = [department, team].filter((x): x is string => Boolean(x));
+  const units = await prisma.department.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, name: true, short: true, parentId: true },
+  });
+  const byId = new Map(units.map((u) => [u.id, u]));
+  const t = team ? byId.get(team) : undefined;
+  if (team && !t) throw badRequest('Seçilen ekip bulunamadı.');
+  // Ekip tek başına gelirse departmanı ondan türetilir; ikisi gelirse uyuşmalı.
+  const deptId = department ?? (t ? t.parentId ?? t.id : null);
+  const d = deptId ? byId.get(deptId) ?? (await prisma.department.findUnique({
+    where: { id: deptId }, select: { id: true, name: true, short: true, parentId: true },
+  })) : null;
+  if (!d || d.parentId) throw badRequest('Seçilen departman bulunamadı.');
+  if (t && (t.parentId ?? t.id) !== d.id) throw badRequest('Seçilen ekip bu departmanın altında değil.');
+  const view = (u: { id: string; name: string; short: string }) => ({ id: u.id, name: u.name, short: u.short });
+  return { department: view(d), team: t ? view(t) : null };
+}
 
-async function gather(deptId: string | null) {
+const recordWhere = (f: ReportFilter) =>
+  f.team ? inTeam(f.team.id) : f.department ? inDepartmentTree(f.department.id) : undefined;
+
+/**
+ * Dağılım tablosunun birimleri: filtresizken departmanlar, departman
+ * seçiliyken onun ekipleri, ekip seçiliyken yalnızca o ekip.
+ */
+async function gather(f: ReportFilter) {
+  const tree = await loadOrgTree(prisma);
+  const unitIds = f.team
+    ? [f.team.id]
+    : f.department
+      ? teamsOf(tree, f.department.id)
+      : [...tree.values()].filter((u) => u.active && u.parentId == null).map((u) => u.id);
+  const level: 'department' | 'team' = f.department || f.team ? 'team' : 'department';
   const [rows, departments] = await Promise.all([
     prisma.record.findMany({
-      where: inDepartment(deptId),
+      where: recordWhere(f),
       select: {
         code: true,
         title: true,
@@ -74,12 +108,14 @@ async function gather(deptId: string | null) {
       },
     }),
     prisma.department.findMany({
-      where: deptId ? { id: deptId } : { active: true },
+      where: { id: { in: unitIds } },
       orderBy: [{ order: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, short: true },
     }),
   ]);
-  return { rows, departments };
+  // Departman düzeyinde kayıt, ekiplerinden birinin departmanı eşleşirse sayılır.
+  const unitOf = (id: string | null) => (level === 'department' ? rootOf(tree, id) : id);
+  return { rows, departments, level, unitOf };
 }
 
 type Row = Awaited<ReturnType<typeof gather>>['rows'][number];
@@ -101,8 +137,8 @@ export default async function reportRoutes(app: FastifyInstance) {
     { preHandler: requireRole(Role.MANAGER, Role.ADMIN) },
     async (req) => {
       const now = Date.now();
-      const dept = await departmentFilter(req);
-      const { rows, departments } = await gather(dept?.id ?? null);
+      const filter = await reportFilter(req);
+      const { rows, departments, level, unitOf } = await gather(filter);
 
       const open = rows.filter((r) => isOpen(r.status));
       const late = open.filter((r) => breached(r, now));
@@ -120,7 +156,7 @@ export default async function reportRoutes(app: FastifyInstance) {
         .map((r) => (r.resolvedAt!.getTime() - r.createdAt.getTime()) / HOUR_MS);
 
       const perDept = departments.map((d) => {
-        const all = rows.filter((r) => r.departmentId === d.id || r.department2Id === d.id);
+        const all = rows.filter((r) => unitOf(r.departmentId) === d.id || unitOf(r.department2Id) === d.id);
         const dOpen = all.filter((r) => isOpen(r.status));
         return {
           id: d.id,
@@ -160,7 +196,7 @@ export default async function reportRoutes(app: FastifyInstance) {
 
       return {
         /** Uygulanan filtre; filtresizse null (kurum geneli). */
-        filter: dept ? { department: dept } : null,
+        filter: filter.department ? { department: filter.department, team: filter.team } : null,
         totals: {
           records: rows.length,
           open: open.length,
@@ -175,7 +211,9 @@ export default async function reportRoutes(app: FastifyInstance) {
           avgFirstResponseHours: avg(respHours),
           avgSolveHours: avg(solveHours),
         },
+        /** Dağılım birimi: filtresizken departman, departman/ekip seçiliyken ekip. */
         byDepartment: perDept,
+        byDepartmentLevel: level,
         byType: Object.entries(TYPE_LABELS).map(([key, label]) => ({
           id: TYPE_TO_SLUG[key as keyof typeof TYPE_TO_SLUG],
           label,
@@ -204,9 +242,11 @@ export default async function reportRoutes(app: FastifyInstance) {
     { preHandler: requireRole(Role.MANAGER, Role.ADMIN) },
     async (req, reply) => {
       const now = Date.now();
-      const dept = await departmentFilter(req);
+      const filter = await reportFilter(req);
+      const tree = await loadOrgTree(prisma);
+      const names = new Map((await prisma.department.findMany({ select: { id: true, name: true } })).map((d) => [d.id, d.name]));
       const rows = await prisma.record.findMany({
-        where: inDepartment(dept?.id ?? null),
+        where: recordWhere(filter),
         orderBy: { createdAt: 'desc' },
         select: {
           code: true,
@@ -229,7 +269,7 @@ export default async function reportRoutes(app: FastifyInstance) {
       });
 
       const head = [
-        'Kayıt No', 'Tür', 'Başlık', 'Departman', 'İkincil Ekip', 'Öncelik',
+        'Kayıt No', 'Tür', 'Başlık', 'Departman', 'Ekip', 'İkincil Ekip', 'Öncelik',
         'Durum', 'Açan', 'Sahip', 'Oluşturma', 'Son Güncelleme', 'SLA',
       ];
 
@@ -250,6 +290,7 @@ export default async function reportRoutes(app: FastifyInstance) {
         r.code,
         TYPE_LABELS[r.type],
         titleFor(r),
+        names.get(rootOf(tree, r.departmentId) ?? '') ?? '',
         r.department.name,
         r.department2?.name ?? '',
         PRIORITY_LABELS[r.priority],
@@ -272,7 +313,7 @@ export default async function reportRoutes(app: FastifyInstance) {
           action: 'report.export',
           entity: 'Record',
           entityId: '*',
-          after: toJsonText({ rows: rows.length, department: dept?.id ?? null }),
+          after: toJsonText({ rows: rows.length, department: filter.department?.id ?? null, team: filter.team?.id ?? null }),
           ip: req.ip,
         },
       });

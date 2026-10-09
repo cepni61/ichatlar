@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { RecordStatus, Role } from '../../src/domain/enums.js';
-import { createDept, createRecord, createUser, loginAs, makeApp, resetDb } from './helpers.js';
+import { createDept, createRecord, createUser, loginAs, makeApp, prisma, resetDb } from './helpers.js';
 
 /*
  * "Yalnızca ilgili ekip görsün" işareti (2026-10-08, kullanıcı isteği).
@@ -78,6 +78,22 @@ describe('yalnızca ilgili ekip (kısıtlı kayıt)', () => {
       payload: { departmentId: w.kalite.id },
     });
     expect(res.statusCode).toBe(403);
+  });
+
+  it('sistem yöneticisi bildirimden kısıtlı kaydın başlığını görmez, ekini indiremez', async () => {
+    const w = await world();
+    const { secret } = await solvedPair(w);
+    const h = { headers: await loginAs(app, w.admin.id) };
+
+    await prisma.notification.create({ data: { userId: w.admin.id, recordId: secret.id, type: 'STATUS', text: 'Kayıt güncellendi.' } });
+    const items = (await app.inject({ method: 'GET', url: '/api/notifications', ...h })).json().items as { record: { title: string | null; canOpen: boolean } }[];
+    expect(items[0]!.record).toMatchObject({ title: null, canOpen: false });
+
+    const ev = await prisma.recordEvent.create({ data: { recordId: secret.id, type: 'COMMENT', text: 'Ek', byId: w.ikMember.id } });
+    const att = await prisma.attachment.create({
+      data: { recordId: secret.id, eventId: ev.id, name: 'haciz.pdf', size: 4, mime: 'application/pdf', storageKey: 'yok', uploadedById: w.ikMember.id },
+    });
+    expect((await app.inject({ method: 'GET', url: '/api/attachments/' + att.id, ...h })).statusCode).toBe(404);
   });
 
   it('ilgili ekibin yöneticisi, üyesi ve kaydı açan görmeye devam eder', async () => {
