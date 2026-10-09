@@ -44,9 +44,14 @@ function scopeWhere(
       return teamFilter;
     case 'all':
     default:
-      // ADMIN her şeyi görür. Diğerleri: kendi açtıkları + ekiplerine düşenler
-      // + üzerlerine aldıkları.
-      if (actor.role === Role.ADMIN) return {};
+      // ADMIN her şeyi görür — "yalnızca ilgili ekip" işaretli kayıtlar hariç
+      // (onlarda diğerleriyle aynı kural). Diğerleri: kendi açtıkları +
+      // ekiplerine düşenler + üzerlerine aldıkları.
+      if (actor.role === Role.ADMIN) {
+        return {
+          OR: [{ restricted: false }, { createdById: actor.id }, { assigneeId: actor.id }, ...(actor.departmentId ? [teamFilter] : [])],
+        };
+      }
       return {
         OR: [{ createdById: actor.id }, { assigneeId: actor.id }, ...(actor.departmentId ? [teamFilter] : [])],
       };

@@ -2115,7 +2115,7 @@
           <label class="learn-toggle restrict-toggle" data-only="bilgi oneri">
             <input type="checkbox" id="fRestricted" />
             <div><b><svg class="ic ic-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> Yalnızca ilgili ekip görsün</b>
-              <span>Kaydınızı yalnızca siz, seçtiğiniz ekip ve sistem yöneticisi görür. Kaydın içeriği başka kişilere benzer çözüm önerilerinde ve aramada gösterilmez.</span></div>
+              <span>Kaydınızı yalnızca siz ve seçtiğiniz ekip görür. İçeriği başkalarına benzer çözüm önerilerinde ve aramada da gösterilmez.</span></div>
           </label>
 
           <div class="grid two-col" data-only="bilgi">
@@ -3451,7 +3451,7 @@ function renderDetail(){
       + '<div style="min-width:0">'
         + '<div class="inline-actions" style="margin-bottom:8px">'+(isOpen ? slaPill(r) : '')+typePill(r.type)+statusPill(r.status)
           + (r.renewed ? '<span class="pill teal" title="Bu çözüm benzer kayıtlarda önerilir">'+icon('spark')+' Önerilerde</span>' : '')
-          + (r.restricted ? '<span class="pill gray" title="Kayıt ve içeriği yalnızca açan kişiye, ilgili ekibe ve sistem yöneticisine görünür">'+icon('lock')+' Yalnızca ilgili ekip</span>' : '')
+          + (r.restricted ? '<span class="pill gray" title="Kayıt ve içeriği yalnızca açan kişiye ve ilgili ekibe görünür">'+icon('lock')+' Yalnızca ilgili ekip</span>' : '')
           + (isOneri ? '' : '<span class="pill gray">'+esc(prioObj(r.priority).label)+'</span>')+'</div>'
         + '<h3 style="margin:0 0 6px">'+esc(r.title)+'</h3>'
         + '<p class="hint">'+esc(r.code)+' • Kaydı açan: '+esc(openerName)+' • Ekip: '+esc(deptName(r.department))

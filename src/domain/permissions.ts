@@ -62,7 +62,9 @@ export function relate(rec: RecordShape, actor: Actor): Relation {
     isCreator: rec.createdById === actor.id,
     isAssignee: rec.assigneeId != null && rec.assigneeId === actor.id,
     inTeam,
-    isAdmin: actor.role === Role.ADMIN,
+    // "Yalnızca ilgili ekip görsün" kayıtta sistem yöneticisinin ayrıcalığı yok:
+    // ekibinde değilse görmez, işlem de yapamaz (kullanıcı isteği, 2026-10-09).
+    isAdmin: actor.role === Role.ADMIN && !rec.restricted,
     isDeptManager:
       actor.role === Role.MANAGER &&
       actor.departmentId != null &&

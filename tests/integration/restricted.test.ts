@@ -5,9 +5,9 @@ import { createDept, createRecord, createUser, loginAs, makeApp, resetDb } from 
 
 /*
  * "Yalnızca ilgili ekip görsün" işareti (2026-10-08, kullanıcı isteği).
- * Kaydın kendisini zaten yalnızca açan, ilgili ekip(ler), sahibi ve sistem
- * yöneticisi görüyor. İşaret, içeriğin başka ekiplere sızdığı paylaşılan
- * kanalları kapatır: benzer çözüm önerileri, arama, öneri
+ * İşaretli kaydı yalnızca açan kişi ve ilgili ekip (üyeleri, yöneticisi,
+ * sahibi) görür; 2026-10-09'dan beri sistem yöneticisi de göremez. İçerik
+ * paylaşılan kanallara da çıkmaz: benzer çözüm önerileri, arama, öneri
  * havuzu ("Önerilerde"), rapor konuları ve başka ekiplerin CSV'si.
  */
 
@@ -59,6 +59,37 @@ describe('yalnızca ilgili ekip (kısıtlı kayıt)', () => {
     expect(res.statusCode).toBe(403);
   });
 
+  it('sistem yöneticisi kısıtlı kaydı açamaz ve listesinde görmez', async () => {
+    const w = await world();
+    const { secret, open } = await solvedPair(w);
+    const h = { headers: await loginAs(app, w.admin.id) };
+    expect((await app.inject({ method: 'GET', url: '/api/records/' + secret.code, ...h })).statusCode).toBe(403);
+    const list = (await app.inject({ method: 'GET', url: '/api/records?scope=all', ...h })).json();
+    const codes = (list.records as { code: string }[]).map((r) => r.code);
+    expect(codes).toContain(open.code);
+    expect(codes).not.toContain(secret.code);
+  });
+
+  it('sistem yöneticisi kısıtlı kayıtta işlem yapamaz', async () => {
+    const w = await world();
+    const rec = await createRecord({ createdById: w.opener.id, departmentId: w.ik.id, restricted: true });
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${rec.code}/forward`, headers: await loginAs(app, w.admin.id),
+      payload: { departmentId: w.kalite.id },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('ilgili ekibin yöneticisi, üyesi ve kaydı açan görmeye devam eder', async () => {
+    const w = await world();
+    const ikManager = await createUser({ name: 'İK Yönetici', role: Role.MANAGER, departmentId: w.ik.id });
+    const { secret } = await solvedPair(w);
+    for (const id of [ikManager.id, w.opener.id, w.ikMember.id]) {
+      const res = await app.inject({ method: 'GET', url: '/api/records/' + secret.code, headers: await loginAs(app, id) });
+      expect(res.statusCode).toBe(200);
+    }
+  });
+
   it('benzer çözüm önerilerinde çıkmaz', async () => {
     const w = await world();
     const { secret, open } = await solvedPair(w);
@@ -105,8 +136,10 @@ describe('yalnızca ilgili ekip (kısıtlı kayıt)', () => {
     expect(other.body).not.toContain('Maaş haczi');
     expect(other.body).toContain('Kısıtlı kayıt');
 
+    // Sistem yöneticisi de ekip dışında sayılır (2026-10-09).
     const adm = await app.inject({ method: 'GET', url: '/api/reports/export.csv', headers: await loginAs(app, w.admin.id) });
-    expect(adm.body).toContain('Maaş haczi');
+    expect(adm.body).not.toContain('Maaş haczi');
+    expect(adm.body).toContain('Kısıtlı kayıt');
   });
 });
 

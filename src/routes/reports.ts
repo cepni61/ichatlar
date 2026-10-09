@@ -236,11 +236,12 @@ export default async function reportRoutes(app: FastifyInstance) {
       const fmt = (d: Date) =>
         d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-      // Kısıtlı kaydın başlığı yalnızca ilgili ekibin yöneticisine ve sistem
-      // yöneticisine yazılır; sayılar tutarlı kalsın diye satır durur.
+      // Kısıtlı kaydın başlığı yalnızca ilgili ekibin yöneticisine yazılır
+      // (sistem yöneticisi dahil diğerlerine değil); sayılar tutarlı kalsın
+      // diye satır durur.
       const actor = actorOf(req);
       const titleFor = (r: (typeof rows)[number]) =>
-        !r.restricted || actor.role === Role.ADMIN ||
+        !r.restricted ||
         (actor.departmentId != null && (actor.departmentId === r.departmentId || actor.departmentId === r.department2Id))
           ? r.title
           : 'Kısıtlı kayıt';
