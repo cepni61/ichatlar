@@ -848,6 +848,13 @@
     background:var(--chrome-input-bg);color:var(--chrome-input-fg);
     border:1px solid var(--chrome-input-line);font-size:12px;font-weight:500;
   }
+  /* Açılan liste her temada beyaz zemin, koyu yazı. Koyu temalarda kutunun
+     yarı saydam zemini listeye de geçiyor, liste gri ve okunmaz oluyordu
+     (kullanıcı geri bildirimi, 2026-10-09). Departman başlıkları kalın. */
+  .profile select option,
+  .profile select optgroup{background:#fff;color:#12275c}
+  .profile select optgroup{font-weight:700}
+  .profile select option{font-weight:500}
   /* Tek satır: büyük harfli etiket iki satıra taşıp yer kaplıyordu */
   .profile .switch-lbl{
     font-size:12px;color:var(--chrome-role);margin-bottom:4px;font-weight:600;
