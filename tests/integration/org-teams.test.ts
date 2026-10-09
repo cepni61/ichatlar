@@ -73,6 +73,26 @@ describe('departman → ekip', () => {
     expect(await list(w.admin.id, `scope=all&dept=${w.isg.id}`)).toEqual([isgRec.code]);
   });
 
+  it('arayüz yüklemesi (scope=visible): her görünümün kayıtları gelir; Tüm Kayıtlar bayrağı scope=all ile aynı', async () => {
+    const w = await world();
+    const sibling = await createRecord({ createdById: w.finMember.id, departmentId: w.isg.id });
+    const toOtherDept = await createRecord({ createdById: w.ikMember.id, departmentId: w.finMain.id });
+    const secret = await createRecord({ createdById: w.finMember.id, departmentId: w.ikMain.id, restricted: true });
+    const foreign = await createRecord({ createdById: w.finMember.id, departmentId: w.finMain.id });
+    const h = as(await loginAs(app, w.ikMember.id));
+
+    const visible = (await app.inject({ method: 'GET', url: '/api/records?scope=visible', ...h })).json().records as
+      { code: string; inAllRecords: boolean }[];
+    const byCode = new Map(visible.map((r) => [r.code, r.inAllRecords]));
+    expect(byCode.get(sibling.code)).toBe(true);
+    expect(byCode.get(toOtherDept.code)).toBe(false); // Açtıklarım'da var, Tüm Kayıtlar'da yok
+    expect(byCode.get(secret.code)).toBe(false); // Ekibime Gelenler'de var, Tüm Kayıtlar'da yok
+    expect(byCode.has(foreign.code)).toBe(false);
+
+    const all = (await app.inject({ method: 'GET', url: '/api/records?scope=all', ...h })).json().records as { code: string }[];
+    expect(all.map((r) => r.code).sort()).toEqual(visible.filter((r) => r.inAllRecords).map((r) => r.code).sort());
+  });
+
   it('departmandaki diğer ekibin kaydı okunur, yorum yazılamaz; kısıtlı olanı açılamaz', async () => {
     const w = await world();
     const open = await createRecord({ createdById: w.finMember.id, departmentId: w.ikMain.id });

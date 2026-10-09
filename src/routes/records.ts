@@ -31,7 +31,20 @@ const withDetail = detailInclude;
 function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
   const teamFilter: Prisma.RecordWhereInput = actor.departmentId ? inTeam(actor.departmentId) : { id: '__none__' };
 
+  const departmentWide: Prisma.RecordWhereInput[] = actor.departmentRootId
+    ? [{ AND: [{ restricted: false }, inDepartmentTree(actor.departmentRootId)] }]
+    : [];
+
   switch (scope) {
+    // Arayüzün tek yüklemesi: kişinin herhangi bir görünümde (Açtıklarım,
+    // Ekibime Gelenler, Üzerimdekiler, Tüm Kayıtlar) görebileceği her kayıt.
+    // Tüm Kayıtlar ekranı bunları kayıttaki inAllRecords ile süzer.
+    case 'visible': {
+      const own: Prisma.RecordWhereInput[] = [{ createdById: actor.id }, { assigneeId: actor.id }, teamFilter];
+      return actor.role === Role.ADMIN
+        ? { OR: [{ restricted: false }, ...own] }
+        : { OR: [...own, ...departmentWide] };
+    }
     case 'mine':
       return { assigneeId: actor.id };
     case 'opened':
@@ -45,14 +58,12 @@ function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
       // "Yalnızca ilgili ekip görsün" işaretli kayıtlar burada hiç görünmez —
       // ilgili ekip onları Ekibime Gelenler'de, açan kişi Açtıklarım'da görür.
       if (actor.role === Role.ADMIN) return { restricted: false };
-      return actor.departmentRootId
-        ? { AND: [{ restricted: false }, inDepartmentTree(actor.departmentRootId)] }
-        : { id: '__none__' };
+      return departmentWide[0] ?? { id: '__none__' };
   }
 }
 
 const listQuery = z.object({
-  scope: z.enum(['all', 'team', 'mine', 'opened']).default('all'),
+  scope: z.enum(['all', 'visible', 'team', 'mine', 'opened']).default('all'),
   type: z.enum(['bilgi', 'oneri']).optional(),
   status: z.string().optional(),
   /** Ekip süzgeci. */

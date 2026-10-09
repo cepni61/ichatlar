@@ -18,11 +18,17 @@
   const clip = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
   const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2)
     .map((w) => w[0].toLocaleUpperCase('tr-TR')).join('');
+  // Bilgi Bankası maddesi ve yetkisi ekibe bağlı: departman başlığı altında ekipleri.
   const deptOptions = (first, selected, only) =>
     (first != null ? '<option value="">' + esc(first) + '</option>' : '') +
-    DEPARTMENTS.filter((d) => !only || only.includes(d.id))
-      .map((d) => '<option value="' + esc(d.id) + '"' + (d.id === selected ? ' selected' : '') + '>' + esc(d.name) + '</option>')
-      .join('');
+    rootUnits().map((r) => {
+      const ts = teamsOfDept(r.id).filter((d) => !only || only.includes(d.id));
+      return ts.length
+        ? '<optgroup label="' + esc(r.name) + '">' +
+            ts.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === selected ? ' selected' : '') + '>' + esc(d.name) + '</option>').join('') +
+          '</optgroup>'
+        : '';
+    }).join('');
   const shortUrl = (u) => {
     try { const x = new URL(u); return x.host + (x.pathname !== '/' ? x.pathname : ''); } catch (_) { return u; }
   };
@@ -114,7 +120,7 @@
   const kbAccess = () => window.IH_KB || { view: false, admin: false, edit: [] };
   const kbEditable = () => {
     const a = kbAccess();
-    return a.edit === 'all' ? DEPARTMENTS.map((d) => d.id) : a.edit || [];
+    return a.edit === 'all' ? teamUnits().map((d) => d.id) : a.edit || [];
   };
   const kbKinds = () => (kbAccess().kinds || [
     { id: 'BILGI', label: 'Bilgi yanıtı' }, { id: 'UYGULAMA', label: 'Uygulama' }, { id: 'SUREC', label: 'Süreç' },

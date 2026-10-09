@@ -1183,6 +1183,11 @@
   }
   .field textarea{min-height:130px;resize:vertical;line-height:1.6}
   .hint{font-size:12.5px;color:var(--muted);line-height:1.55}
+  /* Yönetim: departman başlığı ve altındaki ekipler */
+  .mgmt-dept td{background:var(--panel2)}
+  .mgmt-team td:first-child{padding-left:28px}
+  /* Kayıt detayındaki geçen süre (çözüm hedefi gösterilmez) */
+  .elapsed{font-size:24px;font-weight:800;color:var(--text);letter-spacing:var(--ls-tight);margin-top:2px;font-variant-numeric:tabular-nums}
 
   .dropzone{
     border:1.5px dashed var(--line-2);border-radius:var(--r-sm);
@@ -2040,7 +2045,7 @@
       <div class="grid kpis" id="dashKpis"></div>
       <div class="grid dashboard-layout">
         <div class="card">
-          <div class="card-head"><h3>Ekiplere Göre Dağılım</h3><span class="pill blue"><span class="dot"></span>Canlı görünüm</span></div>
+          <div class="card-head"><h3 id="deptChartTitle">Ekiplere Göre Dağılım</h3><span class="pill blue"><span class="dot"></span>Canlı görünüm</span></div>
           <div class="card-body" id="deptChart"></div>
         </div>
         <div class="card">
@@ -2103,11 +2108,13 @@
           <div class="field" data-only="oneri"><label for="oBenefitNote">Faydanın ölçüsü <span class="opt">(isteğe bağlı)</span></label>
             <input id="oBenefitNote" maxlength="1000" placeholder="Ör. ayda ~20 saat tasarruf, yılda ~50 bin TL" /></div>
 
+          <!-- Önce departman, sonra o departmanın ekibi (kayıt ekibe düşer). -->
           <div class="grid two-col dept-row" data-only="bilgi oneri">
-            <div class="field"><label for="fDept1" id="fDept1Lbl">İlgili Ekip 1</label><select id="fDept1"></select></div>
-            <div class="field" data-only="bilgi"><label for="fDept2">İlgili Ekip 2 <span class="opt">(isteğe bağlı)</span></label><select id="fDept2"></select>
-              <p class="hint" style="margin-top:6px">Kayıt en fazla 2 ekibe yönlendirilebilir.</p></div>
+            <div class="field"><label for="fRoot1">Departman</label><select id="fRoot1"></select></div>
+            <div class="field"><label for="fDept1" id="fDept1Lbl">Ekip</label><select id="fDept1"></select></div>
           </div>
+          <div class="field" data-only="bilgi"><label for="fDept2">İkinci ekip <span class="opt">(isteğe bağlı)</span></label><select id="fDept2"></select>
+            <p class="hint" style="margin-top:6px">Kayıt en fazla 2 ekibe yönlendirilebilir.</p></div>
 
           <!-- Yalnızca ilgili ekip: kayıt zaten başka ekiplere açılmaz; işaret
                içeriğin benzer çözüm önerilerine ve aramaya
@@ -2162,7 +2169,7 @@
           <div class="card form-card" data-only="bilgi">
             <h3 style="font-size:16px">Kaydınıza ne olur?</h3>
             <div class="leader"><div class="avatar">1</div><div><b>Ekibe düşer</b><span>Ekip üyelerinden biri kaydı üzerine alır.</span></div></div>
-            <div class="leader"><div class="avatar">2</div><div><b>Çözüm hedefi</b><span id="slaPreview1">Önceliğe göre hesaplanır</span></div></div>
+            <div class="leader"><div class="avatar">2</div><div><b>Çözüm</b><span id="slaPreview1">Ekip tarafından en kısa sürede tamamlanır.</span></div></div>
             <div class="leader"><div class="avatar">3</div><div><b>Hatırlatma</b><span>Süre dolarsa ekip ve yöneticisi bilgilendirilir.</span></div></div>
             <p class="hint" style="margin-top:12px">Renk göstergesi: <span class="pill green" style="padding:2px 8px"><span class="dot"></span>zamanında</span> <span class="pill yellow" style="padding:2px 8px"><span class="dot"></span>süre yaklaşıyor</span> <span class="pill red" style="padding:2px 8px"><span class="dot"></span>süre aşıldı</span></p>
           </div>
@@ -2175,7 +2182,7 @@
           <div class="card form-card" data-only="oneri" style="margin-top:16px">
             <h3 style="font-size:16px">Öneriniz nasıl değerlendirilir?</h3>
             <div class="leader"><div class="avatar">1</div><div><b>Ekibe düşer</b><span>Seçtiğiniz ekibin üyeleri öneriyi görür; biri değerlendirmeyi üstlenir.</span></div></div>
-            <div class="leader"><div class="avatar">2</div><div><b>Değerlendirilir</b><span>Gerekirse sizden ek bilgi istenir. İlk değerlendirme hedefi <span id="oSla" style="display:inline;margin:0">48</span> saat.</span></div></div>
+            <div class="leader"><div class="avatar">2</div><div><b>Değerlendirilir</b><span>Gerekirse sizden ek bilgi istenir. Ekip en kısa sürede değerlendirir.</span></div></div>
             <div class="leader"><div class="avatar">3</div><div><b>Sonuçlanır</b><span>Hayata geçirilir ya da gerekçesiyle kapatılır; sonuç size bildirilir.</span></div></div>
           </div>
         </div>
@@ -2229,7 +2236,7 @@
         <div class="card-body flt-row">
           <input id="fltText" type="search" aria-label="Kayıtlarda ara" placeholder="Ara..." />
           <select id="fltType" aria-label="Tür"><option value="">Tüm türler</option></select>
-          <select id="fltDept" aria-label="Ekip"><option value="">Tüm ekipler</option></select>
+          <select id="fltDept" aria-label="Departman ya da ekip"><option value="">Tüm departmanlar</option></select>
           <select id="fltStatus" aria-label="Durum"><option value="">Tüm durumlar</option></select>
         </div>
       </div>
@@ -2249,8 +2256,10 @@
       <!-- Ekip filtresi: seçilince bütün kartlar ve CSV o ekibin kayıtlarıyla
            (asıl ya da ikincil ekibi o ekip olanlar) yeniden hesaplanır. -->
       <div class="card rep-filter">
-        <label for="repDept">Ekip</label>
-        <select id="repDept"><option value="">Tüm ekipler</option></select>
+        <label for="repDept">Departman</label>
+        <select id="repDept"><option value="">Tüm departmanlar</option></select>
+        <label for="repTeam">Ekip</label>
+        <select id="repTeam" disabled><option value="">Tüm ekipler</option></select>
         <button class="mini-btn" type="button" id="repDeptClear" hidden>Filtreyi kaldır</button>
       </div>
       <div class="grid report-kpis" id="repKpis"></div>
@@ -2332,9 +2341,9 @@
         <div class="card-body" id="fbAdminList"></div>
       </div>
       <div class="card" style="margin-bottom:16px">
-        <div class="card-head"><h3>Ekipler ve Üyeleri</h3><span class="pill blue" id="mgmtDeptCount">0 ekip</span></div>
+        <div class="card-head"><h3>Departmanlar, Ekipler ve Üyeleri</h3><span class="pill blue" id="mgmtDeptCount">0 ekip</span></div>
         <div class="card-body table-wrap">
-          <table class="table"><thead><tr><th>Ekip</th><th>Ekip Üyeleri</th><th>Açık Kayıt</th><th>Toplam</th></tr></thead><tbody id="mgmtDepts"></tbody></table>
+          <table class="table"><thead><tr><th>Departman / Ekip</th><th>Ekip Üyeleri</th><th>Açık Kayıt</th><th>Toplam</th></tr></thead><tbody id="mgmtDepts"></tbody></table>
         </div>
       </div>
       <div class="card" style="margin-bottom:16px">
@@ -2524,6 +2533,26 @@ const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const deptName  = id => (DEPARTMENTS.find(d=>d.id===id)||{}).name || '—';
+/* Kuruluş ağacı (2026-10-09): DEPARTMENTS hem departmanları hem ekipleri
+   taşır — parent boşsa departman, doluysa o departmanın ekibi. Kayıt ve kişi
+   EKİBE bağlıdır; ekibi olmayan departman kendisi ekip sayılır (yaprak). */
+const isTeamUnit  = d => !!d.parent || !DEPARTMENTS.some(x => x.parent === d.id);
+const teamUnits   = () => DEPARTMENTS.filter(isTeamUnit);
+const rootUnits   = () => DEPARTMENTS.filter(d => !d.parent);
+const rootOf      = id => { const d = DEPARTMENTS.find(x => x.id === id); return d ? (d.parent || d.id) : null; };
+const teamsOfDept = rootId => { const k = DEPARTMENTS.filter(d => d.parent === rootId); return k.length ? k : DEPARTMENTS.filter(d => d.id === rootId); };
+/* "Departman · Ekip"; ekip adı departmanla aynıysa (asıl ekip) tek ad. */
+const unitLabel = id => {
+  const d = DEPARTMENTS.find(x => x.id === id); if (!d) return '—';
+  const p = d.parent && DEPARTMENTS.find(x => x.id === d.parent);
+  return p && p.name !== d.name ? p.name + ' · ' + d.name : d.name;
+};
+/* Ekip seçimi: departmanlar başlık (optgroup), altında ekipleri. */
+const teamOptions = (selected, exclude) => rootUnits().map(r => {
+  const ts = teamsOfDept(r.id).filter(t => t.id !== exclude);
+  return ts.length ? '<optgroup label="'+esc(r.name)+'">' + ts.map(t =>
+    '<option value="'+esc(t.id)+'"'+(t.id === selected ? ' selected' : '')+'>'+esc(t.name)+'</option>').join('') + '</optgroup>' : '';
+}).join('');
 const userById  = id => USERS.find(u=>u.id===id);
 const userName  = id => (userById(id)||{}).name || '—';
 const typeLabel = id => (TYPES.find(t=>t.id===id)||{}).label || id;
@@ -2766,7 +2795,7 @@ const PR_CYCLE = ['normal','normal','yuksek','normal','kritik','normal','yuksek'
 function buildSeed(){
   const out = [];
   let i = 0, seq = 100;
-  DEPARTMENTS.forEach(dept => {
+  teamUnits().forEach(dept => {
     const team = USERS.filter(u => u.dept === dept.id);
     (TPL[dept.id] || []).forEach(tpl => {
       const [type, title, description, resolution] = tpl;
@@ -2801,7 +2830,7 @@ function buildSeed(){
       /* Her 5. kayda ikinci ekip ata */
       let dept2 = null;
       if (i % 5 === 2) {
-        const others = DEPARTMENTS.filter(d => d.id !== dept.id);
+        const others = teamUnits().filter(d => d.id !== dept.id);
         dept2 = others[i % others.length].id;
       }
 
@@ -2918,7 +2947,7 @@ const TITLES = {
   'my-tickets':    ['Açtıklarım','Açtığınız kayıtların durumu ve geçmişi.'],
   'team-tickets':  ['Ekibime Gelenler','Ekibinize gelen açık kayıtlar, duruma göre.'],
   'owned-tickets': ['Üzerimdekiler','Üzerinize aldığınız kayıtlar.'],
-  'all-records':   ['Tüm Kayıtlar','Görme yetkiniz olan tüm kayıtları arayın ve filtreleyin.'],
+  'all-records':   ['Tüm Kayıtlar','Departmanınızdaki bütün ekiplerin kayıtlarını arayın ve filtreleyin.'],
   'reports':       ['Raporlar','Kayıt sayıları, hedef sürelere uyum ve ekip performansı.'],
   'management':    ['Yönetim','Ekipler, ekip üyeleri, hedef süreler ve uygulama geri bildirimleri.'],
   'search':        ['Kişi ve Kaynak Ara','Kişileri ve kurumsal uygulama, süreç, bilgi kaynaklarını arayın.'],
@@ -3161,16 +3190,25 @@ function renderDashboard(){
     + '<div class="trend '+k[5]+'">'+esc(k[4])+'</div></div></div>'
   ).join('');
 
-  /* Departman dağılımı (açık kayıt) */
-  const byDept = DEPARTMENTS.map(d => ({ d, n: open.filter(r => r.department === d.id).length }))
-                            .sort((a,b) => b.n - a.n);
+  /* Dağılım (açık kayıt): kişinin departmanındaki ekipler; departmanı olmayan
+     (sistem yöneticisi) ya da görünen kayıtları hep başka departmanlarda olan
+     için departmanlar. Kişinin başka departmana açtığı kayıtlar ekip dağılımına
+     girmez — oraya ait değiller. */
+  const meUser = (typeof Store.me === 'function' && Store.me()) || userById(Store.data.currentUserId) || {};
+  const myRoot = meUser.role === 'Sistem Yöneticisi' ? null : rootOf(meUser.dept);
+  const oneDept = myRoot && recs.some(r => rootOf(r.department) === myRoot) ? myRoot : null;
+  const unitOfRec = r => oneDept ? r.department : rootOf(r.department);
+  $('#deptChartTitle').textContent = oneDept ? 'Ekiplere Göre Dağılım' : 'Departmanlara Göre Dağılım';
+  const byDept = (oneDept ? teamsOfDept(oneDept) : rootUnits())
+    .map(d => ({ d, n: open.filter(r => unitOfRec(r) === d.id).length }))
+    .sort((a,b) => b.n - a.n);
   const maxD = Math.max(1, ...byDept.map(x => x.n));
   $('#deptChart').innerHTML = byDept.map(x =>
     '<div class="bar-row"><span>'+esc(x.d.name)+'</span><div class="bar"><span style="width:'+(x.n/maxD*100)+'%"></span></div><b>'+x.n+'</b></div>'
   ).join('');
 
   /* Öne çıkan metrikler — gerçek veriden */
-  const perDept = DEPARTMENTS.map(d => {
+  const perDept = teamUnits().map(d => {
     const all = recs.filter(r => r.department === d.id);
     const rs = all.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt)-new Date(r.createdAt))/HOUR);
     return { d, avg: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null, sla: slaPctOf(all),
@@ -3183,9 +3221,9 @@ function renderDashboard(){
   /* Sıralamalar yalnızca kullanıcının görebildiği kayıtlardan; başlık kapsamı söyler (UX denetimi B11). */
   $('#highlights').innerHTML =
     '<p class="hint" style="margin:0 0 8px">Görebildiğiniz kayıtlardaki ekipler arasında.</p>' +
-    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('check')+'</div><div><b>Hedef süreye en çok uyan ekip</b><span>'+(bestSla ? esc(bestSla.d.name)+' • %'+bestSla.sla : 'Henüz sonuçlanmış kayıt yok')+'</span></div></div>' +
-    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('bulb')+'</div><div><b>En çok öneriyi hayata geçiren ekip</b><span>'+(topOneri && topOneri.oneri ? esc(topOneri.d.name)+' • '+topOneri.oneri+' öneri fayda sağladı' : 'Henüz fayda sağlayan öneri yok')+'</span></div></div>' +
-    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('clock')+'</div><div><b>En hızlı ilk geri dönüş</b><span>'+(fastest ? esc(fastest.d.name)+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
+    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('check')+'</div><div><b>Hedef süreye en çok uyan ekip</b><span>'+(bestSla ? esc(unitLabel(bestSla.d.id))+' • %'+bestSla.sla : 'Henüz sonuçlanmış kayıt yok')+'</span></div></div>' +
+    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('bulb')+'</div><div><b>En çok öneriyi hayata geçiren ekip</b><span>'+(topOneri && topOneri.oneri ? esc(unitLabel(topOneri.d.id))+' • '+topOneri.oneri+' öneri fayda sağladı' : 'Henüz fayda sağlayan öneri yok')+'</span></div></div>' +
+    '<div class="leader"><div class="avatar" aria-hidden="true">'+icon('clock')+'</div><div><b>En hızlı ilk geri dönüş</b><span>'+(fastest ? esc(unitLabel(fastest.d.id))+' • '+fmtDur(fastest.avg)+' ortalama' : 'Veri yok')+'</span></div></div>';
 
   /* Son kayıtlar */
   const recent = recs.slice().sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0,6);
@@ -3279,7 +3317,12 @@ function renderAll(){
   /* filtre seçeneklerini bir kez doldur */
   if (!$('#fltType').dataset.ready) {
     $('#fltType').innerHTML   = '<option value="">Tüm türler</option>' + TYPES.map(t=>'<option value="'+t.id+'">'+t.label+'</option>').join('');
-    $('#fltDept').innerHTML   = '<option value="">Tüm ekipler</option>' + DEPARTMENTS.map(d=>'<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+    /* Departman ya da ekip: her departmanın başında "tümü" seçeneği (root:id), altında ekipleri. */
+    $('#fltDept').innerHTML   = '<option value="">Tüm departmanlar</option>' + rootUnits().map(r => {
+      const ts = teamsOfDept(r.id).filter(t => t.id !== r.id);
+      return '<optgroup label="'+esc(r.name)+'"><option value="root:'+esc(r.id)+'">'+esc(r.name)+' — tümü</option>'
+        + ts.map(t => '<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('') + '</optgroup>';
+    }).join('');
     $('#fltStatus').innerHTML = '<option value="">Tüm durumlar</option>' + STATUSES.map(s=>'<option value="'+s.id+'">'+esc(s.label)+'</option>').join('');
     $('#fltType').dataset.ready = '1';
     /* Metin kutusu kısa bir beklemeyle (her tuşta tüm liste yeniden
@@ -3292,12 +3335,17 @@ function renderAll(){
   const q = ($('#fltText').value||'').toLocaleLowerCase('tr-TR');
   const ft = $('#fltType').value, fd = $('#fltDept').value, fs = $('#fltStatus').value;
 
+  const fRoot = fd.startsWith('root:') ? fd.slice(5) : '';
   const rows = Store.data.records.filter(r => {
+    /* Tüm Kayıtlar: departmanın kayıtları, kısıtlılar hariç (sunucu bayrağı;
+       sunucusuz prototipte bayrak yok, hepsi görünür). */
+    if (r.inAllRecords === false) return false;
     if (ft && r.type !== ft) return false;
-    if (fd && r.department !== fd && r.department2 !== fd) return false;
+    if (fRoot && rootOf(r.department) !== fRoot && rootOf(r.department2) !== fRoot) return false;
+    if (fd && !fRoot && r.department !== fd && r.department2 !== fd) return false;
     if (fs && r.status !== fs) return false;
     if (q) {
-      const hay = (r.code + ' ' + r.title + ' ' + r.description + ' ' + deptName(r.department)).toLocaleLowerCase('tr-TR');
+      const hay = (r.code + ' ' + r.title + ' ' + r.description + ' ' + unitLabel(r.department)).toLocaleLowerCase('tr-TR');
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -3423,15 +3471,13 @@ function renderDetail(){
       + 'Aşağıdaki “Güncelleme Ekle” alanından yanıt yazın; kaydın sahibine bildirim gider.</div></div>'
     : '';
 
-  /* Süre ilerlemesi (sunucunun hedef zamanına göre) */
-  const sw = slaWindow(r);
-  const limit = sw.due - sw.start;
-  const pct = Math.min(100, Math.round((Date.now() - sw.start) / limit * 100));
-  const remain = sw.due - Date.now();
-  const slaText = !isOpen ? (ONERI_DONE.includes(r.status) ? 'Öneri değerlendirildi (' + statusObj(r.status).label + ') — süre takibi durdu.'
-    : r.status === 'cozuldu' ? (isOneri ? 'Öneri sonuçlandı — süre takibi durdu.' : 'Kayıt çözüldü — süre takibi durdu.') : r.status === 'reddedildi' ? 'Kayıt reddedildi — süre takibi durdu.' : 'Kayıt kapandı — süre takibi durdu.')
-    : remain > 0 ? 'Süre aşımına ' + fmtDur(remain/HOUR) + ' kaldı.'
-    : 'Süre ' + fmtDur(-remain/HOUR) + ' aşıldı.';
+  /* Süre: yalnızca geçen süre. Çözüm hedefi, kalan süre ve ilerleme çubuğu
+     gösterilmez — kullanıcılara saat vaadi verilmez (kullanıcı isteği, 2026-10-09). */
+  const endAt = !isOpen ? (r.resolvedAt || r.closedAt || r.updatedAt) : null;
+  const elapsedH = Math.max(0, ((endAt ? new Date(endAt) : new Date()) - new Date(r.createdAt)) / HOUR);
+  const slaText = !isOpen ? (ONERI_DONE.includes(r.status) ? 'Öneri değerlendirildi (' + statusObj(r.status).label + ').'
+    : r.status === 'cozuldu' ? (isOneri ? 'Öneri sonuçlandı.' : 'Kayıt çözüldü.') : r.status === 'reddedildi' ? 'Kayıt reddedildi.' : 'Kayıt kapandı.')
+    : 'Kayıt açıldığından bu yana geçen süre.';
 
   const openerName = r.anonymous ? 'Anonim kullanıcı' : userName(r.createdBy);
 
@@ -3496,14 +3542,15 @@ function renderDetail(){
   + '<div>'
     + '<div class="card form-card">'
       + '<h3 style="font-size:16px;margin:0 0 14px">Süre</h3>'
-      + '<div class="field"><span class="lbl">'+(isOneri ? 'Değerlendirme hedefi' : 'Çözüm hedefi')+': '+prioObj(r.priority).sla+' saat</span>'
-        + '<div class="progress"><span class="'+(pct>=100?'red':'')+'" style="width:'+pct+'%"></span></div>'
-        + '<p class="hint" style="margin-top:8px">'+esc(slaText)+'</p></div>'
+      + '<div class="field"><span class="lbl">'+(isOpen ? 'Açık kalma süresi' : 'Sonuçlanma süresi')+'</span>'
+        + '<div class="elapsed">'+esc(fmtDur(elapsedH))+'</div>'
+        + '<p class="hint" style="margin-top:6px">'+esc(slaText)+'</p></div>'
       + '<div class="kv"><span class="k">Kayıt No</span><span class="v">'+esc(r.code)+'</span></div>'
       + '<div class="kv"><span class="k">Tür</span><span class="v">'+esc(typeLabel(r.type))+'</span></div>'
       + (isOneri ? '' : '<div class="kv"><span class="k">Öncelik</span><span class="v">'+esc(prioObj(r.priority).label)+'</span></div>')
+      + '<div class="kv"><span class="k">Departman</span><span class="v">'+esc(deptName(rootOf(r.department)))+'</span></div>'
       + '<div class="kv"><span class="k">Ekip</span><span class="v">'+esc(deptName(r.department))+'</span></div>'
-      + (r.department2 ? '<div class="kv"><span class="k">İkincil Ekip</span><span class="v">'+esc(deptName(r.department2))+'</span></div>' : '')
+      + (r.department2 ? '<div class="kv"><span class="k">İkincil Ekip</span><span class="v">'+esc(unitLabel(r.department2))+'</span></div>' : '')
       + '<div class="kv"><span class="k">Durum</span><span class="v">'+esc(statusObj(r.status).label)+'</span></div>'
       + '<div class="kv"><span class="k">Açan</span><span class="v">'+esc(openerName)+'</span></div>'
       + '<div class="kv"><span class="k">Sahiplenen</span><span class="v">'+(r.assignee?esc(userName(r.assignee)):'—')+'</span></div>'
@@ -3556,7 +3603,7 @@ function actForward(r){
   const mates = USERS.filter(u => u.dept === me.dept && u.id !== me.id);
   openModal('Kayıt Yönlendirme',
     '<div class="field"><label>Departman Seçiniz</label><select id="fwdDept"><option value="">— seçiniz —</option>'
-    + DEPARTMENTS.filter(d => d.id !== r.department).map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('')
+    + teamOptions(null, r.department)
     + '</select></div>'
     + '<div class="field"><label>— veya — Takım Arkadaşı Seçiniz</label><select id="fwdMate"><option value="">— seçiniz —</option>'
     + mates.map(u => '<option value="'+u.id+'">'+esc(u.name)+'</option>').join('')
@@ -3683,11 +3730,10 @@ function setFormType(t){
   $$('#typeCards input[name="fType"]').forEach(i => { i.checked = i.value === t; });
   const oneri = t === 'oneri';
   $('#fTitle').placeholder = oneri ? 'Önerinizi tek cümlede özetleyin' : 'Ör. Bordro pusulam portalda görünmüyor';
-  $('#fDept1Lbl').textContent = oneri ? 'Değerlendirecek Ekip' : 'İlgili Ekip 1';
+  $('#fDept1Lbl').textContent = oneri ? 'Değerlendirecek ekip' : 'Ekip';
   $('#createBtn').textContent = oneri ? 'Öneriyi Gönder' : 'Kaydı Oluştur';
   if (oneri) {
     $('#fDept2').value = '';
-    $('#oSla').textContent = prioObj('normal').sla;
     renderOneriPreview();
   }
   invalidateMl();
@@ -3740,7 +3786,7 @@ function resetForm(){
   $('#fTitle').value = ''; $('#fDesc').value = '';
   $('#oCurrent').value = ''; $('#oProposal').value = ''; $('#oBenefitNote').value = '';
   $$('#oBenefits input').forEach(i => { i.checked = false; });
-  $('#fDept1').value = ''; $('#fDept2').value = ''; $('#fPrio').value = 'normal';
+  setFormTeam(''); $('#fDept2').value = ''; $('#fPrio').value = 'normal';
   $('#fRestricted').checked = false;
   $('#mlResults').innerHTML = ''; $('#mlDept').innerHTML = '';
   $('#mlStatus').innerHTML = ML_IDLE;
@@ -3750,8 +3796,8 @@ function resetForm(){
 }
 
 function updateSlaPreview(){
-  const p = prioObj($('#fPrio').value || 'normal');
-  $('#slaPreview1').textContent = p.label + ' öncelikte ' + p.sla + ' saat içinde çözülmesi hedeflenir.';
+  /* Saat vaadi verilmez (kullanıcı isteği, 2026-10-09). */
+  $('#slaPreview1').textContent = 'Ekip tarafından en kısa sürede tamamlanır.';
 }
 
 /* Gönder düğmesi kapalıyken kullanıcı nedenini görmeli: dar ekranda yan
@@ -3854,8 +3900,32 @@ function autoApplyDept(){
   applyDeptSuggestion(top.id, true);
 }
 
+/* Kayıt formu: Departman → Ekip. Ekip seçimi (#fDept1) kaydın gideceği yerdir;
+   departman yalnızca listeyi daraltır. Kodla yapılan seçim (asistan önerisi,
+   taslak) setFormTeam ile ikisini birlikte kurar. */
+function fillDeptSelects(){
+  $('#fRoot1').innerHTML = '<option value="">Seçiniz...</option>'
+    + rootUnits().map(r => '<option value="'+esc(r.id)+'">'+esc(r.name)+'</option>').join('');
+  fillTeamSelect('');
+  $('#fDept2').innerHTML = '<option value="">Seçiniz (isteğe bağlı)</option>' + teamOptions();
+}
+function fillTeamSelect(rootId, selected){
+  const sel = $('#fDept1');
+  const ts = rootId ? teamsOfDept(rootId) : [];
+  sel.innerHTML = '<option value="">'+(rootId ? 'Seçiniz...' : 'Önce departman seçin')+'</option>'
+    + ts.map(t => '<option value="'+esc(t.id)+'"'+(t.id === selected ? ' selected' : '')+'>'+esc(t.name)+'</option>').join('');
+  sel.disabled = !rootId;
+  if (rootId && !selected && ts.length === 1) sel.value = ts[0].id;   // tek ekipli departman
+}
+function setFormTeam(teamId){
+  const root = rootOf(teamId) || '';
+  $('#fRoot1').value = root;
+  fillTeamSelect(root, teamId);
+  $('#fDept1').value = teamId || '';
+}
+
 function applyDeptSuggestion(id, auto){
-  $('#fDept1').value = id;
+  setFormTeam(id);
   if ($('#fDept2').value === id) $('#fDept2').value = '';
   form.deptApplied = true;
   form.deptAuto = !!auto;
@@ -3901,7 +3971,7 @@ function solvedByMatch(){
 function restoreForm(s){
   setFormType(s.type);
   $('#fTitle').value = s.title; $('#fDesc').value = s.desc;
-  $('#fDept1').value = s.d1; $('#fDept2').value = s.d2; $('#fPrio').value = s.prio || 'normal';
+  setFormTeam(s.d1); $('#fDept2').value = s.d2; $('#fPrio').value = s.prio || 'normal';
   $('#fRestricted').checked = !!s.restricted;
   form.files = s.files;
   form.deptTouched = !!s.d1;
@@ -3986,8 +4056,10 @@ function createRecord(){
    ========================================================================= */
 
 const REP_TTL = 30000;     /* özet ucu kısa süreli önbelleğe alınır */
-let repCache = {};         /* ekip filtresi → {at, sum}; '' = kurum geneli */
-let repDept = '';          /* seçili ekip filtresi; boş = tüm ekipler */
+let repCache = {};         /* "departman|ekip" → {at, sum}; '|' = kurum geneli */
+/* İki filtre (kullanıcı isteği, 2026-10-09): önce departman, sonra onun ekibi. */
+let repDept = '';          /* seçili departman; boş = tüm departmanlar */
+let repTeam = '';          /* seçili ekip (repDept'in altında); boş = departmanın tümü */
 
 const repPct = (a, b) => (b > 0 ? Math.round(a / b * 100) : 0);
 const repAvg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
@@ -3998,12 +4070,20 @@ const repAvg = xs => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : nu
 /* 403 (yetki yok) ile gerçek hata ayrı tutulur: yönetici kurum geneli raporu
    alamadıysa bunu sessizce kendi kapsamındaki sayılarla geçiştirmek yanıltıcıydı. */
 let repFailed = false;
-function fetchReportSummary(dept){
-  dept = dept || '';
+const repQuery = (dept, team) => {
+  const q = new URLSearchParams();
+  if (dept) q.set('department', dept);
+  if (team) q.set('team', team);
+  const s = q.toString();
+  return s ? '?' + s : '';
+};
+function fetchReportSummary(dept, team){
+  dept = dept || ''; team = team || '';
   if (location.protocol === 'file:') return Promise.resolve(null);
-  const hit = repCache[dept];
+  const key = dept + '|' + team;
+  const hit = repCache[key];
   if (hit && Date.now() - hit.at < REP_TTL) return Promise.resolve(hit.sum);
-  const url = '/api/reports/summary' + (dept ? '?department=' + encodeURIComponent(dept) : '');
+  const url = '/api/reports/summary' + repQuery(dept, team);
   return fetch(url, { credentials:'same-origin' })
     .then(res => {
       repFailed = !res.ok && res.status !== 403;
@@ -4011,7 +4091,7 @@ function fetchReportSummary(dept){
     })
     .then(sum => {
       if (!sum || !sum.totals) return null;
-      repCache[dept] = { at: Date.now(), sum };
+      repCache[key] = { at: Date.now(), sum };
       return sum;
     })
     .catch(() => { repFailed = true; return null; });
@@ -4019,17 +4099,21 @@ function fetchReportSummary(dept){
 
 /* Gecikenler yalnızca kullanıcının görebildiği kayıtlardan listelenebilir:
    özet ucu kayıt gövdesi döndürmüyor. Sayı kurumun, liste kapsamın. */
-/* Kayıt, asıl ya da ikincil ekibi seçili ekipse filtreye girer (sunucuyla aynı kural). */
-const inRepDept = (r, dept) => !dept || r.department === dept || r.department2 === dept;
+/* Kayıt, asıl ya da ikincil ekibi seçili ekipse (ya da seçili departmanın
+   bir ekibiyse) filtreye girer — sunucuyla aynı kural. */
+const inRepDept = (r, dept, team) =>
+  team ? (r.department === team || r.department2 === team)
+  : dept ? (rootOf(r.department) === dept || rootOf(r.department2) === dept)
+  : true;
 
-function repVisibleLate(dept){
-  return Store.data.records.filter(r => inRepDept(r, dept) && OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
+function repVisibleLate(dept, team){
+  return Store.data.records.filter(r => inRepDept(r, dept, team) && OPEN_STATUSES.includes(r.status) && slaLevel(r) === 'red');
 }
 
-function reportModelLocal(dept){
-  const recs = Store.data.records.filter(r => inRepDept(r, dept));
+function reportModelLocal(dept, team){
+  const recs = Store.data.records.filter(r => inRepDept(r, dept, team));
   const open = recs.filter(r => OPEN_STATUSES.includes(r.status));
-  const late = repVisibleLate(dept);
+  const late = repVisibleLate(dept, team);
   const anon = recs.filter(r => r.anonymous).length;
   const oneri = recs.filter(r => r.type === 'oneri');
   const oneriOk = oneri.filter(oneriAccepted).length;
@@ -4037,8 +4121,11 @@ function reportModelLocal(dept){
 
   /* İkincil ekip de sayılır — özet ucu da öyle sayıyor. İki görünüm
      arasında gidip gelirken sayılar zıplamasın. */
-  const depts = DEPARTMENTS.filter(d => !dept || d.id === dept).map(d => {
-    const all = recs.filter(r => r.department === d.id || r.department2 === d.id);
+  /* Dağılım birimi: filtresizken departman, departman seçiliyken ekipleri. */
+  const units = team ? DEPARTMENTS.filter(d => d.id === team) : dept ? teamsOfDept(dept) : rootUnits();
+  const unitOf = id => (dept || team) ? id : rootOf(id);
+  const depts = units.map(d => {
+    const all = recs.filter(r => unitOf(r.department) === d.id || unitOf(r.department2) === d.id);
     return {
       label: d.name,
       n: all.length,
@@ -4053,7 +4140,7 @@ function reportModelLocal(dept){
   recs.forEach(r => mlTokens(r.title).forEach(w => { wc[w] = (wc[w] || 0) + 1; }));
 
   return {
-    scope: 'local', dept: dept || '',
+    scope: 'local', dept: dept || '', team: team || '',
     total: recs.length, open: open.length, late: late.length,
     anonPct:  recs.length ? repPct(anon, recs.length) : null,
     slaPct:   slaPctOf(recs),
@@ -4069,11 +4156,11 @@ function reportModelLocal(dept){
   };
 }
 
-function reportModelServer(sum, dept){
+function reportModelServer(sum, dept, team){
   const t = sum.totals;
-  const vis = repVisibleLate(dept);
+  const vis = repVisibleLate(dept, team);
   return {
-    scope: 'org', dept: dept || '',
+    scope: 'org', dept: dept || '', team: team || '',
     total: t.records, open: t.open, late: t.late,
     anonPct: t.anonymousPct, slaPct: t.slaPct, oneriPct: t.oneriAcceptPct,
     avgResp: t.avgFirstResponseHours, avgSolve: t.avgSolveHours,
@@ -4091,20 +4178,27 @@ function reportModelServer(sum, dept){
    her çizimde tazelenir, seçim korunur. */
 function fillRepDept(){
   const sel = $('#repDept'); if (!sel) return;
-  if (repDept && !DEPARTMENTS.some(d => d.id === repDept)) repDept = '';
-  sel.innerHTML = '<option value="">Tüm ekipler</option>'
-    + DEPARTMENTS.map(d => '<option value="'+esc(d.id)+'"'+(d.id === repDept ? ' selected' : '')+'>'+esc(d.name)+'</option>').join('');
+  if (repDept && !rootUnits().some(d => d.id === repDept)) repDept = '';
+  sel.innerHTML = '<option value="">Tüm departmanlar</option>'
+    + rootUnits().map(d => '<option value="'+esc(d.id)+'"'+(d.id === repDept ? ' selected' : '')+'>'+esc(d.name)+'</option>').join('');
+  /* Ekip yalnızca seçili departmanın ekiplerinden; departman seçilmeden kapalı. */
+  const teams = repDept ? teamsOfDept(repDept) : [];
+  if (repTeam && !teams.some(t => t.id === repTeam)) repTeam = '';
+  const ts = $('#repTeam');
+  ts.innerHTML = '<option value="">Tüm ekipler</option>'
+    + teams.map(t => '<option value="'+esc(t.id)+'"'+(t.id === repTeam ? ' selected' : '')+'>'+esc(t.name)+'</option>').join('');
+  ts.disabled = !repDept;
   $('#repDeptClear').hidden = !repDept;
 }
 
 function renderReports(){
   fillRepDept();
-  const want = repDept;
-  paintReports(reportModelLocal(want));
-  fetchReportSummary(want).then(sum => {
-    if (want !== repDept) return;   // bu arada filtre değişti: eski yanıtı çizme
-    if (sum) paintReports(reportModelServer(sum, want));
-    else if (repFailed) paintReports(reportModelLocal(want));   // hata şeridi + "Tekrar dene"
+  const want = repDept, wantTeam = repTeam;
+  paintReports(reportModelLocal(want, wantTeam));
+  fetchReportSummary(want, wantTeam).then(sum => {
+    if (want !== repDept || wantTeam !== repTeam) return;   // bu arada filtre değişti: eski yanıtı çizme
+    if (sum) paintReports(reportModelServer(sum, want, wantTeam));
+    else if (repFailed) paintReports(reportModelLocal(want, wantTeam));   // hata şeridi + "Tekrar dene"
     const retry = $('#repRetry');
     if (retry) retry.onclick = () => { repCache = {}; renderReports(); };
   });
@@ -4114,7 +4208,8 @@ function paintReports(m){
   if (!$('#repKpis') || !$('#repCharts')) return;
   const yuzde = v => (v == null ? '—' : '%' + v);
 
-  const dAd = m.dept ? deptName(m.dept) : '';
+  const dAd = m.team ? unitLabel(m.team) : m.dept ? deptName(m.dept) : '';
+  const dTur = m.team ? 'Ekip' : 'Departman';
   $('#repKpis').innerHTML = [
     ['Toplam Kayıt', m.total, dAd ? dAd : (m.scope === 'org' ? 'Kurum geneli' : 'Görebildiğiniz kayıtlar')],
     // Anonim gönderim kaldırıldı; o kart hep %0 gösterecekti.
@@ -4141,7 +4236,7 @@ function paintReports(m){
   const donutColors = ['#2563eb','#0d9c92','#f59e0b','#7c4ddb','#4caf3f','#94a3b8'];
   /* Ekip seçiliyken ekiplere göre dağılım tek dilim olurdu: yerine o ekibin
      kayıtlarının önceliğe göre dağılımı gösterilir. */
-  const pieRows = m.dept ? (m.priorities || []) : m.depts;
+  const pieRows = m.team ? (m.priorities || []) : m.depts;
   const dTop = pieRows.filter(x => x.n > 0).sort((a,b) => b.n - a.n);
   const dSum = dTop.reduce((a,c) => a + c.n, 0) || 1;
   let acc = 0;
@@ -4159,7 +4254,7 @@ function paintReports(m){
           + '<span class="lg-name">'+esc(r.label)+'</span>'
           + '<b>'+r.n+'</b><em>%'+fmtNum(r.n/dSum*100)+'</em></li>').join('')
       + '</ul></div>'
-      + (!m.dept && dSum > m.total
+      + (!m.team && dSum > m.total
           ? '<p class="hint">Dilimler '+dSum+' atama gösteriyor: ikincil ekibe de yönlendirilen kayıt iki ekipte birden sayılır. Ortadaki sayı gerçek kayıt adedi.</p>'
           : '')
     : '<p class="hint">Henüz kayıt yok.</p>';
@@ -4181,11 +4276,12 @@ function paintReports(m){
 
   /* Kapsam şeridi: tablonun neyi kapsadığı okunmadan görünsün. */
   const kapsam = m.dept && m.scope === 'org'
-    ? '<span class="pill blue">Ekip: '+esc(dAd)+'</span>'
-      + '<span class="hint">Asıl ya da ikincil ekibi '+esc(dAd)+' olan kayıtların tamamı.</span>'
+    ? '<span class="pill blue">'+dTur+': '+esc(dAd)+'</span>'
+      + '<span class="hint">'+(m.team ? 'Asıl ya da ikincil ekibi '+esc(dAd)+' olan kayıtların tamamı.'
+                                       : esc(dAd)+' departmanının bütün ekiplerine düşen kayıtların tamamı.')+'</span>'
     : m.dept && !repFailed
-    ? '<span class="pill gray">Ekip: '+esc(dAd)+'</span>'
-      + '<span class="hint">Görebildiğiniz kayıtlardan bu ekibe ait olanlar. Ekibin tamamı için yönetici yetkisi gerekiyor.</span>'
+    ? '<span class="pill gray">'+dTur+': '+esc(dAd)+'</span>'
+      + '<span class="hint">Görebildiğiniz kayıtlardan bu '+(m.team ? 'ekibe' : 'departmana')+' ait olanlar. Tamamı için yönetici yetkisi gerekiyor.</span>'
     : m.scope === 'org'
     ? '<span class="pill blue">Kurum geneli</span>'
       + '<span class="hint">Sayılar kurum geneli rapordan geliyor; bütün ekipleri kapsıyor.</span>'
@@ -4214,14 +4310,14 @@ function paintReports(m){
   $('#repCharts').innerHTML =
     '<div class="rep-scope">'+kapsam+ortalama+'</div>'
   + '<div class="rep-wide">'
-  +   card(m.dept ? 'Öncelik Dağılımı' : 'Ekiplere Göre Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
-  +   card('Süre performansı','<span class="pill gray">'+(m.dept ? esc(dAd) : m.scope === 'org' ? 'Tüm ekipler' : 'Kapsamınız')+'</span>', slaBlok)
+  +   card(m.team ? 'Öncelik Dağılımı' : m.dept ? 'Ekiplere Göre Dağılım' : 'Departmanlara Göre Dağılım','<span class="pill blue">'+m.total+' kayıt</span>', donut)
+  +   card('Süre performansı','<span class="pill gray">'+(m.dept ? esc(dAd) : m.scope === 'org' ? 'Tüm departmanlar' : 'Kapsamınız')+'</span>', slaBlok)
   + '</div><div class="rep-mason">'
   + card('Kayıt Türü','<span class="pill yellow">Bilgi / Öneri</span>', barChart(m.types, v => v))
   + card('Durum Dağılımı','', barChart(m.statuses, v => v))
   + card('En Çok Gelen Konular','', barChart(m.topics, v => v))
-  + card('En Hızlı İlk Geri Dönüş','<span class="pill green">Ekip bazında</span>', barChart(respRows, fmtDur, 'g'))
-  + card('Ortalama Çözüm Süresi','<span class="pill yellow">Ekip bazında</span>', barChart(solveRows, fmtDur, 'o'))
+  + card('En Hızlı İlk Geri Dönüş','<span class="pill green">'+(m.dept ? 'Ekip' : 'Departman')+' bazında</span>', barChart(respRows, fmtDur, 'g'))
+  + card('Ortalama Çözüm Süresi','<span class="pill yellow">'+(m.dept ? 'Ekip' : 'Departman')+' bazında</span>', barChart(solveRows, fmtDur, 'o'))
   + card('Geciken Kayıtlar','<span class="pill red">'+m.late+'</span>', geciken)
   + '</div>';
 }
@@ -4249,26 +4345,34 @@ function renderManagement(){
      sonra kurum geneli özet gelirse onunla yeniden çizilir. Yerel sayılar
      yöneticiye başka ekipleri 0 kayıtlı gösteriyordu. */
   const recs = Store.data.records;
-  const local = id => {
-    const all = recs.filter(r => r.department === id);
-    return { open: all.filter(r => OPEN_STATUSES.includes(r.status)).length, total: all.length };
-  };
-  const paint = per => {
-    $('#mgmtDeptCount').textContent = DEPARTMENTS.length + ' ekip';
-    $('#mgmtDepts').innerHTML = DEPARTMENTS.map(d => {
-      const n = per(d.id);
-      const team = USERS.filter(u => u.dept === d.id);
-      return '<tr><td><b>'+esc(d.name)+'</b></td>'
-        + '<td class="small">'+(team.length ? team.map(u => esc(u.name)).join(', ') : '—')+'</td>'
-        + '<td>'+(n.open ? '<span class="pill blue">'+n.open+'</span>' : '<span class="small">0</span>')+'</td>'
-        + '<td><b>'+n.total+'</b></td></tr>';
+  const count = all => ({ open: all.filter(r => OPEN_STATUSES.includes(r.status)).length, total: all.length });
+  const localTeam = id => count(recs.filter(r => r.department === id));
+  const localRoot = id => count(recs.filter(r => rootOf(r.department) === id));
+  /* Departman başlığı, altında ekipleri (kişiler ekibe bağlı). Ekibi olmayan
+     departman tek satır. */
+  const paint = (perTeam, perRoot) => {
+    $('#mgmtDeptCount').textContent = rootUnits().length + ' departman · ' + teamUnits().length + ' ekip';
+    const nums = n => '<td>'+(n.open ? '<span class="pill blue">'+n.open+'</span>' : '<span class="small">0</span>')+'</td>'
+      + '<td><b>'+n.total+'</b></td>';
+    const members = id => { const t = USERS.filter(u => u.dept === id); return t.length ? t.map(u => esc(u.name)).join(', ') : '—'; };
+    $('#mgmtDepts').innerHTML = rootUnits().map(root => {
+      const teams = teamsOfDept(root.id);
+      if (teams.length === 1 && teams[0].id === root.id) {
+        return '<tr><td><b>'+esc(root.name)+'</b></td><td class="small">'+members(root.id)+'</td>'+nums(perTeam(root.id))+'</tr>';
+      }
+      return '<tr class="mgmt-dept"><td colspan="2"><b>'+esc(root.name)+'</b> <span class="small">· '+teams.length+' ekip</span></td>'+nums(perRoot(root.id))+'</tr>'
+        + teams.map(t => '<tr class="mgmt-team"><td>'+esc(t.name)+'</td><td class="small">'+members(t.id)+'</td>'+nums(perTeam(t.id))+'</tr>').join('');
     }).join('');
   };
-  paint(local);
+  paint(localTeam, localRoot);
+  /* Kurum geneli özet: filtresizken byDepartment departman düzeyinde, byTeam ekip düzeyinde. */
   fetchReportSummary().then(sum => {
     if (!sum || !sum.byDepartment || CURRENT !== 'management') return;
-    const byId = new Map(sum.byDepartment.map(x => [x.id, x]));
-    paint(id => { const x = byId.get(id); return x ? { open: x.open, total: x.total } : { open: 0, total: 0 }; });
+    const zero = { open: 0, total: 0 };
+    const roots = new Map(sum.byDepartment.map(x => [x.id, x]));
+    const teams = new Map((sum.byTeam || []).map(x => [x.id, x]));
+    paint(id => { const x = teams.get(id) || roots.get(id); return x ? { open: x.open, total: x.total } : zero; },
+          id => { const x = roots.get(id); return x ? { open: x.open, total: x.total } : zero; });
   });
 
   $('#mgmtSla').innerHTML = PRIORITIES.map(p =>
@@ -4436,8 +4540,7 @@ function init(){
   };
 
   /* Form seçenekleri */
-  $('#fDept1').innerHTML = '<option value="">Seçiniz...</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
-  $('#fDept2').innerHTML = '<option value="">Seçiniz (isteğe bağlı)</option>' + DEPARTMENTS.map(d => '<option value="'+d.id+'">'+esc(d.name)+'</option>').join('');
+  fillDeptSelects();
   $('#fPrio').innerHTML  = PRIORITIES.map(p => '<option value="'+p.id+'"'+(p.id==='normal'?' selected':'')+'>'+p.label+'</option>').join('');
 
   /* Tablo satırı klavyeyle de açılır (Enter / Boşluk); düğme ve bağlantılar kendi davranışını korur */
@@ -4521,6 +4624,13 @@ function init(){
     $(sel).addEventListener('input', () => { if (form.type === 'oneri') { renderOneriPreview(); syncCreateBtn(); } });
   });
 
+  /* Departman seçimi ekip listesini daraltır; kişinin seçimi sayılır (ekip değişimi gibi). */
+  $('#fRoot1').addEventListener('change', () => {
+    fillTeamSelect($('#fRoot1').value);
+    $('#fDept1').dispatchEvent(new Event('change'));
+    syncCreateBtn();
+  });
+
   /* Form değişimi → benzer çözüm taraması yeniden planlanır */
   ['#fTitle','#fDesc','#fDept1','#fDept2','#fPrio'].forEach(sel => {
     $(sel).addEventListener('input', invalidateMl);
@@ -4585,8 +4695,9 @@ function init(){
   };
 
   $('#csvBtn').onclick = exportCsv;
-  $('#repDept').addEventListener('change', e => { repDept = e.target.value; renderReports(); });
-  $('#repDeptClear').addEventListener('click', () => { repDept = ''; renderReports(); $('#repDept').focus(); });
+  $('#repDept').addEventListener('change', e => { repDept = e.target.value; repTeam = ''; renderReports(); });
+  $('#repTeam').addEventListener('change', e => { repTeam = e.target.value; renderReports(); });
+  $('#repDeptClear').addEventListener('click', () => { repDept = ''; repTeam = ''; renderReports(); $('#repDept').focus(); });
 
   Agent.init();
   show('dashboard', null, { history:false });
@@ -4612,7 +4723,7 @@ function randomKpi(){
   const solve = recs.filter(r => r.resolvedAt).map(r => (new Date(r.resolvedAt) - new Date(r.createdAt)) / HOUR);
   const avgSolve = solve.length ? solve.reduce((a,b)=>a+b,0)/solve.length : null;
 
-  const per = DEPARTMENTS.map(d => {
+  const per = teamUnits().map(d => {
     const all = recs.filter(r => r.department === d.id);
     const rs = all.filter(r => r.firstResponseAt).map(r => (new Date(r.firstResponseAt)-new Date(r.createdAt))/HOUR);
     return { d, total: all.length, resp: rs.length ? rs.reduce((a,b)=>a+b,0)/rs.length : null };
@@ -5018,7 +5129,7 @@ const Chat = {
       setFormType('bilgi');                 // alanlar tür seçilmeden gizli
       $('#fTitle').value = text.slice(0, 200);
       $('#fDesc').value = text;
-      if (dept) $('#fDept1').value = dept;
+      if (dept) setFormTeam(dept);
       invalidateMl();
       $('#fTitle').focus();
     });
@@ -5338,9 +5449,9 @@ const Chat = {
     }
 
     if (q === 'yogunluk') {
-      const per = DEPARTMENTS.map(d => ({ d, n: recs.filter(r => r.department === d.id).length }))
+      const per = teamUnits().map(d => ({ d, n: recs.filter(r => r.department === d.id).length }))
                              .sort((a,b) => b.n - a.n).slice(0,4);
-      const list = per.map(x => '<li><b>'+esc(x.d.name)+'</b> — '+x.n+' kayıt</li>').join('');
+      const list = per.map(x => '<li><b>'+esc(unitLabel(x.d.id))+'</b> — '+x.n+' kayıt</li>').join('');
       return this.bot('Görebildiğiniz kayıtlarda ekip yoğunluğu:<ul>'+list+'</ul>', 250);
     }
 

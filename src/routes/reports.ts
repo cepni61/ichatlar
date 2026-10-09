@@ -18,7 +18,7 @@ import {
 import { surfaceForms, tokenize } from '../domain/similarity.js';
 import { toJsonText } from '../lib/dialect.js';
 import { badRequest } from '../lib/errors.js';
-import { inDepartmentTree, inTeam, loadOrgTree, rootOf, teamsOf } from '../domain/org.js';
+import { inDepartmentTree, inTeam, isAssignableUnit, loadOrgTree, rootOf, teamsOf } from '../domain/org.js';
 
 /**
  * Raporlar ekip ve kurum düzeyinde toplu sayılar üretir; kayıt gövdesi
@@ -115,7 +115,7 @@ async function gather(f: ReportFilter) {
   ]);
   // Departman düzeyinde kayıt, ekiplerinden birinin departmanı eşleşirse sayılır.
   const unitOf = (id: string | null) => (level === 'department' ? rootOf(tree, id) : id);
-  return { rows, departments, level, unitOf };
+  return { rows, departments, level, unitOf, tree };
 }
 
 type Row = Awaited<ReturnType<typeof gather>>['rows'][number];
@@ -138,7 +138,7 @@ export default async function reportRoutes(app: FastifyInstance) {
     async (req) => {
       const now = Date.now();
       const filter = await reportFilter(req);
-      const { rows, departments, level, unitOf } = await gather(filter);
+      const { rows, departments, level, unitOf, tree } = await gather(filter);
 
       const open = rows.filter((r) => isOpen(r.status));
       const late = open.filter((r) => breached(r, now));
@@ -214,6 +214,11 @@ export default async function reportRoutes(app: FastifyInstance) {
         /** Dağılım birimi: filtresizken departman, departman/ekip seçiliyken ekip. */
         byDepartment: perDept,
         byDepartmentLevel: level,
+        /** Her ekibin sayıları (Yönetim ekranındaki departman/ekip tablosu için). */
+        byTeam: [...tree.keys()].filter((id) => isAssignableUnit(tree, id)).map((id) => {
+          const all = rows.filter((r) => r.departmentId === id || r.department2Id === id);
+          return { id, open: all.filter((r) => isOpen(r.status)).length, total: all.length };
+        }),
         byType: Object.entries(TYPE_LABELS).map(([key, label]) => ({
           id: TYPE_TO_SLUG[key as keyof typeof TYPE_TO_SLUG],
           label,

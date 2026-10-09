@@ -232,11 +232,14 @@
   // sayıya ulaşana kadar sayfa sayfa çekilir.
   const PAGE_SIZE = 200;
 
+  // scope=visible: her görünümün (Açtıklarım, Ekibime Gelenler, Üzerimdekiler,
+  // Tüm Kayıtlar) kayıtları tek listede; Tüm Kayıtlar kayıttaki inAllRecords
+  // bayrağıyla süzer (departman kapsamı, kısıtlı kayıt yok — 2026-10-09).
   async function refreshRecords() {
-    const first = await Api.records({ scope: 'all', pageSize: PAGE_SIZE, page: 1 });
+    const first = await Api.records({ scope: 'visible', pageSize: PAGE_SIZE, page: 1 });
     const all = first.records.slice();
     for (let page = 2; all.length < first.total; page++) {
-      const next = await Api.records({ scope: 'all', pageSize: PAGE_SIZE, page });
+      const next = await Api.records({ scope: 'visible', pageSize: PAGE_SIZE, page });
       if (!next.records.length) break; // arada kayıt silindiyse sonsuz döngüye girme
       all.push(...next.records);
     }
@@ -485,14 +488,20 @@
   window.actForward = function (r) {
     const me = Store.me();
     const mates = USERS.filter((u) => u.dept === me.dept && u.id !== me.id);
+    // "Yalnızca ilgili ekip görsün" kaydı başka ekibe gönderilemez (sunucu da
+    // reddeder); ekip içinde devir serbest (kullanıcı isteği, 2026-10-09).
+    const teamPart = r.restricted
+      ? '<p class="hint" style="margin:0 0 14px">' + icon('lock', 'ic-sm') +
+        ' Bu kayıt yalnızca ilgili ekibe açık; başka bir ekibe yönlendirilemez. Ekip içinde devredebilirsiniz.</p>' +
+        '<input type="hidden" id="fwdDept" value="" />'
+      : '<div class="field"><label for="fwdDept">Başka bir ekibe gönder</label><select id="fwdDept"><option value="">— seçin —</option>' +
+        teamOptions(null, r.department) +
+        '</select></div>';
     openModal(
       'Kayıt Yönlendirme',
-      '<div class="field"><label for="fwdDept">Başka bir ekibe gönder</label><select id="fwdDept"><option value="">— seçin —</option>' +
-        DEPARTMENTS.filter((d) => d.id !== r.department)
-          .map((d) => '<option value="' + d.id + '">' + esc(d.name) + '</option>')
-          .join('') +
-        '</select></div>' +
-        '<div class="field"><label for="fwdMate">— ya da — Ekip arkadaşına devret</label><select id="fwdMate"><option value="">— seçin —</option>' +
+      teamPart +
+        '<div class="field"><label for="fwdMate">' + (r.restricted ? 'Ekip arkadaşına devret' : '— ya da — Ekip arkadaşına devret') +
+        '</label><select id="fwdMate"><option value="">— seçin —</option>' +
         mates.map((u) => '<option value="' + u.id + '">' + esc(u.name) + '</option>').join('') +
         '</select></div>' +
         '<div class="field"><label for="fwdNote">Yönlendirme notu</label><textarea id="fwdNote" placeholder="Yönlendirme sebebini yazın..."></textarea></div>',
@@ -911,9 +920,10 @@
 
   window.exportCsv = function () {
     // Aktarım sunucuda yapılır: yetki kontrolü ve denetim izi orada.
-    // Raporlar ekranında ekip seçiliyse CSV de yalnızca o ekibin kayıtları.
+    // Raporlar ekranında departman/ekip seçiliyse CSV de yalnızca onların kayıtları.
     const dept = typeof repDept !== 'undefined' ? repDept : '';
-    window.location.href = '/api/reports/export.csv' + (dept ? '?department=' + encodeURIComponent(dept) : '');
+    const team = typeof repTeam !== 'undefined' ? repTeam : '';
+    window.location.href = '/api/reports/export.csv' + repQuery(dept, team);
   };
 
   /* ------------------------------------------------------------ açılış */
@@ -1005,15 +1015,9 @@
     const fa = $('#fAttach');
     if (fa) fa.innerHTML = window.attachPicker('create');
 
-    const deptOpts = (placeholder) =>
-      '<option value="">' + placeholder + '</option>' +
-      DEPARTMENTS.map((d) => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('');
-
-    const d1 = $('#fDept1');
-    const d2 = $('#fDept2');
+    // Departman → Ekip seçimleri index.html'deki ortak yardımcıyla (fillDeptSelects).
     const prio = $('#fPrio');
-    if (d1) d1.innerHTML = deptOpts('Seçiniz...');
-    if (d2) d2.innerHTML = deptOpts('Seçiniz (isteğe bağlı)');
+    if ($('#fRoot1') && typeof fillDeptSelects === 'function') fillDeptSelects();
     if (prio) {
       prio.innerHTML = PRIORITIES.map(
         (p) => '<option value="' + p.id + '"' + (p.id === 'normal' ? ' selected' : '') + '>' +
@@ -1034,8 +1038,8 @@
       const isSys = (u) => u.role === 'Sistem Yöneticisi';
       sw.innerHTML =
         grp('Sistem yönetimi', USERS.filter(isSys)) +
-        DEPARTMENTS.map((d) => grp(d.name, USERS.filter((u) => !isSys(u) && u.dept === d.id))).join('') +
-        grp('Ekibi atanmamış', USERS.filter((u) => !isSys(u) && !DEPARTMENTS.some((d) => d.id === u.dept)));
+        teamUnits().map((d) => grp(unitLabel(d.id), USERS.filter((u) => !isSys(u) && u.dept === d.id))).join('') +
+        grp('Ekibi atanmamış', USERS.filter((u) => !isSys(u) && !teamUnits().some((d) => d.id === u.dept)));
       sw.onchange = (e) => {
         location.href = '/auth/dev-login?userId=' + encodeURIComponent(e.target.value) + '&returnTo=/';
       };

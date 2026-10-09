@@ -9,6 +9,7 @@ import { maySeeCreator, permissionsFor, type Actor } from '../domain/permissions
 import { actorInTree, loadOrgTree, rootOf, withRoots, type OrgTree } from '../domain/org.js';
 import { prisma } from '../db.js';
 import { slaStatus } from '../domain/sla.js';
+import { Role } from '../domain/enums.js';
 import { parseDetails } from '../domain/suggestion.js';
 
 const openSlugs: string[] = OPEN_STATUSES.map((s) => STATUS_TO_SLUG[s] ?? s);
@@ -75,6 +76,16 @@ export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: O
     anonymous: rec.anonymous,
     /** Yalnızca ilgili ekip görsün: paylaşılan kanallarda (öneriler, arama) çıkmaz. */
     restricted: rec.restricted,
+    /**
+     * Tüm Kayıtlar'da görünür mü: kişinin departmanındaki bir ekibe düşmüş
+     * (sistem yöneticisi için her departman) ve kısıtlı değil. Sunucudaki
+     * scope=all ile aynı kural (routes/records.ts).
+     */
+    inAllRecords:
+      !rec.restricted &&
+      (a.role === Role.ADMIN ||
+        (a.departmentRootId != null &&
+          (shaped.departmentRootId === a.departmentRootId || shaped.department2RootId === a.departmentRootId))),
 
     resolution: rec.resolution,
     /** Öneri kaydının yapısal alanları; bilgi kaydında null. */
