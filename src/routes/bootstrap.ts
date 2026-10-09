@@ -23,6 +23,19 @@ import { kbAccess, KB_KINDS } from '../domain/kb.js';
  * sabitlerdi. Artık sunucudan gelirler; arayüz kodu bunları aynı isimli
  * dizilere doldurur, geri kalan tüm render mantığı değişmeden çalışır.
  */
+/**
+ * Departman, hemen ardından onun ekipleri. `order` departmanlar arasında ve
+ * her departmanın ekipleri arasında ayrı ayrı 1'den başlar; düz sıralama
+ * ekipleri departmanlarından koparıp karışık dizerdi.
+ */
+function treeOrder<T extends { id: string; parentId: string | null }>(units: T[]): T[] {
+  const roots = units.filter((u) => !u.parentId);
+  const known = new Set(roots.map((r) => r.id));
+  const out = roots.flatMap((r) => [r, ...units.filter((u) => u.parentId === r.id)]);
+  // Üstü etkin olmayan ekip (olmamalı) yine de listede kalsın.
+  return [...out, ...units.filter((u) => u.parentId && !known.has(u.parentId))];
+}
+
 export default async function bootstrapRoutes(app: FastifyInstance) {
   app.get('/api/bootstrap', { preHandler: requireUser }, async (req) => {
     const me = req.user!;
@@ -67,7 +80,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
        * Departmanlar ve ekipleri tek listede: parent boşsa departman, doluysa o
        * departmanın ekibi. Kayıt ve kişi ekibe bağlıdır (bkz. src/domain/org.ts).
        */
-      departments: departments.map((d) => ({ id: d.id, name: d.name, short: d.short, parent: d.parentId })),
+      departments: treeOrder(departments).map((d) => ({ id: d.id, name: d.name, short: d.short, parent: d.parentId })),
       users: users.map((u) => ({
         id: u.id,
         name: u.name,

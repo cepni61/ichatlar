@@ -3060,7 +3060,7 @@ function renderView(id){
 function renderChrome(){
   const me = Store.me(), recs = Store.data.records;
   $('#pName').textContent = me.name;
-  $('#pRole').textContent = me.role + ' • ' + deptName(me.dept);
+  $('#pRole').textContent = me.dept ? me.role + ' • ' + unitLabel(me.dept) : me.role;
   $('#pAvatar').textContent = initials(me.name);
 
   /* Rozet "bakmanız gereken" sayıyı söyler ve sıfırsa görünmez:

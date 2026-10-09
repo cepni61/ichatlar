@@ -1032,13 +1032,20 @@
       // Giriş sayfasıyla aynı düzen: sistem yöneticileri en üstte kendi
       // grubunda, sonra ekipler, en sonda ekibi atanmamışlar. Eskiden sistem
       // yöneticisi alfabetik sırada "Sistem Yöneticisi — —" diye kayboluyordu.
+      // Gruplar departman; kişinin yanında ekibi yazar ("Ad — Ekip"). Seçim
+      // kapandığında da kişinin nerede olduğu görünsün (2026-10-09).
       const opt = (u) => '<option value="' + u.id + '"' + (u.id === boot.me.id ? ' selected' : '') + '>' +
-        esc(u.name) + (u.dept ? '' : ' · ' + esc(u.role)) + '</option>';
+        esc(u.name) + (u.dept ? ' — ' + esc(deptName(u.dept)) : u.name === u.role ? '' : ' — ' + esc(u.role)) + '</option>';
       const grp = (label, list) => list.length ? '<optgroup label="' + esc(label) + '">' + list.map(opt).join('') + '</optgroup>' : '';
       const isSys = (u) => u.role === 'Sistem Yöneticisi';
+      const teamIds = (rootId) => teamsOfDept(rootId).map((t) => t.id);
+      const byTeamThenName = (ids) => (a, b) => ids.indexOf(a.dept) - ids.indexOf(b.dept) || a.name.localeCompare(b.name, 'tr');
       sw.innerHTML =
         grp('Sistem yönetimi', USERS.filter(isSys)) +
-        teamUnits().map((d) => grp(unitLabel(d.id), USERS.filter((u) => !isSys(u) && u.dept === d.id))).join('') +
+        rootUnits().map((r) => {
+          const ids = teamIds(r.id);
+          return grp(r.name, USERS.filter((u) => !isSys(u) && ids.includes(u.dept)).sort(byTeamThenName(ids)));
+        }).join('') +
         grp('Ekibi atanmamış', USERS.filter((u) => !isSys(u) && !teamUnits().some((d) => d.id === u.dept)));
       sw.onchange = (e) => {
         location.href = '/auth/dev-login?userId=' + encodeURIComponent(e.target.value) + '&returnTo=/';

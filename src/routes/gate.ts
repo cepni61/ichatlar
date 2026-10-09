@@ -57,18 +57,29 @@ async function renderPage(opts: { needCode: boolean; returnTo: string; error?: s
     ? await prisma.user.findMany({
         where: { active: true },
         orderBy: [{ departmentId: 'asc' }, { name: 'asc' }],
-        select: { email: true, name: true, role: true, department: { select: { name: true } } },
+        select: {
+          email: true, name: true, role: true,
+          department: { select: { name: true, order: true, parent: { select: { name: true, order: true } } } },
+        },
       })
     : [];
+  // Departman sırası, sonra ekip sırası, sonra ad (ekipler departmanlarının altında).
+  users.sort((a, b) => {
+    const ra = a.department?.parent?.order ?? a.department?.order ?? 1e9;
+    const rb = b.department?.parent?.order ?? b.department?.order ?? 1e9;
+    const ta = a.department?.parent ? a.department.order : 0;
+    const tb = b.department?.parent ? b.department.order : 0;
+    return ra - rb || ta - tb || a.name.localeCompare(b.name, 'tr');
+  });
 
-  // Kişiler ekiplerine göre gruplanır. Sistem yöneticileri ayrı grupta ve en
-  // üstte: ekipsiz oldukları için sıralamada (NULL en sona) listenin dibinde
-  // "Genel" altında kalıyorlardı. Ekibi atanmamış diğer kişiler en sonda.
+  // Kişiler departmanlarına göre gruplanır, yanlarında ekipleri yazar. Sistem
+  // yöneticileri ayrı grupta ve en üstte: ekipsiz oldukları için sıralamada
+  // listenin dibinde kalıyorlardı. Ekibi atanmamış diğer kişiler en sonda.
   const SYS = 'Sistem yönetimi';
   const NONE = 'Ekibi atanmamış';
   const groups = new Map<string, typeof users>([[SYS, []]]);
   for (const u of users) {
-    const key = u.role === 'ADMIN' ? SYS : u.department?.name ?? NONE;
+    const key = u.role === 'ADMIN' ? SYS : u.department?.parent?.name ?? u.department?.name ?? NONE;
     groups.set(key, [...(groups.get(key) ?? []), u]);
   }
   const none = groups.get(NONE);
@@ -79,7 +90,10 @@ async function renderPage(opts: { needCode: boolean; returnTo: string; error?: s
       ([dept, list]) =>
         `<optgroup label="${esc(dept)}">` +
         list
-          .map((u) => `<option value="${esc(u.email)}">${esc(u.name)} · ${esc(ROLE_LABEL[u.role] ?? u.role)}</option>`)
+          .map((u) => {
+            const team = u.role !== 'ADMIN' && u.department ? ` — ${esc(u.department.name)}` : '';
+            return `<option value="${esc(u.email)}">${esc(u.name)}${team} · ${esc(ROLE_LABEL[u.role] ?? u.role)}</option>`;
+          })
           .join('') +
         '</optgroup>',
     )
