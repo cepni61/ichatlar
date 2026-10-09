@@ -59,10 +59,20 @@ describe('test ortamı girişi', () => {
 
     const body = (await app.inject({ method: 'GET', url: '/giris' })).body;
     expect(body).toContain('Zeki Sistem · Sistem yöneticisi');
-    expect(body).toContain('Ayşe Kaya · Ekip yöneticisi');
+    expect(body).toContain('Ayşe Kaya — Bilgi Teknolojileri · Ekip yöneticisi');
     // Ekipsiz yönetici en sonda "Genel" altında kayboluyordu.
     expect(body.indexOf('Zeki Sistem')).toBeLessThan(body.indexOf('Ayşe Kaya'));
     expect(body).toContain('<optgroup label="Sistem yönetimi">');
+  });
+
+  it('kişiler departman başlığı altında, yanlarında ekipleriyle', async () => {
+    const { Role } = await import('../../src/domain/enums.js');
+    const ik = await h.createDept('İnsan Kaynakları');
+    const isg = await h.createDept('İş Sağlığı', ik.id);
+    await h.createUser({ name: 'Nil Ekip', role: Role.TEAM_MEMBER, departmentId: isg.id });
+
+    const body = (await app.inject({ method: 'GET', url: '/giris' })).body;
+    expect(body).toMatch(/<optgroup label="İnsan Kaynakları"><option[^>]*>Nil Ekip — İş Sağlığı · Ekip üyesi<\/option>/);
   });
 
   it('giriş formu adres parçasını (#/kayit/…) dönüş adresine ekler', async () => {
