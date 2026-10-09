@@ -901,8 +901,6 @@
   .src-badge.plain{background:var(--slatebg);color:var(--slate)}
   .ext-link{font-weight:600;color:var(--b-700);overflow-wrap:anywhere}
 
-  .search-grid{grid-template-columns:1fr 1fr;align-items:start}
-  @media(max-width:1080px){ .search-grid{grid-template-columns:1fr} }
   .search-card{padding:20px}
   .search-card h3{margin:0 0 4px;font-size:17px}
   .search-card .hint{margin:0 0 12px}
@@ -912,11 +910,9 @@
   }
   .search-box:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
   .res-head{font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
-  .person,.resource{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);margin-bottom:8px}
-  .person b,.resource b{display:block;font-size:13.5px}
-  .person .meta,.resource .meta{display:block;font-size:12px;color:var(--muted);margin-top:2px}
-  .person .why{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;color:var(--on-soft);background:var(--primary2);padding:2px 8px;border-radius:999px}
-  .person a{font-size:12px;color:var(--b-700)}
+  .resource{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--panel2);margin-bottom:8px}
+  .resource b{display:block;font-size:13.5px}
+  .resource .meta{display:block;font-size:12px;color:var(--muted);margin-top:2px}
   .resource p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--text-2)}
 
   /* Tür başlığı (Bilgi Talepleri / Öneriler) durum başlıklarından güçlü:
@@ -1999,7 +1995,7 @@
         <span class="lbl">Tüm Kayıtlar</span></button>
       <button data-view="search">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
-        <span class="lbl">Kişi ve Kaynak Ara</span></button>
+        <span class="lbl">Kaynak Bul</span></button>
       <button data-view="reports">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 20V9.5M12 20V4M5.5 20v-6.5"/></svg>
         <span class="lbl">Raporlar</span></button>
@@ -2286,24 +2282,16 @@
     </section>
 
     <!-- ---------- SIK SORULANLAR ---------- -->
-    <!-- ---------- ARAMA ----------
-         İki ayrı arama: kişiler (ML ile konuyla ilgili kişiler) ve kurumsal
-         uygulama / süreç / bilgi (Bilgi Bankası, çözülmüş kayıtlar, Cortex). -->
+    <!-- ---------- KAYNAK BUL ----------
+         Tek arama: kurumsal uygulama / süreç / bilgi (Bilgi Bankası, çözülmüş
+         kayıtlar, Cortex). Kişi araması kullanıcı isteğiyle kaldırıldı (2026-10-10). -->
     <section id="search" class="view">
-      <div class="grid search-grid">
-        <div class="card search-card">
-          <h3>Kişi ara</h3>
-          <p class="hint">Ad, unvan ya da konu yazın. Konu yazarsanız o işi yapan ekip ve benzer talepleri çözen kişiler öne çıkar.</p>
-          <input id="peopleQ" class="search-box" type="search" placeholder="ör. bordro, SAP yetkisi, Ayşe" aria-label="Kişi ara" autocomplete="off" />
-          <div id="peopleRes" aria-live="polite"></div>
-        </div>
-        <div class="card search-card">
-          <h3>Uygulama / Süreç / Bilgi ara</h3>
-          <p class="hint">Kurumsal uygulamalar, süreç sayfaları ve daha önce çözülmüş talepler.</p>
-          <input id="resQ" class="search-box" type="search" placeholder="ör. bordro, SAP, izin talebi" aria-label="Uygulama, süreç ya da bilgi ara" autocomplete="off" />
-          <div id="resRes" aria-live="polite"></div>
-          <p class="hint" id="cortexNote" style="margin-top:12px"></p>
-        </div>
+      <div class="card search-card">
+        <h3>Uygulama / Süreç / Bilgi ara</h3>
+        <p class="hint">Uygulama adı (ör. SAP) ya da işin adı (ör. izin talebi) yazın.</p>
+        <input id="resQ" class="search-box" type="search" placeholder="ör. bordro, SAP, izin talebi" aria-label="Uygulama, süreç ya da bilgi ara" autocomplete="off" />
+        <div id="resRes" aria-live="polite"></div>
+        <p class="hint" id="cortexNote" style="margin-top:12px"></p>
       </div>
     </section>
 
@@ -2957,7 +2945,7 @@ const TITLES = {
   'all-records':   ['Tüm Kayıtlar','Departmanınızdaki bütün ekiplerin kayıtlarını arayın ve filtreleyin.'],
   'reports':       ['Raporlar','Kayıt sayıları, hedef sürelere uyum ve ekip performansı.'],
   'management':    ['Yönetim','Ekipler, ekip üyeleri, hedef süreler ve uygulama geri bildirimleri.'],
-  'search':        ['Kişi ve Kaynak Ara','Kişileri ve kurumsal uygulama, süreç, bilgi kaynaklarını arayın.'],
+  'search':        ['Kaynak Bul','Kurumsal uygulamaları, süreç sayfalarını ve daha önce çözülmüş talepleri tek yerden bulun.'],
   'kb':            ['Bilgi Bankası','Ekiplerin hazır yanıtları ve uygulama bağlantıları.'],
   'login':         ['Giriş','Kurumsal giriş ekranı önizlemesi.'],
   'detail':        ['Kayıt','Kayıt geçmişi, yönlendirme ve sahiplenme.'],

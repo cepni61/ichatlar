@@ -1,6 +1,6 @@
 /* =========================================================================
    İç Hatlar — API'ye bağlı modüller:
-     - Arama              (/api/search/people, /api/search/resources)
+     - Kaynak Bul         (/api/search/resources)
      - Bilgi Bankası      (/api/kb, /api/kb/editors)
      - Uygulama geri bildirimi (/api/feedback) ve Yönetim'deki listesi
 
@@ -39,41 +39,15 @@
   /* ============================================================== Arama */
 
   let searchBound = false;
-  let peopleSeq = 0;
   let resSeq = 0;
 
   window.renderSearch = function () {
     if (searchBound) return;
     searchBound = true;
-    const pq = $('#peopleQ');
     const rq = $('#resQ');
-    pq.addEventListener('input', debounce(() => loadPeople(pq.value.trim()), 250));
     rq.addEventListener('input', debounce(() => loadRes(rq.value.trim()), 250));
-    loadPeople('');
     loadRes('');
   };
-
-  async function loadPeople(q) {
-    const my = ++peopleSeq;
-    $('#peopleRes').innerHTML = LOADING;
-    try {
-      const out = await api('GET', '/api/search/people?q=' + encodeURIComponent(q));
-      if (my !== peopleSeq) return;   // bu arada yeni arama başladı
-      const head = out.sample ? 'Örnek kişiler' : out.items.length + ' kişi';
-      $('#peopleRes').innerHTML = '<div class="res-head">' + head + '</div>'
-        + (out.items.length
-            ? out.items.map((p) =>
-                '<div class="person"><div class="avatar" aria-hidden="true">' + esc(initials(p.name)) + '</div>'
-                + '<div style="min-width:0"><b>' + esc(p.name) + '</b>'
-                + '<span class="meta">' + (p.title ? esc(p.title) + ' · ' : '') + esc(p.department ? p.department.name : '—') + '</span>'
-                + (p.reason ? '<span class="why">' + esc(p.reason) + '</span>' : '')
-                + (p.email ? '<span class="meta"><a href="mailto:' + esc(p.email) + '">' + esc(p.email) + '</a></span>' : '')
-                + '</div></div>').join('')
-            : '<p class="hint">Eşleşen kişi bulunamadı. Başka bir ad, unvan ya da konu deneyin.</p>');
-    } catch (err) {
-      if (my === peopleSeq) $('#peopleRes').innerHTML = '<p class="hint">Kişi araması yapılamadı: ' + esc(err.message) + '</p>';
-    }
-  }
 
   const KIND_TONE = { UYGULAMA: 'blue', SUREC: 'purple', BILGI: 'teal', KAYIT: 'green', CORTEX: 'gray' };
 

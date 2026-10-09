@@ -163,27 +163,3 @@ describe('Bilgi Bankası', () => {
     expect(sample.items.length).toBe(1);
   });
 });
-
-describe('kişi araması', () => {
-  it('unvan ve benzer kaydı çözen kişiyle eşleşir; boş sorguda örnek kişiler', async () => {
-    const w = await world();
-    await prisma.user.update({ where: { id: w.ikMember.id }, data: { title: 'Bordro Uzmanı' } });
-    await createRecord({
-      createdById: w.opener.id, departmentId: w.ik.id, assigneeId: w.ikManager.id,
-      status: RecordStatus.KAPATILDI, title: 'Bordro kesintisi itirazı', resolution: 'Kesinti düzeltildi.',
-    });
-
-    const res = (await get(w.opener.id, `/api/search/people?q=${encodeURIComponent('bordro')}`)).json();
-    const names = res.items.map((p: { name: string }) => p.name);
-    expect(names).toContain('İK Üye');
-    expect(names).toContain('İK Müdür');
-    const uzman = res.items.find((p: { name: string }) => p.name === 'İK Üye');
-    expect(uzman).toMatchObject({ title: 'Bordro Uzmanı', department: { name: 'İnsan Kaynakları' } });
-    expect(uzman.reason).toContain('Unvan');
-    expect(res.items.find((p: { name: string }) => p.name === 'İK Müdür').reason).toContain('Benzer 1 kaydı çözdü');
-
-    const sample = (await get(w.opener.id, '/api/search/people')).json();
-    expect(sample.sample).toBe(true);
-    expect(sample.items.length).toBeGreaterThan(0);
-  });
-});
