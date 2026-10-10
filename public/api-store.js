@@ -191,9 +191,6 @@
 
   Store.data = { currentUserId: BOOT_USER.id, records: [], seq: 0 };
 
-  // Prototipin "geçici mod" uyarısı artık gereksiz: veri sunucuda.
-  try { safeStore.persistent = true; } catch (e) { /* yok sayılabilir */ }
-
   // Sunucudan dönen her kayıt sırası: yenileme sürerken yapılan işlemin
   // sonucu, yenilemenin daha önce başlamış (eski) yanıtıyla ezilmesin.
   let touchSeq = 0;
@@ -206,28 +203,12 @@
     return rec;
   }
 
-  Store.load = function () { /* veri sunucudan gelir; senkron yükleme yok */ };
-  Store.save = function () { /* yazma işlemleri API üzerinden yapılır */ };
-  Store.reset = function () {
-    toast('Demo verisi sıfırlama yalnızca geliştirme ortamında yapılır.', 'err');
-  };
-
   Store.me = function () {
     return USERS.find((u) => u.id === Store.data.currentUserId) || null;
   };
 
-  Store.setMe = function () {
-    // Gerçek sistemde kullanıcı değiştirilemez; kimlik Entra oturumundan gelir.
-    toast('Kullanıcı değiştirme kapalı — oturum kurumsal hesabınıza bağlı.', 'err');
-  };
-
   Store.find = function (code) {
     return Store.data.records.find((r) => r.code === code);
-  };
-
-  Store.nextCode = function () {
-    // Numara sunucuda atomik olarak üretilir; istemci tahmin etmez.
-    return '(sunucu atayacak)';
   };
 
   /* --------------------------------------------------------- yenileme */
@@ -773,8 +754,8 @@
     if (title.length >= 5 && desc.length >= 10) {
       $('#mlStatus').innerHTML = '<div class="ml-loading"><div class="spin"></div>Benzer çözümler aranıyor…</div>';
       try {
-        // Departman ve tür skorlamada bonus veriyor (prototipteki mlScore ile
-        // aynı), bu yüzden formdaki seçimler birlikte gönderilir.
+        // Departman ve tür sunucudaki skorlamada bonus veriyor (bkz.
+        // src/domain/similarity.ts), bu yüzden formdaki seçimler birlikte gönderilir.
         const out = await Api.similar({
           title,
           description: desc,

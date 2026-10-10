@@ -16,19 +16,6 @@
     return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
   };
   const clip = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + '…' : s || '');
-  const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2)
-    .map((w) => w[0].toLocaleUpperCase('tr-TR')).join('');
-  // Bilgi Bankası maddesi ve yetkisi ekibe bağlı: departman başlığı altında ekipleri.
-  const deptOptions = (first, selected, only) =>
-    (first != null ? '<option value="">' + esc(first) + '</option>' : '') +
-    rootUnits().map((r) => {
-      const ts = teamsOfDept(r.id).filter((d) => !only || only.includes(d.id));
-      return ts.length
-        ? '<optgroup label="' + esc(r.name) + '">' +
-            ts.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === selected ? ' selected' : '') + '>' + esc(d.name) + '</option>').join('') +
-          '</optgroup>'
-        : '';
-    }).join('');
   const shortUrl = (u) => {
     try { const x = new URL(u); return x.host + (x.pathname !== '/' ? x.pathname : ''); } catch (_) { return u; }
   };
@@ -118,7 +105,7 @@
         const b = e.target.closest('[data-kb-revoke]');
         if (b) revokeEditor(b.dataset.kbRevoke);
       });
-      $('#kbDept').innerHTML = deptOptions('Tüm ekipler', '');
+      $('#kbDept').innerHTML = '<option value="">Tüm ekipler</option>' + teamOptions('');
       $('#kbKind').innerHTML = '<option value="">Tüm türler</option>'
         + kbKinds().map((k) => '<option value="' + esc(k.id) + '">' + esc(k.label) + '</option>').join('');
     }
@@ -174,7 +161,7 @@
       + '<div class="field"><label for="kbfKind">Tür</label><select id="kbfKind">'
       +   kbKinds().map((k) => '<option value="' + esc(k.id) + '"' + (k.id === v.kind ? ' selected' : '') + '>' + esc(k.label) + '</option>').join('')
       + '</select></div>'
-      + '<div class="field"><label for="kbfDept">Ekip</label><select id="kbfDept">' + deptOptions(null, v.department.id, depts) + '</select></div>'
+      + '<div class="field"><label for="kbfDept">Ekip</label><select id="kbfDept">' + teamOptions(v.department.id, null, depts) + '</select></div>'
       + '</div>'
       + '<div class="field"><label for="kbfTitle">Başlık</label><input id="kbfTitle" maxlength="200" value="' + esc(v.title) + '" placeholder="ör. Bordro ve ücret pusulası" /></div>'
       + '<div class="field"><label for="kbfKeys">Anahtar kelimeler <span class="opt">(isteğe bağlı)</span></label>'

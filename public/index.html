@@ -1846,11 +1846,7 @@
     body.chat-open #toast{right:26px;bottom:auto;top:80px}
   }
 
-  /* ---------- Login ---------- */
-  .login-wrap{max-width:440px;margin:40px auto}
-  .login-wrap .brand h1{color:var(--text)}
-  .login-wrap .brand span{color:var(--muted)}
-
+  
   /* ---------- Responsive ---------- */
   @media(max-width:1080px){
     .app{grid-template-columns:220px 1fr}
@@ -2358,19 +2354,6 @@
       </div></div>
     </section>
 
-    <!-- ---------- LOGIN ---------- -->
-    <section id="login" class="view">
-      <div class="login-wrap card form-card">
-        <div class="brand" style="color:var(--text);margin-bottom:18px">
-          <div class="logo"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="50" cy="50" r="34" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="3 3" opacity=".55"/><circle cx="50" cy="50" r="21" stroke="#3b82f6" stroke-width="3.4" opacity=".3"/><path d="M50 29V19M50 81V71M29 50H19M81 50H71M35.2 35.2l-7-7M64.8 64.8l7 7M64.8 35.2l7-7M35.2 64.8l-7 7" stroke="#2563eb" stroke-width="1.7" opacity=".5"/><circle cx="50" cy="16" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.4 19.4c0-1.7 1.5-2.6 3.6-2.6s3.6.9 3.6 2.6M50 15.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8" fill="#2563eb"/><circle cx="76" cy="27" r="11" fill="#fff" stroke="#f59e0b" stroke-width="2.6"/><path d="M76 21.5a4 4 0 0 0-2.3 7.3v1.4h4.6v-1.4A4 4 0 0 0 76 21.5M74.4 32h3.2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><circle cx="84" cy="55" r="11" fill="#fff" stroke="#4caf3f" stroke-width="2.6"/><path d="M80 55.2l2.9 2.9 5.3-5.6" stroke="#4caf3f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="84" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.6 78.6h5l2 2v6.8h-7z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><path d="M48.4 83h3.2M48.4 85.2h3.2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="66" r="11" fill="#fff" stroke="#7c4ddb" stroke-width="2.6"/><circle cx="18" cy="66" r="2.6" stroke="#7c4ddb" stroke-width="2"/><path d="M18 60.4v-1.8M18 73.4v-1.8M23.6 66h1.8M10.6 66h1.8M21.9 62.1l1.3-1.3M12.8 71.2l1.3-1.3M21.9 69.9l1.3 1.3M12.8 60.8l1.3 1.3" stroke="#7c4ddb" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="31" r="11" fill="#fff" stroke="#0d9c92" stroke-width="2.6"/><path d="M13.4 34.4v-4M17 34.4v-7.6M20.6 34.4v-5.6" stroke="#0d9c92" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="50" r="14.5" fill="#12275c"/><path d="M43.5 44.5h13a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-5.2l-3.6 3.2v-3.2h-4.2a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2" fill="#fff"/><circle cx="46.6" cy="49.8" r="1.35" fill="#12275c"/><circle cx="50" cy="49.8" r="1.35" fill="#12275c"/><circle cx="53.4" cy="49.8" r="1.35" fill="#12275c"/></svg></div>
-          <h1 style="color:var(--text)">İç Hatlar<span style="color:var(--muted)">Kurumsal giriş</span></h1>
-        </div>
-        <div class="field"><label>E-posta</label><input placeholder="ad.soyad@sirket.com" value="omer.uygun@sirket.com" /></div>
-        <div class="field"><label>Şifre</label><input type="password" placeholder="••••••••" value="demo1234" /></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center" data-view="dashboard">Giriş Yap</button>
-        <p class="hint" style="text-align:center;margin-top:14px">SSO / kurumsal hesap ile giriş desteklenir. (Prototip — giriş simülasyondur.)</p>
-      </div>
-    </section>
   </main>
 
   <!-- ================= ALT GEZİNME (telefon) =================
@@ -2425,7 +2408,6 @@
 /* =========================================================================
    1) SABİTLER
    ========================================================================= */
-const STORE_KEY = 'kayit_yonetimi_v1';
 
 const DEPARTMENTS = [
   { id:'ik',     name:'İnsan Kaynakları' },
@@ -2542,9 +2524,10 @@ const unitLabel = id => {
   const p = d.parent && DEPARTMENTS.find(x => x.id === d.parent);
   return p && p.name !== d.name ? p.name + ' · ' + d.name : d.name;
 };
-/* Ekip seçimi: departmanlar başlık (optgroup), altında ekipleri. */
-const teamOptions = (selected, exclude) => rootUnits().map(r => {
-  const ts = teamsOfDept(r.id).filter(t => t.id !== exclude);
+/* Ekip seçimi: departmanlar başlık (optgroup), altında ekipleri. `only`
+   verilirse yalnızca o ekipler (Bilgi Bankası yetkisi). */
+const teamOptions = (selected, exclude, only) => rootUnits().map(r => {
+  const ts = teamsOfDept(r.id).filter(t => t.id !== exclude && (!only || only.includes(t.id)));
   return ts.length ? '<optgroup label="'+esc(r.name)+'">' + ts.map(t =>
     '<option value="'+esc(t.id)+'"'+(t.id === selected ? ' selected' : '')+'>'+esc(t.name)+'</option>').join('') + '</optgroup>' : '';
 }).join('');
@@ -2556,11 +2539,9 @@ const TYPE_ICON = { bilgi:'info', oneri:'bulb' };
 const typeIcon  = id => icon(((TYPES.find(t=>t.id===id)||{}).icon) || TYPE_ICON[id] || 'info');
 const prioObj   = id => PRIORITIES.find(p=>p.id===id) || PRIORITIES[0];
 const statusObj = id => STATUSES.find(s=>s.id===id) || STATUSES[0];
-const initials  = n => { const p=String(n||'?').split(' '); return ((p[0]||'?')[0] + (p[1]?p[1][0]:'')).toUpperCase(); };
+const initials  = n => String(n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toLocaleUpperCase('tr-TR')).join('');
 
-const HOUR = 3600*1000, DAY = 24*HOUR;
-const hAgo = h => new Date(Date.now()-h*HOUR).toISOString();
-const dAgo = d => new Date(Date.now()-d*DAY).toISOString();
+const HOUR = 3600*1000;
 
 function fmtDate(iso){
   if(!iso) return '—';
@@ -2658,7 +2639,7 @@ function toast(msg, kind, action){
 }
 
 /* =========================================================================
-   3) ML — Türkçe metin benzerliği (kütüphanesiz)
+   3) METİN — konu sayımı ve asistan için kelime ayırma (benzerlik sunucuda)
    ========================================================================= */
 const STOPWORDS = new Set(['ve','veya','ile','için','gibi','kadar','daha','çok','az','bir','bu','şu',
   'da','de','ki','mi','mı','mu','mü','ama','fakat','ancak','her','hem','ise','değil','ne','nasıl',
@@ -2672,259 +2653,11 @@ function mlNorm(t){
     .replace(/[^a-zçğıöşü0-9\s]/g,' ').replace(/\s+/g,' ').trim();
 }
 function mlTokens(t){ return mlNorm(t).split(' ').filter(w=>w.length>=3 && !STOPWORDS.has(w)); }
-function jaccard(a,b){
-  if(!a.size && !b.size) return 0;
-  let i=0; a.forEach(x=>{ if(b.has(x)) i++; });
-  const u = a.size + b.size - i;
-  return u ? i/u : 0;
-}
-function overlapRatio(arr,set){
-  if(!arr.length) return 0;
-  let h=0; arr.forEach(t=>{ if(set.has(t)) h++; });
-  return h/arr.length;
-}
-function mlScore(q, c){
-  const qT = mlTokens(q.title), qD = mlTokens(q.description);
-  const qAll = qT.concat(qD);
-  const cTs = new Set(mlTokens(c.title));
-  const cAll = new Set(mlTokens(c.title).concat(mlTokens(c.description)));
-  const s = 0.40*jaccard(new Set(qAll), cAll)
-          + 0.35*jaccard(new Set(qT), cTs)
-          + 0.25*overlapRatio(qAll, cAll);
-  let out = s;
-  if(q.department && (c.department===q.department || c.department2===q.department)) out += 0.05;
-  if(q.type && c.type===q.type) out += 0.05;
-  return Math.max(0, Math.min(1, out));
-}
-function mlKeywords(q,c,max){
-  const a=new Set(mlTokens(q.title).concat(mlTokens(q.description)));
-  const b=new Set(mlTokens(c.title).concat(mlTokens(c.description)));
-  const out=[]; a.forEach(w=>{ if(b.has(w) && out.length<(max||4)) out.push(w); });
-  return out;
-}
-function findSimilar(query, records, topN){
-  /* Çözülmüş VE çözülüp kapatılmış kayıtların tamamı öneri havuzundadır */
-  return records
-    .filter(r => (r.status==='cozuldu' || r.status==='kapatildi') && r.resolution)
-    .map(r => ({ record:r, score:mlScore(query,r), percent:Math.round(mlScore(query,r)*100), keywords:mlKeywords(query,r) }))
-    .filter(x => x.percent >= 12)
-    .sort((a,b)=>b.score-a.score)
-    .slice(0, topN||3);
-}
-
-/* =========================================================================
-   4) SEED VERİ — 50 kayıt, İK çoğunlukta, sadece Bilgi + Öneri
-   ========================================================================= */
-/* [tür, başlık, açıklama, çözüm] */
-const TPL = {
-  ik: [
-    ['bilgi','İşe giriş belgesi talebi','Banka kredisi başvurum için işe giriş bildirgemin bir kopyasını rica ediyorum.','Belge e-imzalı olarak hazırlandı ve kurumsal e-posta adresinize iletildi.'],
-    ['bilgi','Yıllık izin bakiyesi düzeltme talebi','İzin bakiyem sistemde eksik görünüyor, geçen yıldan devreden günler işlenmemiş.','Devir kaydı manuel olarak işlendi, bakiye güncellendi ve ekran görüntüsü paylaşıldı.'],
-    ['oneri','Oryantasyon programının zenginleştirilmesi','Yeni başlayanlar için departman tanıtım turu ve mentör eşleştirmesi eklenmesini öneriyorum.','Öneri kabul edildi; yeni oryantasyon akışına departman turu ve ilk hafta mentör ataması eklendi.'],
-    ['bilgi','Eğitim katılım belgesi talebi','Geçen ay tamamladığım liderlik eğitimi için katılım belgesi rica ediyorum.','Katılım belgesi PDF olarak iletildi ve özlük dosyanıza eklendi.'],
-    ['bilgi','Bordro dökümü talebi','Son üç aya ait bordro dökümlerime ihtiyacım var.','Bordrolar İK portalında erişime açıldı, ayrıca e-posta ile de gönderildi.'],
-    ['oneri','Esnek çalışma saatleri önerisi','Giriş-çıkış saatlerinde bir saatlik esneklik uygulamasına geçilmesini öneriyorum.','Pilot uygulama kararı alındı; iki departmanda üç ay boyunca denenecek.'],
-    ['bilgi','Çalışma belgesi talebi','Vize başvurum için güncel çalışma belgesi rica ediyorum.','Çalışma belgesi aynı gün hazırlanıp elden teslim edildi.'],
-    ['oneri','Kariyer haritalarının güncellenmesi','Departman bazlı kariyer haritalarının güncel rollerle yenilenmesini öneriyorum.','Kariyer haritaları güncellendi ve intranette yayınlandı.'],
-    ['bilgi','Özel sağlık sigortası kapsam güncellemesi','Yeni doğan çocuğumun sağlık sigortası kapsamına eklenmesini talep ediyorum.','Sigorta şirketine bildirim yapıldı, kapsam güncellemesi tamamlandı.'],
-    ['bilgi','BES kesintisi düzeltme talebi','Bu ayki bireysel emeklilik kesintim çift yapılmış görünüyor.','Fazla kesinti tespit edildi; iade bir sonraki bordroya yansıtıldı.'],
-    ['oneri','İç eğitim kataloğu oluşturulması','Tüm iç eğitimlerin tek katalogda toplanmasını ve dönemsel yayınlanmasını öneriyorum.','Eğitim kataloğu hazırlandı; çeyrek bazında güncellenerek yayınlanacak.'],
-    ['bilgi','Fazla mesai onayı düzeltme talebi','Geçen haftaki fazla mesai kaydım onay akışında görünmüyor.','Kayıt yönetici onayına yeniden gönderildi ve işleme alındı.'],
-    ['oneri','Çalışan takdir programı önerisi','Aylık teşekkür kartı uygulaması ile ekipler arası takdirin görünür olmasını öneriyorum.','Öneri kabul edildi; takdir programı iletişim planıyla birlikte devreye alınacak.'],
-    ['bilgi','Görev tanımı güncelleme talebi','Görev tanımım mevcut sorumluluklarımı yansıtmıyor, güncellenmesini talep ediyorum.','Yöneticiyle birlikte görev tanımı revize edildi ve sisteme yüklendi.'],
-    ['oneri','Mentorluk programı başlatılması','Deneyimli çalışanlarla yeni mezunları eşleştiren bir mentorluk programı öneriyorum.','Mentorluk programı pilotu on eşleşme ile başlatıldı.'],
-    ['bilgi','Performans hedef girişi süre uzatımı','Hedef giriş ekranı kapandı, girişimi tamamlayamadım; süre uzatımı rica ediyorum.','Ekran üç gün süreyle yeniden açıldı, hedef girişi tamamlandı.'],
-    ['oneri','Uzaktan çalışma politikasının netleştirilmesi','Hibrit çalışma günlerinin ekip bazında netleştirilmesini öneriyorum.','Politika güncellendi; ekip bazlı gün planı tüm yöneticilere iletildi.'],
-    ['bilgi','Doğum yardımı ödemesi talebi','Doğum yardımı ödemesinin tarafıma yapılmasını talep ediyorum.','Gerekli belgeler tamamlandı; ödeme bordro dönemine yansıtıldı.'],
-    ['oneri','Yan hakların çalışan anketiyle belirlenmesi','Yan hak paketinin yıllık çalışan anketi ile şekillendirilmesini öneriyorum.','Anket tasarlandı; sonuçlar gelecek yıl yan hak planlamasına girdi olacak.'],
-    ['bilgi','Askerlik sevk belgesi bildirimi','Askerlik sevk tarihimi bildirmek ve ücretsiz izin sürecini başlatmak istiyorum.','Ücretsiz izin süreci başlatıldı, dönüş planı yöneticinizle paylaşıldı.'],
-  ],
-  ki: [
-    ['bilgi','Kurumsal sunum şablonu talebi','Müşteri sunumu için güncel kurumsal sunum şablonuna ihtiyacım var.','Güncel şablon seti paylaşıldı ve intranet bağlantısı iletildi.'],
-    ['oneri','İç iletişim bülteninin aylık yayınlanması','Bültenin düzenli aylık formata geçmesini öneriyorum.','Bülten aylık periyoda alındı; ilk sayı yayınlandı.'],
-    ['bilgi','Etkinlik duyurusu yayınlama talebi','Departman etkinliğimizin intranet ve panolarda duyurulmasını rica ediyorum.','Duyuru görseli hazırlandı ve tüm iç kanallarda yayınlandı.'],
-    ['oneri','Intranet ana sayfasının sadeleştirilmesi','Ana sayfada en çok kullanılan bağlantıların öne çıkarılmasını öneriyorum.','Ana sayfa düzeni yenilendi; hızlı erişim alanı eklendi.'],
-    ['bilgi','Logo kullanım kılavuzu talebi','Tedarikçiyle paylaşmak üzere logo kullanım kılavuzuna ihtiyacım var.','Marka kılavuzu ve doğru logo paketi iletildi.'],
-    ['oneri','Çalışan başarı hikayeleri köşesi','İntranette aylık çalışan başarı hikayeleri köşesi açılmasını öneriyorum.','Köşe açıldı; ilk hikaye yayına alındı.'],
-    ['bilgi','Sosyal medya paylaşım onayı','Ekibimizin aldığı ödül haberinin kurumsal hesaplardan paylaşılmasını talep ediyorum.','İçerik onaylandı ve kurumsal hesaplardan paylaşıldı.'],
-    ['oneri','Tek kanal kayıt yönetimi iletişimi','Yeni kayıt yönetim sisteminin tüm çalışanlara tanıtım kampanyasıyla duyurulmasını öneriyorum.','İletişim planı hazırlandı; tanıtım videosu ve e-posta serisi yayınlandı.'],
-  ],
-  idari: [
-    ['bilgi','Ofis sıcaklığı ayarı talebi','Üçüncü kat öğleden sonra aşırı ısınıyor, klima ayarının gözden geçirilmesini rica ediyorum.','Bina yönetimiyle görüşüldü; setpoint 22°C ye çekildi, ölçümler normale döndü.'],
-    ['oneri','Yemekhanede vejetaryen seçenek','Her gün en az bir vejetaryen ana yemek bulunmasını öneriyorum.','Tedarikçiyle anlaşıldı; menüye günlük vejetaryen ana yemek eklendi.'],
-    ['bilgi','Toplantı odası ekipman talebi','B2 toplantı odasına HDMI kablosu ve sunum tıklayıcısı gerekiyor.','Ekipmanlar temin edildi ve odaya sabitlendi.'],
-    ['oneri','Servis saatlerinin gözden geçirilmesi','Sabah giriş yoğunluğuna göre servis saatlerinin yeniden değerlendirilmesini öneriyorum.','Alternatif saat anketi yapıldı; iki güzergâhta kalkış saati güncellendi.'],
-    ['bilgi','Otopark kartı talebi','Yeni aracım için otopark geçiş kartı talep ediyorum.','Kart tanımlandı ve elden teslim edildi.'],
-    ['oneri','Ofis geri dönüşüm istasyonları','Katlara cam, plastik ve kağıt ayrıştırma üniteleri konulmasını öneriyorum.','Her kata üçlü geri dönüşüm ünitesi yerleştirildi.'],
-    ['bilgi','Kartlı geçiş yetkisi güncelleme','Arşiv odasına erişim yetkimin tanımlanmasını talep ediyorum.','Yetki tanımı yapıldı; kart aynı gün aktif edildi.'],
-    ['oneri','Toplantı odası rezervasyon sürecinin sadeleştirilmesi','Rezervasyonun takvim üzerinden tek adımda yapılabilmesini öneriyorum.','Takvim entegrasyonu devreye alındı; rezervasyon tek adıma indirildi.'],
-  ],
-  fin: [
-    ['bilgi','Seyahat masraf iadesi talebi','Geçen haftaki şehir dışı görev masraflarımın iadesini talep ediyorum.','Beyan onaylandı; iade ödemesi banka hesabınıza aktarıldı.'],
-    ['bilgi','Fatura kopyası talebi','Mart ayına ait eğitim faturasının kopyasını rica ediyorum.','Fatura kopyası e-arşivden alınarak iletildi.'],
-    ['oneri','Masraf beyanının mobilden yapılabilmesi','Fiş fotoğrafı ile mobil masraf beyanı imkânı öneriyorum.','Mobil beyan özelliği yol haritasına alındı; pilot kullanım başladı.'],
-    ['bilgi','Seyahat avansı talebi','Yaklaşan saha ziyareti için seyahat avansı talep ediyorum.','Avans onaylandı ve hesaba yatırıldı.'],
-    ['bilgi','Tedarikçi ödeme durumu sorgusu','Tedarikçimiz ödemesinin durumunu soruyor, kontrol edilmesini rica ederim.','Ödeme planı kontrol edildi; ödeme gerçekleşti ve tedarikçi bilgilendirildi.'],
-    ['oneri','Bütçe raporu şablonunun sadeleştirilmesi','Aylık bütçe raporunun bir yönetici özeti sayfasıyla başlamasını öneriyorum.','Şablona yönetici özeti eklendi; yeni format kullanıma alındı.'],
-  ],
-  sat: [
-    ['bilgi','Yeni monitör talebi','Mevcut monitörümde renk bozulması başladı, değişim talep ediyorum.','Envanterden 24 inç monitör tahsis edildi ve kurulumu yapıldı.'],
-    ['bilgi','Kırtasiye siparişi talebi','Ekibimiz için dosya, kalem ve defter siparişi rica ediyorum.','Sipariş verildi; ürünler ekibe teslim edildi.'],
-    ['oneri','Tedarikçi değerlendirme anketi','Yıllık tedarikçi değerlendirmesinin anketle sistematik yapılmasını öneriyorum.','Anket formu tasarlandı ve yıllık değerlendirme sürecine eklendi.'],
-    ['bilgi','Ergonomik sandalye talebi','Bel rahatsızlığım nedeniyle ergonomik sandalye talep ediyorum.','Sağlık raporu doğrultusunda ergonomik sandalye temin edildi.'],
-    ['oneri','Toplu alım takvimi oluşturulması','Sık kullanılan sarf malzemeleri için çeyreklik toplu alım takvimi öneriyorum.','Toplu alım takvimi oluşturuldu; ilk dönem alımı tamamlandı.'],
-  ],
-  kalite: [
-    ['bilgi','Doküman revizyon talebi','P-04 prosedüründeki onay akışının güncellenmesini talep ediyorum.','Doküman revize edildi; yeni versiyon yayınlandı.'],
-    ['oneri','Onay adımlarının sadeleştirilmesi','İç denetim formlarındaki çift onay adımının tekilleştirilmesini öneriyorum.','Akış analizi yapıldı; tek onaylı yeni akış devreye alındı.'],
-    ['bilgi','Denetim raporu erişim talebi','Son iç denetim raporuna erişim yetkisi rica ediyorum.','Erişim yetkisi tanımlandı ve rapor paylaşıldı.'],
-  ],
-};
-
-/* Durum ve öncelik döngüleri — dengeli dağılım için */
-const ST_CYCLE = ['cozuldu','cozuldu','yeni','cozuldu','inceleniyor','cozuldu','cozuldu','calisiliyor',
-                  'cozuldu','yeni','cozuldu','ek_bilgi','cozuldu','uzerime_alindi','kapatildi',
-                  'yeni','cozuldu','calisiliyor','cozuldu','reddedildi'];
-const PR_CYCLE = ['normal','normal','yuksek','normal','kritik','normal','yuksek','normal'];
-
-function buildSeed(){
-  const out = [];
-  let i = 0, seq = 100;
-  teamUnits().forEach(dept => {
-    const team = USERS.filter(u => u.dept === dept.id);
-    (TPL[dept.id] || []).forEach(tpl => {
-      const [type, title, description, resolution] = tpl;
-      const status = ST_CYCLE[i % ST_CYCLE.length];
-      const priority = PR_CYCLE[i % PR_CYCLE.length];
-      const closed = ['cozuldu','kapatildi','reddedildi'].includes(status);
-      const isNew = status === 'yeni';
-
-      const outsiders = USERS.filter(u => u.dept !== dept.id);
-      const creator = outsiders[i % outsiders.length];
-      const assignee = isNew ? null : team[i % team.length];
-
-      let createdAt, updatedAt, firstResponseAt = null, resolvedAt = null;
-      if (closed) {
-        const c = 4 + ((i * 2.7) % 55);
-        createdAt = dAgo(c);
-        firstResponseAt = dAgo(c - (0.15 + (i % 6) * 0.09));
-        resolvedAt = dAgo(Math.max(0.4, c - 1 - (i % 5) * 0.7));
-        updatedAt = resolvedAt;
-      } else if (isNew) {
-        /* Bir kısmı SLA içinde, bir kısmı gecikmiş olsun */
-        createdAt = hAgo(3 + (i % 5) * 18);
-        updatedAt = createdAt;
-      } else {
-        /* Devam eden kayıtlar: çoğu SLA içinde kalsın ki kanban dengeli görünsün */
-        const h = 5 + (i % 4) * 9;            // 5 / 14 / 23 / 32 saat
-        createdAt = hAgo(h);
-        firstResponseAt = hAgo(h - 2);
-        updatedAt = hAgo(Math.max(0.5, h - 3 - (i % 3)));
-      }
-
-      /* Her 5. kayda ikinci ekip ata */
-      let dept2 = null;
-      if (i % 5 === 2) {
-        const others = teamUnits().filter(d => d.id !== dept.id);
-        dept2 = others[i % others.length].id;
-      }
-
-      const rec = {
-        code: 'KAY-2026-' + String(++seq).padStart(4,'0'),
-        type, title, description, priority, status,
-        department: dept.id, department2: dept2,
-        createdBy: creator.id,
-        assignee: assignee ? assignee.id : null,
-        anonymous: i % 8 === 3,
-        createdAt, updatedAt, firstResponseAt, resolvedAt,
-        attachments: [],
-        mlSuggested: null,
-        history: [{ t:'create', at:createdAt, by:creator.id, text:'Kayıt oluşturuldu ve ' + dept.name + ' ekibine iletildi.' }],
-      };
-      if (status === 'cozuldu') rec.resolution = resolution;
-
-      if (rec.assignee) rec.history.push({ t:'assign', at:firstResponseAt||createdAt, by:rec.assignee, text:'Kayıt ' + userName(rec.assignee) + ' tarafından üzerine alındı.' });
-      if (!isNew) rec.history.push({ t:'status', at:updatedAt, by:rec.assignee, text:'Durum güncellendi: ' + statusObj(status).label });
-      if (status === 'cozuldu') rec.history.push({ t:'comment', at:resolvedAt, by:rec.assignee, text:resolution });
-
-      out.push(rec);
-      i++;
-    });
-  });
-  out.sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  return { records: out, seq };
-}
-
 /* =========================================================================
    5) STORE
    ========================================================================= */
-/* Güvenli depolama — dosyaya çift tıklayarak (file://) veya ağ paylaşımından
-   açıldığında tarayıcı localStorage'ı engelleyebilir. O durumda bellek içi
-   depoya düşeriz: uygulama yine tam çalışır, veri yalnızca sekme kapanınca sıfırlanır. */
-const safeStore = (() => {
-  try {
-    const probe = '__ky_probe__';
-    window.localStorage.setItem(probe, '1');
-    window.localStorage.removeItem(probe);
-    return { ls: window.localStorage, persistent: true };
-  } catch (e) {
-    let mem = {};
-    return {
-      persistent: false,
-      ls: {
-        getItem: k => (k in mem ? mem[k] : null),
-        setItem: (k, v) => { mem[k] = String(v); },
-        removeItem: k => { delete mem[k]; },
-      },
-    };
-  }
-})();
-
-const Store = {
-  data: null,
-  load(){
-    const raw = safeStore.ls.getItem(STORE_KEY);
-    if (raw) { try { this.data = JSON.parse(raw); return; } catch(e){ console.warn('state bozuk, seed yükleniyor'); } }
-    const s = buildSeed();
-    this.data = { currentUserId:'u1', records:s.records, seq:s.seq };
-    this.save();
-  },
-  save(){ try { safeStore.ls.setItem(STORE_KEY, JSON.stringify(this.data)); } catch(e){ console.warn('kayıt saklanamadı', e); } },
-  reset(){ safeStore.ls.removeItem(STORE_KEY); this.load(); },
-  me(){ return userById(this.data.currentUserId); },
-  setMe(id){ this.data.currentUserId = id; this.save(); },
-  find(code){ return this.data.records.find(r => r.code === code); },
-  nextCode(){ this.data.seq = (this.data.seq||150) + 1; return 'KAY-2026-' + String(this.data.seq).padStart(4,'0'); },
-  create(p){
-    const now = new Date().toISOString(), me = this.me();
-    const rec = {
-      code: this.nextCode(), type:p.type, title:p.title, description:p.description,
-      priority:p.priority, status:'yeni',
-      department:p.department, department2:p.department2 || null,
-      createdBy: me.id, assignee: null, anonymous: !!p.anonymous,
-      createdAt: now, updatedAt: now, firstResponseAt: null, resolvedAt: null,
-      attachments: p.attachments || [], mlSuggested: p.mlSuggested || null,
-      history: [{ t:'create', at:now, by:me.id, text:'Kayıt oluşturuldu ve ' + deptName(p.department) + ' ekibine iletildi.' }],
-    };
-    if (p.department2) rec.history.push({ t:'assign', at:now, by:me.id, text:'Kayıt ayrıca ' + deptName(p.department2) + ' ekibiyle paylaşıldı.' });
-    this.data.records.unshift(rec); this.save(); return rec;
-  },
-  update(code, changes, hist){
-    const r = this.find(code); if(!r) return null;
-    Object.assign(r, changes);
-    r.updatedAt = new Date().toISOString();
-    if (hist) r.history.push(Object.assign({ at:r.updatedAt, by:this.data.currentUserId }, hist));
-    this.save(); return r;
-  },
-  comment(code, text){
-    const r = this.find(code); if(!r) return null;
-    const now = new Date().toISOString();
-    r.history.push({ t:'comment', at:now, by:this.data.currentUserId, text });
-    r.updatedAt = now;
-    if (!r.firstResponseAt) r.firstResponseAt = now;
-    this.save(); return r;
-  },
-};
+/* Veri sunucudan gelir: api-store.js `data`, `me()` ve `find()` alanlarını doldurur. */
+const Store = { data: null };
 
 /* Kullanıcının ekibine düşen kayıtlar (ana veya ikincil ekip) */
 function teamRecords(u){
@@ -2947,7 +2680,6 @@ const TITLES = {
   'management':    ['Yönetim','Ekipler, ekip üyeleri, hedef süreler ve uygulama geri bildirimleri.'],
   'search':        ['Kaynak Bul','Kurumsal uygulamaları, süreç sayfalarını ve daha önce çözülmüş talepleri tek yerden bulun.'],
   'kb':            ['Bilgi Bankası','Ekiplerin hazır yanıtları ve uygulama bağlantıları.'],
-  'login':         ['Giriş','Kurumsal giriş ekranı önizlemesi.'],
   'detail':        ['Kayıt','Kayıt geçmişi, yönlendirme ve sahiplenme.'],
 };
 
@@ -3586,105 +3318,8 @@ const CommentDrafts = {};
 /* =========================================================================
    12) DETAY AKSİYONLARI
    ========================================================================= */
-function actClaim(r){
-  Store.update(r.code, {
-    assignee: Store.data.currentUserId,
-    status: 'uzerime_alindi',
-    firstResponseAt: r.firstResponseAt || new Date().toISOString(),
-  }, { t:'assign', text:'Kayıt ' + Store.me().name + ' tarafından üzerine alındı.' });
-  toast('Kayıt üzerinize alındı', 'ok'); renderDetail(); renderChrome();
-}
-
-function actForward(r){
-  const me = Store.me();
-  const mates = USERS.filter(u => u.dept === me.dept && u.id !== me.id);
-  openModal('Kayıt Yönlendirme',
-    '<div class="field"><label>Departman Seçiniz</label><select id="fwdDept"><option value="">— seçiniz —</option>'
-    + teamOptions(null, r.department)
-    + '</select></div>'
-    + '<div class="field"><label>— veya — Takım Arkadaşı Seçiniz</label><select id="fwdMate"><option value="">— seçiniz —</option>'
-    + mates.map(u => '<option value="'+u.id+'">'+esc(u.name)+'</option>').join('')
-    + '</select></div>'
-    + '<div class="field"><label>Yönlendirme Notu</label><textarea id="fwdNote" placeholder="Yönlendirme sebebini yazın..."></textarea></div>',
-    [
-      { label:'İptal', cls:'btn-ghost' },
-      { label:'Yönlendirmeyi Kaydet', cls:'btn-primary', run(){
-          const d = $('#fwdDept').value, u = $('#fwdMate').value, note = ($('#fwdNote').value||'').trim();
-          if (!d && !u) return toast('Lütfen departman veya takım arkadaşı seçin','err');
-          let changes, text;
-          if (d) { changes = { department:d, assignee:null, status:'yeni' }; text = 'Kayıt ' + deptName(d) + ' ekibine yönlendirildi.'; }
-          else   { changes = { assignee:u, status:'uzerime_alindi' };          text = 'Kayıt ' + userName(u) + ' kişisine atandı.'; }
-          if (note) text += ' Not: ' + note;
-          Store.update(r.code, changes, { t:'assign', text });
-          closeModal(); toast('Kayıt yönlendirildi','ok'); renderDetail(); renderChrome();
-        }}
-    ]);
-}
-
-function actStatus(r){
-  const opts = STATUSES.filter(s => ['inceleniyor','calisiliyor','ek_bilgi'].includes(s.id));
-  openModal('Durum Güncelle',
-    '<div class="field"><label>Yeni Durum</label><select id="stSel">'
-    + opts.map(s => '<option value="'+s.id+'"'+(r.status===s.id?' selected':'')+'>'+esc(s.label)+'</option>').join('')
-    + '</select></div><div class="field"><label>Not (isteğe bağlı)</label><textarea id="stNote" placeholder="Kısa açıklama..."></textarea></div>',
-    [
-      { label:'İptal', cls:'btn-ghost' },
-      { label:'Güncelle', cls:'btn-primary', run(){
-          const s = $('#stSel').value, n = ($('#stNote').value||'').trim();
-          Store.update(r.code, { status:s }, { t:'status', text:'Durum güncellendi: ' + statusObj(s).label + (n ? ' — ' + n : '') });
-          closeModal(); toast('Durum güncellendi','ok'); renderDetail(); renderChrome();
-        }}
-    ]);
-}
-
-function actResolve(r){
-  openModal('Çözüldü olarak işaretle',
-    '<div class="field"><label>Çözüm Açıklaması</label>'
-    + '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>'
-    + '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>',
-    [
-      { label:'İptal', cls:'btn-ghost' },
-      { label:'Çözüldü olarak işaretle', cls:'btn-success', run(){
-          const t = ($('#resTxt').value||'').trim();
-          if (!t) return toast('Çözüm açıklaması zorunludur','err');
-          Store.update(r.code, { status:'cozuldu', resolution:t, resolvedAt:new Date().toISOString() },
-                       { t:'status', text:'Kayıt çözüldü. Çözüm: ' + t });
-          closeModal(); toast('Kayıt çözüldü olarak işaretlendi','ok'); renderDetail(); renderChrome();
-        }}
-    ]);
-}
-
-function actReject(r){
-  openModal('Kaydı Reddet',
-    '<div class="field"><label>Ret Sebebi</label><textarea id="rejTxt" placeholder="Neden reddediyorsunuz?"></textarea></div>',
-    [
-      { label:'İptal', cls:'btn-ghost' },
-      { label:'Reddet', cls:'btn-danger', run(){
-          const t = ($('#rejTxt').value||'').trim();
-          if (!t) return toast('Ret sebebi zorunludur','err');
-          Store.update(r.code, { status:'reddedildi' }, { t:'status', text:'Kayıt reddedildi. Sebep: ' + t });
-          closeModal(); toast('Kayıt reddedildi','ok'); renderDetail(); renderChrome();
-        }}
-    ]);
-}
-
-function actClose(r){
-  openModal('Kaydı Kapat', '<p class="hint">Çözümü onaylayıp kaydı kapatmak istediğinize emin misiniz?</p>',
-    [
-      { label:'Vazgeç', cls:'btn-ghost' },
-      { label:'Kaydı Kapat', cls:'btn-primary', run(){
-          Store.update(r.code, { status:'kapatildi' }, { t:'status', text:'Kayıt, kaydı açan kullanıcı tarafından kapatıldı.' });
-          closeModal(); toast('Kayıt kapatıldı','ok'); renderDetail(); renderChrome();
-        }}
-    ]);
-}
-
-function actComment(r){
-  const el = $('#cmtInput'); const t = (el && el.value || '').trim();
-  if (!t) return toast('Boş güncelleme eklenemez','err');
-  Store.comment(r.code, t);
-  toast('Güncelleme eklendi','ok'); renderDetail(); renderChrome();
-}
+/* actClaim, actForward, actStatus, actResolve, actReject, actClose,
+   actComment … api-store.js'te: her biri sunucuya istek atar. */
 
 /* =========================================================================
    13) YENİ KAYIT FORMU + ML AKIŞI
@@ -4006,37 +3641,6 @@ function runMl(opts){
   syncCreateBtn();
 }
 
-function createRecord(){
-  const title = $('#fTitle').value.trim(), desc = $('#fDesc').value.trim();
-  const d1 = $('#fDept1').value, d2 = $('#fDept2').value, pr = $('#fPrio').value;
-  if (!form.type) return toast('Kayıt türü seçin','err');
-  if (form.type === 'oneri') {
-    const miss = oneriMissing(); if (miss) return toast(miss, 'err');
-    const o = oneriData();
-    const rec = Store.create({
-      type:'oneri', title, oneri:{ current:o.current, proposal:o.proposal, benefits:o.benefits, benefitNote:o.benefitNote },
-      description:'Mevcut durum: '+o.current+'\n\nÖneri: '+o.proposal, department:d1, department2:null, priority:'normal',
-      anonymous:false, attachments:[], mlSuggested:[],
-    });
-    toast('Öneriniz iletildi: ' + rec.code, 'ok'); resetForm(); show('detail', rec.code);
-    return;
-  }
-  if (!title)     return toast('Başlık zorunludur','err');
-  if (!desc)      return toast('Açıklama zorunludur','err');
-  if (!d1)        return toast('İlgili Ekip 1 seçin','err');
-  if (d2 && d2 === d1) return toast('İki ekip farklı olmalıdır','err');
-
-  const rec = Store.create({
-    type: form.type, title, description: desc,
-    department: d1, department2: d2 || null, priority: pr,
-    anonymous: form.anon, attachments: form.files.slice(),
-    mlSuggested: form.matches.map(m => ({ code:m.record.code, title:m.record.title, resolution:m.record.resolution, percent:m.percent })),
-  });
-  toast((form.anon ? 'Kayıt anonim olarak gönderildi: ' : 'Kayıt oluşturuldu: ') + rec.code, 'ok');
-  resetForm();
-  show('detail', rec.code);
-}
-
 /* =========================================================================
    14) RAPORLAR
    -------------------------------------------------------------------------
@@ -4319,21 +3923,6 @@ function paintReports(m){
   + '</div>';
 }
 
-function exportCsv(){
-  const head = ['Kayıt No','Tür','Başlık','Departman','İkincil Ekip','Öncelik','Durum','Açan','Sahip','Oluşturma','Son Güncelleme','SLA'];
-  const rows = Store.data.records.map(r => [
-    r.code, typeLabel(r.type), r.title, deptName(r.department), r.department2?deptName(r.department2):'',
-    prioObj(r.priority).label, statusObj(r.status).label,
-    r.anonymous?'Anonim':userName(r.createdBy), r.assignee?userName(r.assignee):'',
-    fmtDate(r.createdAt), fmtDate(r.updatedAt), slaLevel(r),
-  ]);
-  const csv = [head].concat(rows).map(a => a.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(';')).join('\r\n');
-  const blob = new Blob(['﻿' + csv], { type:'text/csv;charset=utf-8;' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'kayitlar.csv'; a.click();
-  toast('CSV indirildi','ok');
-}
-
 /* =========================================================================
    15) YÖNETİM
    ========================================================================= */
@@ -4512,30 +4101,6 @@ window.addEventListener('error', e => {
 });
 
 function init(){
-  Store.load();
-
-  /* Kalıcı depolama yoksa (file:// kısıtı) kullanıcıyı bilgilendir */
-  if (!safeStore.persistent) {
-    const tb = document.querySelector('.topbar .actions');
-    if (tb) {
-      const w = document.createElement('span');
-      w.className = 'pill yellow';
-      w.title = 'Tarayıcı bu konumda veri saklamaya izin vermiyor. Uygulama çalışır, ancak sekmeyi kapatınca değişiklikler kaybolur. Kalıcı kayıt için dosyayı bir web sunucusundan açın.';
-      w.textContent = 'Geçici mod';
-      tb.prepend(w);
-    }
-  }
-
-  /* Kullanıcı seçici */
-  $('#userSwitch').innerHTML = USERS.map(u =>
-    '<option value="'+u.id+'"'+(u.id===Store.data.currentUserId?' selected':'')+'>'+esc(u.name)+' — '+esc(deptName(u.dept))+'</option>'
-  ).join('');
-  $('#userSwitch').onchange = e => {
-    Store.setMe(e.target.value);
-    toast('Kullanıcı değiştirildi: ' + Store.me().name);
-    renderView(CURRENT);
-  };
-
   /* Form seçenekleri */
   fillDeptSelects();
   $('#fPrio').innerHTML  = PRIORITIES.map(p => '<option value="'+p.id+'"'+(p.id==='normal'?' selected':'')+'>'+p.label+'</option>').join('');
