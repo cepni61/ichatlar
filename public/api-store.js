@@ -194,7 +194,12 @@
   // Prototipin "geçici mod" uyarısı artık gereksiz: veri sunucuda.
   try { safeStore.persistent = true; } catch (e) { /* yok sayılabilir */ }
 
+  // Sunucudan dönen her kayıt sırası: yenileme sürerken yapılan işlemin
+  // sonucu, yenilemenin daha önce başlamış (eski) yanıtıyla ezilmesin.
+  let touchSeq = 0;
+  const touched = new Map();
   function upsertLocal(rec) {
+    touched.set(rec.code, ++touchSeq);
     const i = Store.data.records.findIndex((r) => r.code === rec.code);
     if (i >= 0) Store.data.records[i] = rec;
     else Store.data.records.unshift(rec);
@@ -235,7 +240,15 @@
   // scope=visible: her görünümün (Açtıklarım, Ekibime Gelenler, Üzerimdekiler,
   // Tüm Kayıtlar) kayıtları tek listede; Tüm Kayıtlar kayıttaki inAllRecords
   // bayrağıyla süzer (departman kapsamı, kısıtlı kayıt yok — 2026-10-09).
-  async function refreshRecords() {
+  // Aynı anda iki yenileme olmaz: ikinci çağıran ilkini bekler.
+  let inflight = null;
+  function refreshRecords() {
+    if (!inflight) inflight = loadRecords().finally(() => { inflight = null; });
+    return inflight;
+  }
+
+  async function loadRecords() {
+    const seq0 = touchSeq;
     const first = await Api.records({ scope: 'visible', pageSize: PAGE_SIZE, page: 1 });
     const all = first.records.slice();
     for (let page = 2; all.length < first.total; page++) {
@@ -245,7 +258,15 @@
     }
     // Sayfalar arasında bir kayıt güncellenirse sıralaması kayar ve iki sayfada
     // birden gelebilir; kayıt numarasına göre tekilleştir.
-    const unique = [...new Map(all.map((r) => [r.code, r])).values()];
+    const byCode = new Map(all.map((r) => [r.code, r]));
+    for (const local of Store.data.records) {
+      const got = byCode.get(local.code);
+      // Yükleme başladıktan sonra yerelde güncellenen (ya da açılan) kayıt daha yeni.
+      if ((touched.get(local.code) || 0) > seq0) byCode.set(local.code, local);
+      // Liste yalnızca son olayı taşır; değişmemiş kaydın detaydan gelen tam geçmişi kalsın.
+      else if (got && got.historyPartial && !local.historyPartial && got.updatedAt === local.updatedAt) byCode.set(local.code, local);
+    }
+    const unique = [...byCode.values()];
     Store.data.records.length = 0;
     unique.forEach((r) => Store.data.records.push(r));
     return { ...first, records: unique };

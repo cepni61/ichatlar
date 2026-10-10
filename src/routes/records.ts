@@ -158,8 +158,12 @@ export default async function recordRoutes(app: FastifyInstance) {
     const [rows, total] = await Promise.all([
       prisma.record.findMany({
         where,
-        include: withDetail,
-        orderBy: { updatedAt: 'desc' },
+        // Liste yalnızca son olayı taşır (asistan kartı); tam geçmiş ve ekler
+        // detayda gelir — arayüz listeyi dakikada bir yeniden çekiyor.
+        include: { events: { orderBy: { at: 'desc' }, take: 1, select: { type: true, text: true, at: true, byId: true } } },
+        // Değişmeyen alana göre: sayfalar arasında güncellenen kayıt sayfa
+        // atlayıp listeden düşmez. Arayüz kendisi sıralar.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

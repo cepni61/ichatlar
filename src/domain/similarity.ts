@@ -130,7 +130,75 @@ export interface SimilarMatch {
   terms: string[];
 }
 
-export async function findSimilar(query: SimilarQuery, limit = 3): Promise<SimilarMatch[]> {
+// Havuz: çözülmüş VE çözülüp kapatılmış kayıtların tamamı. Kapatılmış
+// olanlar en değerlisi — çözümün işe yaradığını kaydı açan onaylamış.
+// "Yalnızca ilgili ekip görsün" kayıtları öneri olarak kimseye gösterilmez.
+const SOLVED = {
+  status: { in: [RecordStatus.COZULDU, RecordStatus.KAPATILDI] },
+  resolution: { not: null },
+  restricted: false,
+};
+
+async function loadPool() {
+  const [records, kb] = await Promise.all([
+    prisma.record.findMany({
+      where: SOLVED,
+      select: {
+        code: true, type: true, title: true, description: true, resolution: true, resolvedAt: true,
+        renewed: true, departmentId: true, department2Id: true, department: { select: { name: true } },
+      },
+      orderBy: { resolvedAt: 'desc' },
+      take: 2000,
+    }),
+    prisma.kbArticle.findMany({
+      where: { active: true },
+      select: {
+        seq: true, title: true, keywords: true, answer: true, url: true, departmentId: true,
+        department: { select: { name: true } },
+      },
+      take: 1000,
+    }),
+  ]);
+  return {
+    records: records.map((r) => ({
+      r,
+      titleSet: new Set(tokenize(r.title)),
+      allSet: new Set(tokenize(r.title).concat(tokenize(r.description))),
+    })),
+    kb: kb.map((a) => {
+      const head = `${a.title} ${a.keywords ?? ''}`;
+      return { a, titleSet: new Set(tokenize(head)), allSet: new Set(tokenize(head).concat(tokenize(a.answer))) };
+    }),
+  };
+}
+
+/**
+ * Havuz her tuşta (kayıt formu taraması, Kaynak Bul) binlerce satır okunup
+ * yeniden ayrıştırılmasın diye bellekte tutulur. Geçerliliği üç küçük
+ * sorguyla denetlenir: havuzdaki, Bilgi Bankası'ndaki ve ekiplerdeki satır
+ * sayısı ile son güncelleme zamanı. Her süreç kendi kopyasını aynı yolla
+ * denetler; çok örnekli kurulumda da bayatlamaz.
+ */
+let pool: { key: string; data: Awaited<ReturnType<typeof loadPool>> } | null = null;
+
+async function candidatePool() {
+  const stamp = { _count: { _all: true }, _max: { updatedAt: true } } as const;
+  const [r, k, d] = await Promise.all([
+    prisma.record.aggregate({ where: SOLVED, ...stamp }),
+    prisma.kbArticle.aggregate({ where: { active: true }, ...stamp }),
+    prisma.department.aggregate(stamp),
+  ]);
+  const key = [r, k, d].map((x) => `${x._count._all}:${x._max.updatedAt?.getTime() ?? 0}`).join('|');
+  if (pool?.key !== key) pool = { key, data: await loadPool() };
+  return pool.data;
+}
+
+export async function findSimilar(
+  query: SimilarQuery,
+  limit = 3,
+  /** false: yalnızca çözülmüş kayıtlar (Bilgi Bankası'nı ayrıca arayan Kaynak Bul için). */
+  withKb = true,
+): Promise<SimilarMatch[]> {
   const qTitleTokens = tokenize(query.title);
   const qDescTokens = tokenize(query.description);
   const qAllTokens = qTitleTokens.concat(qDescTokens);
@@ -139,36 +207,9 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
   const qTitleSet = new Set(qTitleTokens);
   const qAllSet = new Set(qAllTokens);
   const surface = surfaceForms(`${query.title} ${query.description}`);
+  const { records, kb } = await candidatePool();
 
-  // Havuz: çözülmüş VE çözülüp kapatılmış kayıtların tamamı. Kapatılmış
-  // olanlar en değerlisi — çözümün işe yaradığını kaydı açan onaylamış.
-  const solved = await prisma.record.findMany({
-    where: {
-      status: { in: [RecordStatus.COZULDU, RecordStatus.KAPATILDI] },
-      resolution: { not: null },
-      // "Yalnızca ilgili ekip görsün" kayıtları öneri olarak kimseye gösterilmez.
-      restricted: false,
-    },
-    select: {
-      code: true,
-      type: true,
-      title: true,
-      description: true,
-      resolution: true,
-      resolvedAt: true,
-      renewed: true,
-      departmentId: true,
-      department2Id: true,
-      department: { select: { name: true } },
-    },
-    orderBy: { resolvedAt: 'desc' },
-    take: 2000,
-  });
-
-  const scored = solved.map((r) => {
-    const cTitleSet = new Set(tokenize(r.title));
-    const cAllSet = new Set(tokenize(r.title).concat(tokenize(r.description)));
-
+  const scored = records.map(({ r, titleSet: cTitleSet, allSet: cAllSet }) => {
     let score =
       0.40 * jaccard(qAllSet, cAllSet) +
       0.35 * jaccard(qTitleSet, cTitleSet) +
@@ -209,18 +250,7 @@ export async function findSimilar(query: SimilarQuery, limit = 3): Promise<Simil
   });
 
   // Bilgi Bankası: ekiplerin hazır yanıtları aynı ölçütle aday olur.
-  const kb = await prisma.kbArticle.findMany({
-    where: { active: true },
-    select: {
-      seq: true, title: true, keywords: true, answer: true, url: true, departmentId: true,
-      department: { select: { name: true } },
-    },
-    take: 1000,
-  });
-  for (const a of kb) {
-    const head = `${a.title} ${a.keywords ?? ''}`;
-    const cTitleSet = new Set(tokenize(head));
-    const cAllSet = new Set(tokenize(head).concat(tokenize(a.answer)));
+  for (const { a, titleSet: cTitleSet, allSet: cAllSet } of withKb ? kb : []) {
     let score =
       0.40 * jaccard(qAllSet, cAllSet) +
       0.35 * jaccard(qTitleSet, cTitleSet) +

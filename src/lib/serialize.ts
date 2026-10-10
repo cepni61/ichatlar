@@ -118,7 +118,8 @@ export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: O
   };
 }
 
+/** Liste: geçmişte yalnızca son olay var, ekler yok (bkz. routes/records.ts). */
 export async function serializeList(recs: FullRecord[], actor: Actor) {
   const tree = await loadOrgTree(prisma);
-  return Promise.all(recs.map((r) => serializeRecord(r, actor, tree)));
+  return Promise.all(recs.map(async (r) => ({ ...(await serializeRecord(r, actor, tree)), historyPartial: true })));
 }

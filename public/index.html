@@ -3479,8 +3479,10 @@ function renderDetail(){
   /* Kaydın kendi ekleri ("oluşturuldu" adımı) gövdenin altında; sonradan
      eklenenler yalnızca ait oldukları güncellemenin altında görünür. Sunucusuz
      prototipte olay ekleri yok: tüm ekler gövdede. */
+  // Listeden gelen kayıtta geçmiş ve ekler yok; detay sunucudan gelince çizilir.
+  const partial = !!r.historyPartial;
   const withEvents = r.history.some(h => h.attachments);
-  const ownFiles = withEvents
+  const ownFiles = partial ? [] : withEvents
     ? ((r.history.find(h => h.t === 'create') || {}).attachments || [])
     : (r.attachments || []);
 
@@ -3519,11 +3521,11 @@ function renderDetail(){
     + '<div class="card form-card" style="margin-top:16px">'
       + '<h3 style="font-size:16px;margin:0 0 14px">Süreç Geçmişi</h3>'
       + '<div class="timeline">'
-      + r.history.map(h =>
+      + (partial ? '<p class="hint">Geçmiş yükleniyor…</p>' : r.history.map(h =>
           '<div class="event '+esc(h.t)+'"><b>'+esc(plainText(h.text))+'</b>'
           + (h.t !== 'create' && h.attachments && h.attachments.length ? '<div class="file-links">'+h.attachments.map(fileLink).join('')+'</div>' : '')
           + '<span>'+esc(fmtDate(h.at))+' • '+esc(h.by ? userName(h.by) : 'Sistem')+'</span></div>'
-        ).join('')
+        ).join(''))
       + '</div>'
       + ((p.comment != null ? p.comment : (isCreator || inTeam))
           ? '<div class="field" style="margin:18px 0 10px"><label for="cmtInput">Yorum / Güncelleme</label>'

@@ -162,4 +162,23 @@ describe('Bilgi Bankası', () => {
     expect(sample.sample).toBe(true);
     expect(sample.items.length).toBe(1);
   });
+
+  it('Kaynak Bul: Bilgi Bankası maddeleri çözülmüş kayıtları dışarıda bırakmaz', async () => {
+    const w = await world();
+    for (const title of ['Bordro pusulası', 'Bordro itirazı', 'Bordro dönemi']) {
+      await post(w.ikManager.id, '/api/kb', article(w.ik.id, { title, keywords: 'bordro' }));
+    }
+    const r = await createRecord({
+      createdById: w.opener.id, departmentId: w.ik.id, status: RecordStatus.COZULDU,
+      title: 'Bordro pusulasında fazla mesai eksik', resolution: 'Fark ekim bordrosuna eklendi.',
+    });
+    const kinds = async () =>
+      ((await get(w.opener.id, `/api/search/resources?q=${encodeURIComponent('bordro pusulası')}`)).json().items as { source: string }[])
+        .map((i) => i.source);
+    expect(await kinds()).toContain('kayit');
+
+    // Bellekteki aday havuzu kayıt değişince yenilenir: kısıtlanan kayıt düşer.
+    await prisma.record.update({ where: { id: r.id }, data: { restricted: true } });
+    expect(await kinds()).not.toContain('kayit');
+  });
 });

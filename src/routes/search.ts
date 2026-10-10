@@ -65,13 +65,13 @@ export default async function searchRoutes(app: FastifyInstance) {
       .map((x) => kbView(x.a));
 
     const [similar, cortex] = await Promise.all([
-      findSimilar({ title: q, description: '' }, 3),
+      // Bilgi Bankası yukarıda ayrıca aranıyor; ilk 3'ü onlar kapıp kayıtları silmesin.
+      findSimilar({ title: q, description: '' }, 3, false),
       cortexSearch(q, req.log),
     ]);
     // Aynı soru farklı kişilerden gelmiş olabilir: başlık + çözüm aynıysa tek sonuç.
     const seen = new Set(kbHits.map((k) => fold(k.title)));
     const recordHits = similar
-      .filter((m) => m.source === 'kayit')
       .filter((m) => {
         const key = fold(m.title) + '|' + fold(m.resolution);
         if (seen.has(key) || seen.has(fold(m.title))) return false;
