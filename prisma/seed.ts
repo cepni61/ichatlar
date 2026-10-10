@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { Priority, RecordStatus, RecordType } from '../src/domain/enums.js';
 import { applyOrgConfig, mainTeamId, orgConfigSchema } from '../src/setup/org-config.js';
-import { effectiveRole } from '../src/domain/roles.js';
+import { activeGrant, effectiveRole, ROLE_KINDS } from '../src/domain/grants.js';
 import { CONTEXT, COUNTS, KB_ARTICLES, TITLES, TOPICS, USERS } from './demo-data.js';
 
 const prisma = new PrismaClient();
@@ -128,8 +128,11 @@ async function main() {
   const userIds = new Map<string, string>();
   for (const u of USERS) {
     // Yetkiler ekranında verilmiş yetki her açılıştaki tohumlamada kaybolmasın.
-    const prev = await prisma.user.findUnique({ where: { entraOid: `seed:${u.key}` }, select: { roleGrant: true } });
-    const role = effectiveRole(u.role, prev?.roleGrant, teamOf(u.dept));
+    const prev = await prisma.user.findUnique({
+      where: { entraOid: `seed:${u.key}` },
+      select: { grants: { where: { kind: { in: ROLE_KINDS }, AND: [activeGrant()] }, select: { kind: true } } },
+    });
+    const role = effectiveRole(u.role, (prev?.grants ?? []).map((g) => g.kind), teamOf(u.dept));
     const row = await prisma.user.upsert({
       // Entra yoksa oid yerine kararlı bir yer tutucu kullanılır; gerçek
       // girişte oid ile eşleşen ayrı kullanıcı açılır.

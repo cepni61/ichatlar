@@ -1,5 +1,7 @@
 import { prisma } from '../db.js';
 import { Role } from './enums.js';
+import { activeGrant, GrantKind } from './grants.js';
+import { loadOrgTree, teamsOf } from './org.js';
 import type { Actor } from './permissions.js';
 
 /**
@@ -9,7 +11,8 @@ import type { Actor } from './permissions.js';
  * Kim ne yapar:
  *   - Sistem yöneticisi: her ekibin maddesini yönetir, düzenleme yetkisi verir.
  *   - Yönetici (departman müdürü): bütün maddeleri görür, kendi ekibininkini yönetir.
- *   - Yetki verilen kişi: yetkili olduğu ekip(ler)in maddelerini görür ve yönetir.
+ *   - Yetki verilen kişi (Yetkiler → Bilgi Bankası düzenleyici): o ekibin maddelerini.
+ *   - Departman sorumlusu: departmanının bütün ekiplerinin maddelerini.
  *   - Diğerleri yönetim ekranını görmez; maddeler onlara Arama,
  *     benzer kayıt önerileri ve asistan üzerinden ulaşır.
  */
@@ -32,12 +35,16 @@ export interface KbAccess {
 
 export async function kbAccess(actor: Actor): Promise<KbAccess> {
   if (actor.role === Role.ADMIN) return { view: true, admin: true, edit: 'all' };
-  const grants = await prisma.kbEditor.findMany({
-    where: { userId: actor.id },
+  const grants = await prisma.grant.findMany({
+    where: { userId: actor.id, kind: GrantKind.KB_EDITOR, departmentId: { not: null }, AND: [activeGrant()] },
     select: { departmentId: true },
   });
-  const depts = new Set(grants.map((g) => g.departmentId));
+  const depts = new Set(grants.map((g) => g.departmentId!));
   if (actor.role === Role.MANAGER && actor.departmentId) depts.add(actor.departmentId);
+  if (actor.headOf?.length) {
+    const tree = await loadOrgTree(prisma);
+    for (const root of actor.headOf) for (const t of teamsOf(tree, root)) depts.add(t);
+  }
   return { view: actor.role === Role.MANAGER || depts.size > 0, admin: false, edit: [...depts] };
 }
 

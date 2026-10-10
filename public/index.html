@@ -917,14 +917,25 @@
   /* ---------- Yetkiler ---------- */
   .perm-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .perm-form select{flex:1 1 220px;min-width:0}
-  .perm-form #permRole{flex:0 1 200px}
-  /* Raporlardaki filtrelerle aynı kutu (Bilgi Bankası yetki seçicisi de çıplaktı) */
-  .perm-form select,#kbGrantUser{
+  /* Raporlardaki filtrelerle aynı kutu */
+  .perm-form select,.perm-form input{
     border:1px solid var(--line-2);border-radius:var(--r-sm);
-    background:var(--panel);color:var(--text);padding:9px 12px;font-size:14px;
+    background:var(--panel);color:var(--text);padding:9px 12px;font-size:14px;font-family:inherit;
   }
-  .perm-form select:focus,#kbGrantUser:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
-  @media(max-width:640px){ .perm-form select,#kbGrantUser{font-size:16px} }
+  .perm-form select:focus,.perm-form input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
+  .perm-form #permKind{flex:0 1 210px}
+  .perm-form #permScope{flex:0 1 220px}
+  .perm-until{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2)}
+  .perm-check{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13.5px;color:var(--text)}
+  .perm-note{display:block;color:var(--warn-ink);font-size:12px;margin-top:3px}
+  .perm-log{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .perm-log li{display:grid;grid-template-columns:118px 1fr;gap:12px;font-size:13px;line-height:1.5;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .perm-log li:last-child{border-bottom:0;padding-bottom:0}
+  .perm-log time{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+  @media(max-width:640px){
+    .perm-form select,.perm-form input{font-size:16px}
+    .perm-log li{grid-template-columns:1fr;gap:2px}
+  }
   .perm-help{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:16px 0 0;font-size:13px;line-height:1.5}
   .perm-help dt{font-weight:650;color:var(--text)}
   .perm-help dd{margin:0;color:var(--text-2)}
@@ -2363,17 +2374,6 @@
           </table>
         </div>
       </div>
-      <div class="card" id="kbEditorsCard" style="margin-top:16px" hidden>
-        <div class="card-head"><h3>Düzenleme yetkileri</h3><span class="pill gray">Sistem yöneticisi</span></div>
-        <div class="card-body">
-          <p class="hint" style="margin:0 0 12px">Departman yöneticileri kendi ekiplerinin maddelerini zaten yönetir. Yetki verdiğiniz kişi kendi ekibinin maddelerini ekleyip düzenleyebilir.</p>
-          <div class="inline-actions" style="margin-bottom:12px">
-            <select id="kbGrantUser" aria-label="Yetki verilecek kişi"></select>
-            <button class="btn btn-soft" type="button" id="kbGrant">Yetki ver</button>
-          </div>
-          <div id="kbEditors"></div>
-        </div>
-      </div>
       <p class="hint" style="margin-top:14px">Maddeler; yeni kayıttaki çözüm ve ekip önerilerini, Aramayı ve asistanı besler. Değişiklik birkaç dakika içinde önerilere yansır.</p>
     </section>
 
@@ -2414,29 +2414,72 @@
         <div class="card-body">
           <div class="perm-form">
             <select id="permUser" aria-label="Yetki verilecek kişi"></select>
-            <select id="permRole" aria-label="Verilecek yetki">
+            <select id="permKind" aria-label="Yetki türü">
               <option value="MANAGER">Ekip yöneticisi</option>
               <option value="ADMIN">Sistem yöneticisi</option>
+              <option value="DEPT_HEAD">Departman sorumlusu</option>
+              <option value="REPORTS">Rapor görüntüleyici</option>
+              <option value="KB_EDITOR">Bilgi Bankası düzenleyici</option>
             </select>
+            <select id="permScope" aria-label="Kapsam" hidden></select>
+            <label class="perm-until">Bitiş <input type="date" id="permUntil" aria-label="Bitiş tarihi (boşsa süresiz)" /></label>
             <button class="btn btn-primary" type="button" id="permGrant">Yetki ver</button>
           </div>
+          <p class="hint" style="margin:8px 0 0">Bitiş tarihi boşsa yetki süresizdir. Tarih verirseniz (ör. izindeki yöneticinin yerine vekâlet) o günün sonunda kendiliğinden düşer.</p>
           <dl class="perm-help">
             <dt>Ekip yöneticisi</dt>
             <dd>Raporları ve Yönetim ekranını görür, ekibinin Bilgi Bankası maddelerini yönetir, ekibinde hedef süresi aşılan kayıtlar için bildirim alır. Kişinin bir ekibi olmalı.</dd>
             <dt>Sistem yöneticisi</dt>
             <dd>Bütün departmanların kayıtlarını (yalnızca ilgili ekibe açık olanlar hariç), Yönetim ve Yetkiler ekranlarını görür; yetki verir ve geri alır.</dd>
+            <dt>Departman sorumlusu</dt>
+            <dd>Seçilen departmanın bütün ekiplerinin kayıtlarını okur (yalnızca ilgili ekibe açık olanlar hariç), raporları görür, departmanın Bilgi Bankası maddelerini yönetir. Kayıtlarda işlem yapmaz.</dd>
+            <dt>Rapor görüntüleyici</dt>
+            <dd>Raporları ve CSV dışa aktarımını görür; ekip yönetmez.</dd>
+            <dt>Bilgi Bankası düzenleyici</dt>
+            <dd>Seçilen ekibin Bilgi Bankası maddelerini ekler ve düzenler.</dd>
           </dl>
-          <p class="hint" style="margin:10px 0 0">Kişi listede yoksa uygulamaya henüz hiç giriş yapmamıştır. Verdiğiniz yetki kişinin kurumsal dizindeki rolünün üstüne eklenir; geri aldığınızda dizindeki rolüne döner.</p>
+          <p class="hint" style="margin:10px 0 0">Kişi listede yoksa uygulamaya henüz hiç giriş yapmamıştır. Verdiğiniz yetki kişinin kurumsal dizindeki rolünün üstüne eklenir; geri aldığınızda dizindeki rolüne döner. Kişiye bildirim gider.</p>
         </div>
       </div>
-      <div class="card">
-        <div class="card-head"><h3>Yetkili kişiler</h3><span class="pill blue" id="permCount">0 kişi</span></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>Verilen yetkiler</h3><span class="pill blue" id="permCount">0 yetki</span></div>
         <div class="card-body table-wrap">
           <table class="table">
-            <thead><tr><th>Kişi</th><th>Ekip</th><th>Yetki</th><th>Nereden</th><th><span class="sr-only">İşlem</span></th></tr></thead>
+            <thead><tr><th>Kişi</th><th>Yetki</th><th>Veren</th><th>Bitiş</th><th><span class="sr-only">İşlem</span></th></tr></thead>
             <tbody id="permRows"></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>Ayrılan çalışanın kayıtları</h3></div>
+        <div class="card-body">
+          <p class="hint" style="margin:0 0 12px">İşten ayrılan ya da görev değiştiren kişinin üzerindeki açık kayıtları devredin. Devralacak kişinin ekibinde olmayan kayıtlar, ekibinin havuzuna (Yeni) döner.</p>
+          <div class="perm-form">
+            <select id="hoFrom" aria-label="Kayıtları devredilecek kişi"></select>
+            <select id="hoTo" aria-label="Devralacak kişi"></select>
+          </div>
+          <p class="hint" id="hoPreview" aria-live="polite" style="margin:10px 0 0"></p>
+          <label class="perm-check"><input type="checkbox" id="hoDeactivate" /> Kişiyi uygulamada kapat: oturumu sonlanır, yetkileri silinir</label>
+          <button class="btn btn-soft" type="button" id="hoGo" style="margin-top:12px">Kayıtları devret</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>Kurumsal dizinden gelen yöneticiler</h3><span class="pill gray" id="permDirCount">0 kişi</span></div>
+        <div class="card-body table-wrap">
+          <p class="hint" style="margin:0 0 10px" id="permDirHint"></p>
+          <table class="table">
+            <thead><tr><th>Kişi</th><th>Ekip</th><th>Rol</th></tr></thead>
+            <tbody id="permDirRows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Yetki geçmişi</h3><span class="pill gray">Son 100 değişiklik</span></div>
+        <div class="card-body" id="permHistory"></div>
       </div>
     </section>
 
@@ -2980,7 +3023,8 @@ function openNotifications(){
       + (view ? ' type="button" data-view="'+esc(view)+'"' : '') + '>'
       + '<div class="avatar" aria-hidden="true">' + (n.read ? '•' : '!') + '</div>'
       + '<div><b' + (n.read ? ' style="font-weight:500"' : '') + '>' + esc(rec && rec.title ? rec.title : n.text) + '</b>'
-      + '<span>' + esc(plainText(n.text)) + ' • ' + esc(fmtRel(n.createdAt)) + '</span></div></' + tag + '>';
+      /* Kayda bağlı olmayan bildirimde (yetki, geri bildirim) metin başlıkta; tekrar yazılmaz */
+      + '<span>' + (rec ? esc(plainText(n.text)) + ' • ' : '') + esc(fmtRel(n.createdAt)) + '</span></div></' + tag + '>';
   };
   openModal('Bildirimler',
     items.length ? items.map(row).join('') : '<p class="hint">Henüz bildiriminiz yok.</p>',

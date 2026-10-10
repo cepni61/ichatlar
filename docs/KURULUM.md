@@ -54,10 +54,24 @@ yeniden başlatın.
 | Ekip yöneticisi grubu | `IcHatlar-Yoneticiler` | Bu gruptaki kişi, üyesi olduğu ekibin yöneticisi olur (raporlar, Bilgi Bankası) |
 | DNS kaydı | `ichatlar.eczacibasi.local` → sunucu | Kullanıcıların açacağı adres |
 
-AD gruplarına ek olarak sistem yöneticisi, uygulamadaki **Yetkiler** ekranından bir kişiyi
-ekip yöneticisi ya da sistem yöneticisi yapabilir. Bu yetki AD'deki rolün üstüne eklenir,
-AD girişinde silinmez, geri alınınca kişi AD'deki rolüne döner; her değişiklik denetim
-izine yazılır. İlk sistem yöneticisi yine AD grubundan (`LDAP_ADMIN_GROUP`) gelmelidir.
+AD gruplarına ek olarak sistem yöneticisi, uygulamadaki **Yetkiler** ekranından yetki
+verir:
+
+| Yetki | Ne sağlar |
+|---|---|
+| Ekip yöneticisi | Kişinin kendi ekibinde yönetici (raporlar, Bilgi Bankası, gecikme bildirimleri) |
+| Sistem yöneticisi | Bütün departmanlar, Yönetim ve Yetkiler ekranları |
+| Departman sorumlusu | Seçilen departmanın bütün ekiplerini okur, raporları görür, maddelerini yönetir; işlem yapmaz |
+| Rapor görüntüleyici | Raporlar ve CSV |
+| Bilgi Bankası düzenleyici | Seçilen ekibin maddeleri |
+
+Verilen yetki AD'deki rolün üstüne eklenir, AD girişinde silinmez; geri alınınca kişi
+AD'deki rolüne döner. Bitiş tarihi verilebilir (vekâlet): yetki o günün sonunda kendiliğinden
+düşer. Aynı ekranda ayrılan çalışanın açık kayıtları devredilir ve kişi uygulamada
+kapatılabilir. Her değişiklik denetim izine yazılır, ekranda "Yetki geçmişi" olarak
+görünür ve kişiye bildirim gider. İlk sistem yöneticisi yine AD grubundan
+(`LDAP_ADMIN_GROUP`) gelmelidir. "Yalnızca ilgili ekip görsün" işaretli kayıtlar hiçbir
+yetkiyle ekip dışına açılmaz.
 
 Hizmet hesabı **gerekmez**: kişi kendi hesabıyla bağlanır ve yalnızca kendi
 kaydını okur. Grup üyeliği **doğrudan** olmalı (iç içe grup sayılmaz).

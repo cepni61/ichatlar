@@ -135,10 +135,10 @@ describe('Bilgi Bankası', () => {
     expect((await post(w.ikManager.id, '/api/kb', article(w.ik.id))).statusCode).toBe(201);
     expect((await post(w.ikManager.id, '/api/kb', article(w.bt.id))).statusCode).toBe(403);
 
-    // Sistem yöneticisi BT üyesine BT için yetki verir.
+    // Sistem yöneticisi BT üyesine BT için yetki verir (Yetkiler ekranı).
     expect((await post(w.btMember.id, '/api/kb', article(w.bt.id))).statusCode).toBe(403);
     // Ekip seçilmez: yetki kişinin kendi ekibi (BT) için verilir.
-    expect((await post(w.admin.id, '/api/kb/editors', { userId: w.btMember.id })).statusCode).toBe(201);
+    expect((await post(w.admin.id, '/api/admin/grants', { userId: w.btMember.id, kind: 'KB_EDITOR' })).statusCode).toBe(201);
     expect((await post(w.btMember.id, '/api/kb', article(w.bt.id, { title: 'SAP erişimi' }))).statusCode).toBe(201);
     const boot = (await get(w.btMember.id, '/api/bootstrap')).json();
     expect(boot.kb).toMatchObject({ view: true, admin: false, edit: [w.bt.id] });

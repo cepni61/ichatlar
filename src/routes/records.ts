@@ -10,7 +10,7 @@ import {
   STATUS_FROM_SLUG,
   TYPE_FROM_SLUG,
 } from '../domain/constants.js';
-import { can, isTeamRole, type Actor } from '../domain/permissions.js';
+import { can, departmentsOf, isTeamRole, type Actor } from '../domain/permissions.js';
 import { actorInTree, inDepartmentTree, inTeam, isAssignableUnit, loadOrgTree, withRoots } from '../domain/org.js';
 import { dueDateFor } from '../domain/sla.js';
 import { findSimilar } from '../domain/similarity.js';
@@ -33,9 +33,9 @@ function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
   const teamFilter: Prisma.RecordWhereInput =
     actor.departmentId && isTeamRole(actor.role) ? inTeam(actor.departmentId) : { id: '__none__' };
 
-  const departmentWide: Prisma.RecordWhereInput[] = actor.departmentRootId
-    ? [{ AND: [{ restricted: false }, inDepartmentTree(actor.departmentRootId)] }]
-    : [];
+  // Kendi departmanı ve sorumlu olduğu departmanlar; kısıtlı kayıtlar hariç.
+  const departmentWide: Prisma.RecordWhereInput[] = departmentsOf(actor)
+    .map((root) => ({ AND: [{ restricted: false }, inDepartmentTree(root)] }));
 
   switch (scope) {
     // Arayüzün tek yüklemesi: kişinin herhangi bir görünümde (Açtıklarım,
@@ -56,11 +56,12 @@ function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
     case 'all':
     default:
       // Tüm Kayıtlar (kullanıcı isteği, 2026-10-09): kişinin departmanındaki
-      // bütün ekiplerin kayıtları; sistem yöneticisi bütün departmanları görür.
+      // bütün ekiplerin kayıtları (departman sorumlusu: sorumlu olduğu
+      // departmanlar da); sistem yöneticisi bütün departmanları görür.
       // "Yalnızca ilgili ekip görsün" işaretli kayıtlar burada hiç görünmez —
       // ilgili ekip onları Ekibime Gelenler'de, açan kişi Açtıklarım'da görür.
       if (actor.role === Role.ADMIN) return { restricted: false };
-      return departmentWide[0] ?? { id: '__none__' };
+      return departmentWide.length ? { OR: departmentWide } : { id: '__none__' };
   }
 }
 

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
-import { requireUser } from '../auth/guard.js';
+import { actorOf, requireUser } from '../auth/guard.js';
 import { isTeamRole } from '../domain/permissions.js';
 import { env } from '../env.js';
 import { ALLOWED, MAX_FILES } from '../domain/attachments.js';
@@ -55,7 +55,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
         select: { id: true, name: true, role: true, departmentId: true },
       }),
       slaRules(),
-      kbAccess({ id: me.id, role: me.role, departmentId: me.departmentId }),
+      kbAccess(actorOf(req)),  // departman sorumluluğu da (headOf)
     ]);
 
     return {

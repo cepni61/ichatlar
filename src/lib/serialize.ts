@@ -5,7 +5,7 @@ import {
   STATUS_TO_SLUG,
   TYPE_TO_SLUG,
 } from '../domain/constants.js';
-import { maySeeCreator, permissionsFor, type Actor } from '../domain/permissions.js';
+import { departmentsOf, maySeeCreator, permissionsFor, type Actor } from '../domain/permissions.js';
 import { actorInTree, loadOrgTree, rootOf, withRoots, type OrgTree } from '../domain/org.js';
 import { prisma } from '../db.js';
 import { slaStatus } from '../domain/sla.js';
@@ -84,8 +84,7 @@ export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: O
     inAllRecords:
       !rec.restricted &&
       (a.role === Role.ADMIN ||
-        (a.departmentRootId != null &&
-          (shaped.departmentRootId === a.departmentRootId || shaped.department2RootId === a.departmentRootId))),
+        departmentsOf(a).some((d) => d === shaped.departmentRootId || d === shaped.department2RootId)),
 
     resolution: rec.resolution,
     /** Öneri kaydının yapısal alanları; bilgi kaydında null. */

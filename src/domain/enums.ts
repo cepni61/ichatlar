@@ -88,6 +88,8 @@ export const NotificationType = {
   EVALUATED: 'EVALUATED',
   /** Uygulama geri bildirimi geldi (sistem yöneticileri). Kayda bağlı değil. */
   FEEDBACK: 'FEEDBACK',
+  /** Yetki verildi, alındı ya da süresi doldu (Yetkiler ekranı). Kayda bağlı değil. */
+  ACCESS: 'ACCESS',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

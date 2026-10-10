@@ -23,7 +23,7 @@ import attachmentRoutes from './routes/attachments.js';
 import kbRoutes from './routes/kb.js';
 import feedbackRoutes from './routes/feedback.js';
 import searchRoutes from './routes/search.js';
-import roleRoutes from './routes/roles.js';
+import grantRoutes from './routes/grants.js';
 import { MAX_FILES } from './domain/attachments.js';
 import gateRoutes, { gateHook } from './routes/gate.js';
 
@@ -164,7 +164,7 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
   await app.register(kbRoutes);
   await app.register(feedbackRoutes);
   await app.register(searchRoutes);
-  await app.register(roleRoutes);
+  await app.register(grantRoutes);
 
   /**
    * Arayüz kimlik istiyor. API istekleri 401 döner (arayüz kendisi yönlendirir),

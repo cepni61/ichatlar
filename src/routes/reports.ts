@@ -3,7 +3,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
-import { actorOf, requireRole, requireUser } from '../auth/guard.js';
+import { actorOf, requireReports, requireUser } from '../auth/guard.js';
 import {
   HOUR_MS,
   isOpen,
@@ -22,7 +22,8 @@ import { inDepartmentTree, inTeam, isAssignableUnit, loadOrgTree, rootOf, teamsO
 /**
  * Raporlar ekip ve kurum düzeyinde toplu sayılar üretir; kayıt gövdesi
  * döndürmez. Bu yüzden yetki kaydı bazında değil rol bazında verilir:
- * yönetici ve sistem yöneticisi görür.
+ * yönetici, sistem yöneticisi, rapor görüntüleyici ve departman sorumlusu
+ * görür (auth/guard.ts → requireReports).
  *
  * Ölçek notu: kayıtlar belleğe çekilip toplanıyor. On binlerce kayda kadar
  * sorun değil (satır başına ~10 alan). Ötesinde bu uç SQL toplama
@@ -136,7 +137,7 @@ export default async function reportRoutes(app: FastifyInstance) {
 
   app.get(
     '/api/reports/summary',
-    { preHandler: requireRole(Role.MANAGER, Role.ADMIN) },
+    { preHandler: requireReports },
     async (req) => {
       const now = Date.now();
       const filter = await reportFilter(req);
@@ -237,7 +238,7 @@ export default async function reportRoutes(app: FastifyInstance) {
   /** CSV — ichatlar4'teki sütunlarla aynı, Excel'in Türkçe ayracıyla. */
   app.get(
     '/api/reports/export.csv',
-    { preHandler: requireRole(Role.MANAGER, Role.ADMIN) },
+    { preHandler: requireReports },
     async (req, reply) => {
       const now = Date.now();
       const filter = await reportFilter(req);

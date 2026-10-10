@@ -142,11 +142,12 @@ export async function applyOrgConfig(prisma: PrismaClient, input: OrgConfigInput
       result.moved.users += (await tx.user.updateMany({ where: { departmentId: d.id }, data: { departmentId: main } })).count;
       result.moved.kb += (await tx.kbArticle.updateMany({ where: { departmentId: d.id }, data: { departmentId: main } })).count;
       // Düzenleme yetkisi (kişi + birim tekil): asıl ekipte zaten varsa eskisi silinir.
-      const grants = await tx.kbEditor.findMany({ where: { departmentId: d.id }, select: { id: true, userId: true } });
+      // Bilgi Bankası düzenleme yetkileri de asıl ekibe (aynısı varsa silinir).
+      const grants = await tx.grant.findMany({ where: { departmentId: d.id, kind: 'KB_EDITOR' }, select: { id: true, userId: true } });
       for (const g of grants) {
-        const dup = await tx.kbEditor.findUnique({ where: { userId_departmentId: { userId: g.userId, departmentId: main } } });
-        if (dup) await tx.kbEditor.delete({ where: { id: g.id } });
-        else await tx.kbEditor.update({ where: { id: g.id }, data: { departmentId: main } });
+        const dup = await tx.grant.findFirst({ where: { userId: g.userId, departmentId: main, kind: 'KB_EDITOR' } });
+        if (dup) await tx.grant.delete({ where: { id: g.id } });
+        else await tx.grant.update({ where: { id: g.id }, data: { departmentId: main } });
       }
     }
 

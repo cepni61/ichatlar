@@ -1,7 +1,7 @@
 import { Role } from '../domain/enums.js';
 import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { prisma } from '../db.js';
-import { effectiveRole } from '../domain/roles.js';
+import { effectiveRole, roleGrantsOf } from '../domain/grants.js';
 
 /**
  * Kurumsal dizinden (Entra ID ya da Active Directory) gelen kişiyi uygulama
@@ -68,13 +68,13 @@ async function fromGroups(claims: DirectoryClaims, policy: DirectoryPolicy) {
 /**
  * İlk girişte kullanıcıyı oluşturur, sonrakilerde ad/e-posta ve (politikaya
  * göre) ekip/rolü tazeler. Gruplardan gelen rol baseRole'e yazılır; Yetkiler
- * ekranında verilen yetki (roleGrant) korunur, etkin rol ikisinin yükseğidir.
+ * ekranında verilen yetki (Grant) korunur, etkin rol ikisinin yükseğidir.
  */
 export async function upsertUserFromClaims(claims: DirectoryClaims, policy: DirectoryPolicy) {
   const target = await fromGroups(claims, policy);
   const existing = await prisma.user.findUnique({
     where: { entraOid: claims.oid },
-    select: { id: true, baseRole: true, roleGrant: true, departmentId: true },
+    select: { id: true, baseRole: true, departmentId: true },
   });
 
   if (existing) {
@@ -99,7 +99,7 @@ export async function upsertUserFromClaims(claims: DirectoryClaims, policy: Dire
         lastLoginAt: new Date(),
         departmentId,
         baseRole: base,
-        role: effectiveRole(base, existing.roleGrant, departmentId),
+        role: effectiveRole(base, await roleGrantsOf(prisma, existing.id), departmentId),
       },
       select: { id: true, active: true },
     });

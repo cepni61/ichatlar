@@ -3,6 +3,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { asRole, type Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
 import { env } from '../env.js';
+import { activeGrant, GrantKind } from '../domain/grants.js';
 
 export const SESSION_COOKIE = 'ih_sid';
 
@@ -13,6 +14,10 @@ export interface SessionUser {
   role: Role;
   departmentId: string | null;
   departmentName: string | null;
+  /** Departman sorumlusu olduğu departmanlar (Yetkiler ekranı). */
+  headOf: string[];
+  /** Raporları görebilir: yönetici, sistem yöneticisi, rapor görüntüleyici ya da departman sorumlusu. */
+  reports: boolean;
 }
 
 /** Oturum kimliği tahmin edilemez olmalı; çerezde yalnızca bu değer taşınır. */
@@ -73,6 +78,11 @@ export async function resolveSession(req: FastifyRequest): Promise<SessionUser |
           active: true,
           departmentId: true,
           department: { select: { name: true } },
+          // Rolü değiştirmeyen yetkiler her istekte okunur: süresi dolan hemen işlemez.
+          grants: {
+            where: { kind: { in: [GrantKind.DEPT_HEAD, GrantKind.REPORTS] }, AND: [activeGrant()] },
+            select: { kind: true, departmentId: true },
+          },
         },
       },
     },
@@ -83,13 +93,18 @@ export async function resolveSession(req: FastifyRequest): Promise<SessionUser |
   if (session.expiresAt.getTime() < Date.now()) return null;
   if (!session.user.active) return null;
 
+  const role = asRole(session.user.role);
+  const grants = session.user.grants;
+  const headOf = grants.filter((g) => g.kind === GrantKind.DEPT_HEAD && g.departmentId).map((g) => g.departmentId!);
   return {
     id: session.user.id,
     name: session.user.name,
     email: session.user.email,
-    role: asRole(session.user.role),
+    role,
     departmentId: session.user.departmentId,
     departmentName: session.user.department?.name ?? null,
+    headOf,
+    reports: role === 'MANAGER' || role === 'ADMIN' || headOf.length > 0 || grants.some((g) => g.kind === GrantKind.REPORTS),
   };
 }
 

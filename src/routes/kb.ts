@@ -2,8 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
-import { actorOf, requireRole, requireUser } from '../auth/guard.js';
-import { Role } from '../domain/enums.js';
+import { actorOf, requireUser } from '../auth/guard.js';
 import { canEditDept, isHttpUrl, KB_KIND_KEYS, KB_KINDS, kbAccess } from '../domain/kb.js';
 import { fold } from '../domain/similarity.js';
 import { toJsonText } from '../lib/dialect.js';
@@ -161,63 +160,6 @@ export default async function kbRoutes(app: FastifyInstance) {
       data: { actorId: actor.id, action: 'kb.delete', entity: 'KbArticle', entityId: id, before: toJsonText({ title: old.title }), ip: req.ip },
     });
     relearn(req.log);
-    return { ok: true };
-  });
-
-  /* --------------------------------------------- düzenleme yetkileri (admin) */
-
-  app.get('/api/kb/editors', { preHandler: requireRole(Role.ADMIN) }, async () => {
-    const rows = await prisma.kbEditor.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true, createdAt: true,
-        user: { select: { id: true, name: true } },
-        department: { select: { id: true, name: true } },
-        grantedBy: { select: { name: true } },
-      },
-    });
-    return {
-      items: rows.map((r) => ({
-        id: r.id, user: r.user, department: r.department, grantedBy: r.grantedBy?.name ?? null, createdAt: r.createdAt,
-      })),
-    };
-  });
-
-  app.post('/api/kb/editors', { preHandler: requireRole(Role.ADMIN) }, async (req, reply) => {
-    const actor = actorOf(req);
-    // Ekip verilmezse yetki kişinin kendi ekibi için verilir (arayüz böyle kullanır).
-    const parsed = z
-      .object({ userId: z.string().min(1).max(64), departmentId: z.string().min(1).max(64).optional() })
-      .safeParse(req.body);
-    if (!parsed.success) throw badRequest('Kişi seçin.');
-    const { userId } = parsed.data;
-    const user = await prisma.user.findFirst({ where: { id: userId, active: true }, select: { id: true, departmentId: true } });
-    if (!user) throw badRequest('Kişi bulunamadı.');
-    const departmentId = parsed.data.departmentId ?? user.departmentId;
-    if (!departmentId) throw badRequest('Kişinin bir ekibi yok; önce ekibe atanmalı.');
-    await activeDept(departmentId);
-
-    const row = await prisma.kbEditor.upsert({
-      where: { userId_departmentId: { userId, departmentId } },
-      create: { userId, departmentId, grantedById: actor.id },
-      update: {},
-      select: { id: true },
-    });
-    await prisma.auditLog.create({
-      data: { actorId: actor.id, action: 'kb.grant', entity: 'KbEditor', entityId: row.id, after: toJsonText({ userId, departmentId }), ip: req.ip },
-    });
-    return reply.code(201).send({ id: row.id });
-  });
-
-  app.delete('/api/kb/editors/:id', { preHandler: requireRole(Role.ADMIN) }, async (req) => {
-    const actor = actorOf(req);
-    const { id } = req.params as { id: string };
-    const row = await prisma.kbEditor.findUnique({ where: { id }, select: { userId: true, departmentId: true } });
-    if (!row) throw notFound('Yetki');
-    await prisma.kbEditor.delete({ where: { id } });
-    await prisma.auditLog.create({
-      data: { actorId: actor.id, action: 'kb.revoke', entity: 'KbEditor', entityId: id, before: toJsonText(row), ip: req.ip },
-    });
     return { ok: true };
   });
 }

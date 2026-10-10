@@ -17,7 +17,13 @@ export interface Actor {
   departmentId: string | null;
   /** Ekibin departmanı. Verilmezse departman genelinde görme kuralı uygulanmaz. */
   departmentRootId?: string | null;
+  /** Departman sorumlusu olduğu departmanlar: kendi departmanı gibi okur. */
+  headOf?: string[];
 }
+
+/** Kişinin "Tüm Kayıtlar"da gördüğü departmanlar: kendi departmanı + sorumlu olduklar. */
+export const departmentsOf = (a: Actor) =>
+  [...new Set([a.departmentRootId, ...(a.headOf ?? [])].filter((x): x is string => Boolean(x)))];
 
 /** Veritabanından okunan kayıt. Kolonlar String olduğu için tipler geniş;
   * karşılaştırmalar enums.ts sabitleriyle yapıldığı için güvenli kalır. */
@@ -74,9 +80,7 @@ export function relate(rec: RecordShape, actor: Actor): Relation {
     // "Yalnızca ilgili ekip görsün" kayıtta sistem yöneticisinin ayrıcalığı yok:
     // ekibinde değilse görmez, işlem de yapamaz (kullanıcı isteği, 2026-10-09).
     isAdmin: actor.role === Role.ADMIN && !rec.restricted,
-    inDepartment:
-      actor.departmentRootId != null &&
-      (actor.departmentRootId === rec.departmentRootId || actor.departmentRootId === rec.department2RootId),
+    inDepartment: departmentsOf(actor).some((d) => d === rec.departmentRootId || d === rec.department2RootId),
     open: isOpen(rec.status),
   };
 }

@@ -1,8 +1,8 @@
 /* =========================================================================
    İç Hatlar — API'ye bağlı modüller:
      - Kaynak Bul         (/api/search/resources)
-     - Bilgi Bankası      (/api/kb, /api/kb/editors)
-     - Yetkiler           (/api/admin/roles)
+     - Bilgi Bankası      (/api/kb)
+     - Yetkiler           (/api/admin/grants, /api/admin/handover)
      - Uygulama geri bildirimi (/api/feedback) ve Yönetim'deki listesi
 
    index.html'deki renderView bu fonksiyonları ekran açılınca çağırır.
@@ -101,19 +101,12 @@
         const b = e.target.closest('[data-kb-edit]');
         if (b) openKbEditor(kbItems.find((x) => x.id === b.dataset.kbEdit));
       });
-      $('#kbGrant').addEventListener('click', grantEditor);
-      $('#kbEditors').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-kb-revoke]');
-        if (b) revokeEditor(b.dataset.kbRevoke);
-      });
       $('#kbDept').innerHTML = '<option value="">Tüm ekipler</option>' + teamOptions('');
       $('#kbKind').innerHTML = '<option value="">Tüm türler</option>'
         + kbKinds().map((k) => '<option value="' + esc(k.id) + '">' + esc(k.label) + '</option>').join('');
     }
     $('#kbNew').hidden = kbEditable().length === 0;
-    $('#kbEditorsCard').hidden = !a.admin;
     await loadKb();
-    if (a.admin) loadEditors();
   };
 
   async function loadKb() {
@@ -219,132 +212,221 @@
       ]);
   }
 
-  /* Kişi seçimi: yalnızca ekip üyeleri (yöneticiler kendi ekiplerinde zaten
-     yetkili) ve henüz yetkisi olmayanlar. Liste yeniden çizilse de yapılmış
-     seçim korunur. */
-  function fillGrantUsers(granted) {
-    const keep = $('#kbGrantUser').value;
-    $('#kbGrantUser').innerHTML = '<option value="">Kişi seçin…</option>'
-      + USERS.filter((u) => u.dept && u.role !== 'Yönetici' && u.role !== 'Sistem Yöneticisi' && !granted.has(u.id))
-        .map((u) => '<option value="' + esc(u.id) + '"' + (u.id === keep ? ' selected' : '') + '>' + esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>').join('');
-  }
-
-  async function loadEditors() {
-    $('#kbEditors').innerHTML = LOADING;
-    try {
-      const out = await api('GET', '/api/kb/editors');
-      fillGrantUsers(new Set(out.items.map((x) => x.user.id)));
-      $('#kbEditors').innerHTML = out.items.length
-        ? out.items.map((x) =>
-            '<div class="leader"><div class="avatar" aria-hidden="true">' + esc(initials(x.user.name)) + '</div>'
-            + '<div style="flex:1;min-width:0"><b>' + esc(x.user.name) + '</b><span>' + esc(x.department.name) + ' maddeleri'
-            + (x.grantedBy ? ' · veren: ' + esc(x.grantedBy) : '') + ' · ' + esc(fmtRel(x.createdAt)) + '</span></div>'
-            + '<button class="mini-btn" type="button" data-kb-revoke="' + esc(x.id) + '" aria-label="' + esc(x.user.name + ' kişisinden yetkiyi al') + '">Yetkiyi al</button></div>').join('')
-        : '<p class="hint" style="margin:0">Ek yetki verilmedi.</p>';
-    } catch (err) {
-      fillGrantUsers(new Set());
-      $('#kbEditors').innerHTML = '<p class="hint">Yetkiler yüklenemedi: ' + esc(err.message) + '</p>';
-    }
-  }
-
-  async function grantEditor() {
-    const userId = $('#kbGrantUser').value;
-    if (!userId) return toast('Kişi seçin', 'err');
-    try {
-      await api('POST', '/api/kb/editors', { userId });
-      toast('Yetki verildi', 'ok');
-      $('#kbGrantUser').value = '';
-      loadEditors();
-    } catch (err) { toast(err.message, 'err'); }
-  }
-
-  async function revokeEditor(id) {
-    try {
-      await api('DELETE', '/api/kb/editors/' + encodeURIComponent(id));
-      toast('Yetki alındı', 'ok');
-      loadEditors();
-    } catch (err) { toast(err.message, 'err'); }
-  }
-
   /* ============================================================ Yetkiler */
 
   const ROLE_NAME = { USER: 'Çalışan', TEAM_MEMBER: 'Ekip üyesi', MANAGER: 'Ekip yöneticisi', ADMIN: 'Sistem yöneticisi' };
-  const RANK = { USER: 0, TEAM_MEMBER: 1, MANAGER: 2, ADMIN: 3 };
+  const KIND_NAME = {
+    MANAGER: 'Ekip yöneticisi', ADMIN: 'Sistem yöneticisi', DEPT_HEAD: 'Departman sorumlusu',
+    REPORTS: 'Rapor görüntüleyici', KB_EDITOR: 'Bilgi Bankası düzenleyici',
+  };
+  const dayOf = (iso) => new Date(iso).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Europe/Istanbul' });
   let permBound = false;
+
+  /* Kişi seçenekleri: departman başlıkları altında, yanında ekibi */
+  function personOptions(list, first) {
+    const opt = (u) => '<option value="' + esc(u.id) + '">' + esc(u.name) + (u.dept ? ' — ' + esc(deptName(u.dept)) : '') + '</option>';
+    const sorted = (xs) => xs.slice().sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+    return '<option value="">' + esc(first) + '</option>'
+      + rootUnits().map((r) => {
+        const ids = teamsOfDept(r.id).map((t) => t.id);
+        const xs = list.filter((u) => ids.includes(u.dept));
+        return xs.length ? '<optgroup label="' + esc(r.name) + '">' + sorted(xs).map(opt).join('') + '</optgroup>' : '';
+      }).join('')
+      + (() => {
+        const xs = list.filter((u) => !teamUnits().some((d) => d.id === u.dept));
+        return xs.length ? '<optgroup label="Ekibi olmayanlar">' + sorted(xs).map(opt).join('') + '</optgroup>' : '';
+      })();
+  }
+
+  /* Kapsam: departman sorumlusunda departman, Bilgi Bankası'nda ekip (varsayılan kişinin ekibi) */
+  function syncScope() {
+    const kind = $('#permKind').value;
+    const sel = $('#permScope');
+    const u = USERS.find((x) => x.id === $('#permUser').value);
+    if (kind === 'DEPT_HEAD') {
+      sel.innerHTML = '<option value="">Departman seçin…</option>'
+        + rootUnits().map((r) => '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>').join('');
+      if (u && u.dept) sel.value = rootOf(u.dept) || '';
+    } else if (kind === 'KB_EDITOR') {
+      sel.innerHTML = '<option value="">Ekip seçin…</option>' + teamOptions(u ? u.dept : '');
+    }
+    sel.hidden = kind !== 'DEPT_HEAD' && kind !== 'KB_EDITOR';
+  }
 
   window.renderPerms = function () {
     if (document.body.dataset.role !== 'ADMIN') { show('dashboard'); return toast('Yetkiler yalnızca sistem yöneticisine açık', 'err'); }
     if (!permBound) {
       permBound = true;
-      $('#permGrant').addEventListener('click', () => changeRole($('#permUser').value, $('#permRole').value));
+      const me = Store.me();
+      const others = USERS.filter((u) => u.id !== me.id);
+      $('#permUser').innerHTML = personOptions(others, 'Kişi seçin…');
+      $('#hoFrom').innerHTML = personOptions(others, 'Ayrılan kişi…');
+      $('#hoTo').innerHTML = personOptions(USERS.filter((u) => u.teamRole && u.dept), 'Devralacak kişi yok: ekibin havuzuna bırak');
+      $('#permUntil').min = new Date().toISOString().slice(0, 10);
+      $('#permKind').addEventListener('change', syncScope);
+      $('#permUser').addEventListener('change', syncScope);
+      $('#permGrant').addEventListener('click', grantNow);
       $('#permRows').addEventListener('click', (e) => {
         const b = e.target.closest('[data-perm-revoke]');
-        if (b) changeRole(b.dataset.permRevoke, null, b.dataset.name);
+        if (b) revoke(b.dataset.permRevoke, b.dataset.what);
       });
-      // Kişi listesi: departman başlıkları altında, yanında ekibi; kendisi hariç
-      // (kendi yetkisini değiştiremez).
-      const me = Store.me();
-      const opt = (u) => '<option value="' + esc(u.id) + '">' + esc(u.name) + (u.dept ? ' — ' + esc(deptName(u.dept)) : '') + '</option>';
-      const others = USERS.filter((u) => u.id !== me.id);
-      $('#permUser').innerHTML = '<option value="">Kişi seçin…</option>'
-        + rootUnits().map((r) => {
-          const ids = teamsOfDept(r.id).map((t) => t.id);
-          const list = others.filter((u) => ids.includes(u.dept)).sort((a, b) => a.name.localeCompare(b.name, 'tr'));
-          return list.length ? '<optgroup label="' + esc(r.name) + '">' + list.map(opt).join('') + '</optgroup>' : '';
-        }).join('')
-        + (() => {
-          const none = others.filter((u) => !teamUnits().some((d) => d.id === u.dept));
-          return none.length ? '<optgroup label="Ekibi olmayanlar">' + none.map(opt).join('') + '</optgroup>' : '';
-        })();
+      $('#hoFrom').addEventListener('change', previewHandover);
+      $('#hoGo').addEventListener('click', confirmHandover);
+      syncScope();
     }
     loadPerms();
+    loadHistory();
   };
 
   async function loadPerms() {
     $('#permRows').innerHTML = '<tr><td colspan="5" class="empty">Yükleniyor…</td></tr>';
     try {
-      const out = await api('GET', '/api/admin/roles');
-      const me = Store.me();
-      const source = out.directory ? out.directory + ' grubundan' : 'Kurulumdan';
-      $('#permCount').textContent = out.items.length + ' kişi';
-      $('#permRows').innerHTML = out.items.map((u) => {
-        // Verilen yetki dizindeki rolden yüksekse etkin olan odur; ekipsiz
-        // kişide ekip yöneticiliği işlemez.
-        const granted = u.roleGrant && RANK[u.roleGrant] > RANK[u.baseRole];
-        const idle = granted && u.role !== u.roleGrant;
-        const from = granted
-          ? 'Bu ekrandan' + (u.grantedBy ? ', veren: ' + esc(u.grantedBy) : '') + (u.roleGrantAt ? ' (' + esc(fmtRel(u.roleGrantAt)) + ')' : '')
-            + (idle ? '<br><span class="hint">Ekibi olmadığı için işlemiyor</span>' : '')
-          : esc(source);
-        const action = u.roleGrant && u.id !== me.id
-          ? '<button class="mini-btn" type="button" data-perm-revoke="' + esc(u.id) + '" data-name="' + esc(u.name) + '">Yetkiyi al</button>'
-          : '';
-        return '<tr><td><div class="perm-who"><div class="avatar sm" aria-hidden="true">' + esc(initials(u.name)) + '</div>'
-          + '<div><b>' + esc(u.name) + (u.id === me.id ? ' (siz)' : '') + '</b><small>' + esc(u.email) + '</small></div></div></td>'
-          + '<td>' + esc(u.departmentId ? deptName(u.departmentId) : '—') + '</td>'
-          + '<td><span class="pill ' + (u.role === 'ADMIN' ? 'purple' : 'blue') + '">' + esc(ROLE_NAME[u.role] || u.role) + '</span></td>'
-          + '<td class="small">' + from + '</td>'
-          + '<td>' + action + '</td></tr>';
-      }).join('') || '<tr><td colspan="5" class="empty">Yetkili kişi yok.</td></tr>';
+      const out = await api('GET', '/api/admin/grants');
+      $('#permCount').textContent = out.grants.length + ' yetki';
+      $('#permRows').innerHTML = out.grants.map((g) => {
+        const what = g.label + (g.department ? ' (' + g.department.name + ')' : '');
+        const left = g.expiresAt ? Math.floor((new Date(g.expiresAt) - Date.now()) / 86400000) : null;
+        return '<tr><td><div class="perm-who"><div class="avatar sm" aria-hidden="true">' + esc(initials(g.user.name)) + '</div>'
+          + '<div><b>' + esc(g.user.name) + '</b><small>' + esc(g.user.departmentId ? deptName(g.user.departmentId) : g.user.email) + '</small></div></div></td>'
+          + '<td>' + esc(what) + (g.note ? '<span class="perm-note">' + esc(g.note) + '</span>' : '') + '</td>'
+          + '<td class="small">' + esc(g.grantedBy || '—') + '<br>' + esc(fmtRel(g.createdAt)) + '</td>'
+          + '<td class="small">' + (g.expiresAt ? esc(dayOf(g.expiresAt)) + '<br>' + esc(left < 1 ? 'son gün' : left + ' gün kaldı') : 'Süresiz') + '</td>'
+          + '<td><button class="mini-btn" type="button" data-perm-revoke="' + esc(g.id) + '" data-what="' + esc(g.user.name + ': ' + what) + '">Yetkiyi al</button></td></tr>';
+      }).join('') || '<tr><td colspan="5" class="empty">Bu ekrandan verilmiş yetki yok.</td></tr>';
+
+      $('#permDirHint').textContent = out.source
+        ? 'Bu kişilerin rolü ' + out.source + ' gruplarından gelir; buradan değişmez, BT grubu düzenler.'
+        : 'Bu kişilerin rolü kurulum verisinden gelir; buradan değişmez.';
+      $('#permDirCount').textContent = out.directory.length + ' kişi';
+      $('#permDirRows').innerHTML = out.directory.map((u) =>
+        '<tr><td><div class="perm-who"><div class="avatar sm" aria-hidden="true">' + esc(initials(u.name)) + '</div>'
+        + '<div><b>' + esc(u.name) + '</b><small>' + esc(u.email) + '</small></div></div></td>'
+        + '<td>' + esc(u.departmentId ? deptName(u.departmentId) : '—') + '</td>'
+        + '<td><span class="pill ' + (u.baseRole === 'ADMIN' ? 'purple' : 'blue') + '">' + esc(ROLE_NAME[u.baseRole] || u.baseRole) + '</span></td></tr>').join('')
+        || '<tr><td colspan="3" class="empty">Kimse yok.</td></tr>';
     } catch (err) {
       $('#permRows').innerHTML = '<tr><td colspan="5" class="empty">Yetkiler yüklenemedi: ' + esc(err.message) + '</td></tr>';
     }
   }
 
-  async function changeRole(userId, role, name) {
-    if (!userId) return toast('Kişi seçin', 'err');
+  /* Geçmiş: denetim izindeki yetki olayları, cümle olarak */
+  function historyLine(h) {
+    const d = h.detail || {};
+    const what = (d.label || '') + (d.department ? ' (' + d.department + ')' : '');
+    const until = d.expiresAt ? ', ' + dayOf(d.expiresAt) + ' tarihine kadar' : '';
+    const who = h.actor || 'Sistem';
+    switch (h.action) {
+      case 'grant.add': return who + ', ' + d.user + ' kişisine ' + what + ' yetkisi verdi' + until + '.';
+      case 'grant.renew': return who + ', ' + d.user + ' kişisinin ' + what + ' yetkisini yeniledi' + (until || ' (süresiz)') + '.';
+      case 'grant.revoke': return who + ', ' + d.user + ' kişisinden ' + what + ' yetkisini aldı.';
+      case 'grant.expire': return d.user + ' kişisinin ' + what + ' yetkisinin süresi doldu.';
+      case 'handover':
+      case 'handover.deactivate':
+        return who + ', ' + d.user + ' kişisinin açık kayıtlarını devretti: '
+          + (d.assigned ? d.assigned + ' kayıt ' + d.to + ' kişisine' : '') + (d.assigned && d.pooled ? ', ' : '')
+          + (d.pooled ? d.pooled + ' kayıt ekibin havuzuna' : '') + (!d.assigned && !d.pooled ? 'açık kayıt yoktu' : '')
+          + (h.action === 'handover.deactivate' ? '; kişi uygulamada kapatıldı' : '') + '.';
+      default: return h.action;
+    }
+  }
+
+  async function loadHistory() {
+    $('#permHistory').innerHTML = LOADING;
     try {
-      const out = await api('PUT', '/api/admin/roles/' + encodeURIComponent(userId), { role });
-      // Kişi listelerindeki rol etiketi (seçiciler, kayıt sahibi) tazelensin.
+      const out = await api('GET', '/api/admin/grants/history');
+      $('#permHistory').innerHTML = out.items.length
+        ? '<ul class="perm-log">' + out.items.map((h) =>
+            '<li><time datetime="' + esc(h.at) + '">' + esc(fmtDate(h.at)) + '</time><span>' + esc(historyLine(h)) + '</span></li>').join('') + '</ul>'
+        : '<p class="hint" style="margin:0">Henüz yetki değişikliği yok.</p>';
+    } catch (err) {
+      $('#permHistory').innerHTML = '<p class="hint">Geçmiş yüklenemedi: ' + esc(err.message) + '</p>';
+    }
+  }
+
+  function refreshUserRole(userId, role) {
+    // Kişi listelerindeki rol etiketi (seçiciler, kayıt sahibi) tazelensin.
+    const u = USERS.find((x) => x.id === userId);
+    if (!u || !role) return;
+    u.role = role === 'MANAGER' ? 'Yönetici' : role === 'ADMIN' ? 'Sistem Yöneticisi' : 'Ekip Üyesi';
+    u.teamRole = role !== 'USER';
+  }
+
+  async function grantNow() {
+    const userId = $('#permUser').value;
+    const kind = $('#permKind').value;
+    if (!userId) return toast('Kişi seçin', 'err');
+    const scoped = kind === 'DEPT_HEAD' || kind === 'KB_EDITOR';
+    if (scoped && !$('#permScope').value) return toast(kind === 'DEPT_HEAD' ? 'Departman seçin' : 'Ekip seçin', 'err');
+    const body = { userId, kind, until: $('#permUntil').value || null };
+    if (scoped) body.departmentId = $('#permScope').value;
+    try {
+      const out = await api('POST', '/api/admin/grants', body);
+      refreshUserRole(userId, out.role);
       const u = USERS.find((x) => x.id === userId);
-      if (u) {
-        u.role = out.user.role === 'MANAGER' ? 'Yönetici' : out.user.role === 'ADMIN' ? 'Sistem Yöneticisi' : 'Ekip Üyesi';
-        u.teamRole = out.user.role !== 'USER';
-      }
-      toast(role ? out.user.name + ' artık ' + ROLE_NAME[role].toLocaleLowerCase('tr-TR') : (name || out.user.name) + ' kişisinin yetkisi alındı', 'ok');
+      toast((u ? u.name : 'Kişi') + ': ' + KIND_NAME[kind] + (out.renewed ? ' yetkisi yenilendi' : ' yetkisi verildi'), 'ok');
       $('#permUser').value = '';
+      $('#permUntil').value = '';
+      syncScope();
       loadPerms();
+      loadHistory();
     } catch (err) { toast(err.message, 'err'); }
+  }
+
+  function revoke(id, what) {
+    openModal('Yetkiyi al', '<p style="margin:0">' + esc(what) + ' yetkisi alınsın mı? Kişiye bildirim gider.</p>', [
+      { label: 'Vazgeç', cls: 'btn-ghost' },
+      { label: 'Yetkiyi al', cls: 'btn-danger', run: async () => {
+        try {
+          await api('DELETE', '/api/admin/grants/' + encodeURIComponent(id));
+          closeModal();
+          toast('Yetki alındı', 'ok');
+          loadPerms();
+          loadHistory();
+        } catch (err) { toast(err.message, 'err'); }
+      } },
+    ]);
+  }
+
+  /* ------------------------------------------- ayrılan çalışanın kayıtları */
+
+  let hoSeq = 0;
+  async function previewHandover() {
+    const id = $('#hoFrom').value;
+    const seq = ++hoSeq;
+    $('#hoPreview').textContent = id ? 'Hesaplanıyor…' : '';
+    if (!id) return;
+    try {
+      const out = await api('GET', '/api/admin/handover/' + encodeURIComponent(id));
+      if (seq !== hoSeq) return;
+      $('#hoPreview').textContent = out.open
+        ? out.user.name + ' kişisinin üzerinde ' + out.open + ' açık kayıt var: ' + out.teams.map((t) => t.name + ' ' + t.n).join(', ') + '.'
+        : out.user.name + ' kişisinin üzerinde açık kayıt yok.';
+    } catch (err) { $('#hoPreview').textContent = err.message; }
+  }
+
+  function confirmHandover() {
+    const from = USERS.find((u) => u.id === $('#hoFrom').value);
+    if (!from) return toast('Kayıtları devredilecek kişiyi seçin', 'err');
+    const to = USERS.find((u) => u.id === $('#hoTo').value);
+    const off = $('#hoDeactivate').checked;
+    openModal('Kayıtları devret',
+      '<p style="margin:0 0 8px">' + esc(from.name) + ' kişisinin açık kayıtları '
+      + (to ? esc(to.name) + ' kişisine devredilecek; ' + esc(to.name) + ' kişisinin ekibinde olmayanlar ekibin havuzuna dönecek.' : 'ekiplerinin havuzuna dönecek.')
+      + '</p>' + (off ? '<p style="margin:0">Kişi uygulamada kapatılacak: oturumu sonlanır, yetkileri silinir.</p>' : ''),
+      [
+        { label: 'Vazgeç', cls: 'btn-ghost' },
+        { label: 'Devret', cls: off ? 'btn-danger' : 'btn-primary', run: async () => {
+          try {
+            const out = await api('POST', '/api/admin/handover', { fromUserId: from.id, toUserId: to ? to.id : null, deactivate: off });
+            closeModal();
+            toast(out.assigned + ' kayıt devredildi, ' + out.pooled + ' kayıt ekibin havuzuna döndü' + (out.deactivated ? '; kişi kapatıldı' : ''), 'ok');
+            $('#hoFrom').value = ''; $('#hoTo').value = ''; $('#hoDeactivate').checked = false; $('#hoPreview').textContent = '';
+            loadPerms();
+            loadHistory();
+            if (typeof IhRefresh === 'function') IhRefresh();
+          } catch (err) { toast(err.message, 'err'); }
+        } },
+      ]);
   }
 
   /* ================================================ Uygulama geri bildirimi */

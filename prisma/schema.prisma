@@ -49,7 +49,7 @@ model Department {
   primaryRecords   Record[] @relation("primaryDepartment")
   secondaryRecords Record[] @relation("secondaryDepartment")
   kbArticles       KbArticle[]
-  kbEditors        KbEditor[]
+  grants           Grant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -66,19 +66,12 @@ model User {
   email    String  @unique
   name     String
 
-  /// src/domain/enums.ts → Role. ETKİN rol: baseRole ile roleGrant'ın yükseği
-  /// (src/domain/roles.ts). Bütün yetki kodu bunu okur.
+  /// src/domain/enums.ts → Role. ETKİN rol: baseRole ile Yetkiler ekranında
+  /// verilen rolün (Grant) yükseği (src/domain/grants.ts). Bütün yetki kodu bunu okur.
   role   String  @default("USER")
   /// Kurumsal dizinden (AD/Entra grupları) ya da kurulumdan gelen rol. AD
   /// girişinde her seferinde yeniden yazılır.
   baseRole String @default("USER")
-  /// Sistem yöneticisinin Yetkiler ekranında verdiği rol (MANAGER | ADMIN).
-  /// Dizin senkronu buna dokunmaz; geri alınınca etkin rol baseRole'e döner.
-  roleGrant     String?
-  roleGrantAt   DateTime?
-  roleGrantById String?
-  roleGrantBy   User?   @relation("roleGrant", fields: [roleGrantById], references: [id], onDelete: SetNull)
-  roleGranted   User[]  @relation("roleGrant")
   active Boolean @default(true)
 
   /// Unvan (ör. "İK Uzmanı"). Kişi aramasında görünür; kurumsal dizinden
@@ -102,8 +95,8 @@ model User {
   feedbacks       Feedback[]
   kbCreated       KbArticle[] @relation("kbCreator")
   kbUpdated       KbArticle[] @relation("kbUpdater")
-  kbGrants        KbEditor[]  @relation("kbEditor")
-  kbGranted       KbEditor[]  @relation("kbGrantor")
+  grants          Grant[]     @relation("grants")
+  grantsGiven     Grant[]     @relation("grantsGiven")
 
   @@index([departmentId, active])
 }
@@ -413,20 +406,28 @@ model KbArticle {
   @@index([kind, active])
 }
 
-/// Sistem yöneticisinin verdiği Bilgi Bankası düzenleme yetkisi (ekip bazında).
-model KbEditor {
+/// Sistem yöneticisinin Yetkiler ekranında verdiği yetki (src/domain/grants.ts).
+/// Kurumsal dizinden gelen rolün üstüne eklenir; AD girişi buna dokunmaz.
+model Grant {
   id String @id @default(cuid())
 
   userId String
-  user   User   @relation("kbEditor", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("grants", fields: [userId], references: [id], onDelete: Cascade)
 
-  departmentId String
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  /// MANAGER | ADMIN | DEPT_HEAD | REPORTS | KB_EDITOR
+  kind String
+
+  /// DEPT_HEAD: departman; KB_EDITOR: ekip; diğerlerinde boş.
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
   grantedById String?
-  grantedBy   User?   @relation("kbGrantor", fields: [grantedById], references: [id], onDelete: SetNull)
+  grantedBy   User?   @relation("grantsGiven", fields: [grantedById], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  /// Boşsa süresiz. Geçince yetki işlemez; zamanlanmış iş satırı siler.
+  expiresAt DateTime?
 
-  @@unique([userId, departmentId])
+  @@index([userId])
+  @@index([expiresAt])
 }

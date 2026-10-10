@@ -26,7 +26,7 @@ export async function resetDb() {
   assertTestDatabase(process.env.DATABASE_URL);
   await prisma.notification.deleteMany();
   await prisma.feedback.deleteMany();
-  await prisma.kbEditor.deleteMany();
+  await prisma.grant.deleteMany();
   await prisma.kbArticle.deleteMany();
   await prisma.suggestion.deleteMany();
   await prisma.attachment.deleteMany();
