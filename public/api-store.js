@@ -952,13 +952,10 @@
       if (boot.uploads) Object.assign(Uploads, boot.uploads);
       if (Array.isArray(boot.benefits) && boot.benefits.length) fill(BENEFITS, boot.benefits);
 
-      // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
+      // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğunda logonun altı.
       if (boot.org && boot.org.name) {
         APP_TITLE = 'İç Hatlar — ' + boot.org.name;
-        // Yalnızca telif satırı: .side-foot'un tamamı yazılırsa içindeki
-        // "Uygulama için geri bildirim" düğmesi de siliniyordu.
-        const copy = document.querySelector('.side-foot .copy');
-        if (copy) copy.textContent = '© ' + new Date().getFullYear() + ' ' + boot.org.name;
+        $('#orgName').textContent = boot.org.name;
       }
 
       // Rol: yönetim menüsü yalnızca yönetici ve sistem yöneticisine. Yetki

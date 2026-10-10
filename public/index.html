@@ -114,11 +114,16 @@
     --chrome-text:var(--text-2);
     --chrome-text-hi:var(--text);
     --chrome-hover:var(--panel2);
-    --chrome-active-bg:var(--primary);
-    --chrome-active-fg:#fff;
-    --chrome-active-mark:transparent;
+    /* Seçili satır açık tonlu + solda ana renk çizgisi: dolu olan yalnızca
+       birincil eylem (Yeni Kayıt) kalsın, ikisi yarışmasın. */
+    --chrome-active-bg:var(--primary2);
+    --chrome-active-fg:var(--on-soft);
+    --chrome-active-shadow:none;
+    --chrome-active-mark:var(--primary);
     --chrome-badge-bg:var(--primary2);
     --chrome-badge-fg:var(--on-soft);
+    --chrome-badge-on-bg:var(--primary);
+    --chrome-badge-on-fg:#ffffff;
     --chrome-card:var(--panel2);
     --chrome-card-line:var(--line);
     --chrome-name:var(--text);
@@ -129,6 +134,8 @@
     --chrome-foot:var(--muted);
     --chrome-menu-bg:var(--panel);
     --chrome-menu-line:var(--line-2);
+    --chrome-cta-bg:var(--primary);
+    --chrome-cta-fg:#ffffff;
 
     /* Ust bant: baslik, alt metin, arama */
     --head-title:var(--text);
@@ -336,6 +343,9 @@
     --chrome-input-line:rgba(255,255,255,.14);
     --chrome-foot:rgba(215,240,232,.78);
     --chrome-menu-bg:rgba(3,33,26,.94);
+    /* Yeni Kayıt: koyu camın üstünde nane; metin en koyu zümrüt (≥7:1) */
+    --chrome-cta-bg:linear-gradient(180deg,#6ee7b7,#34d399);
+    --chrome-cta-fg:#032b21;
     --chrome-menu-line:rgba(255,255,255,.16);
 
     --head-title:#ffffff;
@@ -438,12 +448,14 @@
     --chrome-text:rgba(212,220,236,.82);
     --chrome-text-hi:#ffffff;
     --chrome-hover:rgba(255,255,255,.07);
-    --chrome-active-bg:var(--primary);
+    --chrome-active-bg:rgba(255,255,255,.09);
     --chrome-active-fg:#ffffff;
-    --chrome-active-shadow:0 6px 16px rgba(37,99,235,.34);
-    --chrome-active-mark:transparent;
+    --chrome-active-shadow:none;
+    --chrome-active-mark:#5b8def;
     --chrome-badge-bg:rgba(147,197,253,.20);
     --chrome-badge-fg:#bfdbfe;
+    --chrome-badge-on-bg:rgba(147,197,253,.30);
+    --chrome-badge-on-fg:#e6eeff;
     --chrome-card:rgba(255,255,255,.06);
     --chrome-card-line:rgba(255,255,255,.10);
     --chrome-name:#ffffff;
@@ -607,6 +619,9 @@
     --chrome-input-line:rgba(255,236,205,.15);
     --chrome-foot:rgba(214,196,168,.70);
     --chrome-menu-bg:#2b221b;
+    /* Yeni Kayıt: bakalit üstünde pirinç plaka (profil rozetiyle aynı) */
+    --chrome-cta-bg:linear-gradient(180deg,#d9b675,#c7a35e);
+    --chrome-cta-fg:#1e1712;
     --chrome-menu-line:rgba(255,236,205,.16);
 
     /* Üst bant açık kalır: başlık bakalit mürekkep, porselen zeminde */
@@ -672,7 +687,7 @@
   html[data-theme="santral"] .ring b{color:var(--text) !important}
 
   /* Bakalit üzerinde bakalit avatar kaybolurdu: profil rozeti pirinç plaka */
-  html[data-theme="santral"] .profile .avatar.grad{
+  html[data-theme="santral"] .account .avatar.grad{
     background:var(--pirinc);color:#1e1712;box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
   }
 
@@ -683,51 +698,21 @@
   /* btn-soft zemini petrol, hover'ı --b-200 (kemik) — renk değişmesin */
   html[data-theme="santral"] .btn-soft:hover{background:#d2e1e4}
 
-  /* Tema secici — kapali dururken yalnizca mevcut temayi gosterir, tiklanınca
-     acilir. Kenar cubugunda durdugu icin ICERIK degil CHROME token'larini
-     kullanir; yoksa zumrut/soft dark'ta koyu kenar cubugunun uzerinde beyaz
-     kutular olarak duruyordu. */
-  .theme-pick{margin-top:8px;position:relative}
-
-  .theme-trigger{
-    width:100%;display:flex;align-items:center;gap:9px;
-    border:1px solid var(--chrome-input-line);background:var(--chrome-input-bg);
-    color:var(--chrome-text-hi);border-radius:10px;padding:6px 9px;
-    cursor:pointer;text-align:left;font:inherit;
-    transition:background .16s var(--ease), border-color .16s var(--ease);
-  }
-  .theme-trigger:hover{background:var(--chrome-hover)}
-  .tt-txt{flex:1;min-width:0;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
-  .tt-lbl{display:inline;font-weight:600;color:var(--chrome-role)}
-  .tt-lbl::after{content:': '}
-  .tt-cur{display:inline;font-weight:600}
-  .tt-chev{
-    width:14px;height:14px;flex:none;color:var(--chrome-role);
-    transition:transform .18s var(--ease);
-  }
-  .theme-trigger[aria-expanded="true"] .tt-chev{transform:rotate(180deg)}
-
-  /* Menu YUKARI acilir: profil blogu kenar cubugunun dibinde, asagi acilsa
-     gorunur alandan tasardi. */
-  .theme-menu{
-    position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:40;
-    background:var(--chrome-menu-bg);
-    backdrop-filter:var(--chrome-blur);-webkit-backdrop-filter:var(--chrome-blur);
-    border:1px solid var(--chrome-menu-line);border-radius:12px;
-    padding:6px;box-shadow:var(--sh-3);display:grid;gap:2px;
-  }
+  /* Tema seçimi hesap menüsünde: beş renk örneği yan yana, seçili olanın
+     çevresinde halka (theme.js). Chrome token'ları: koyu kenar çubuklu
+     temalarda menü de koyu. */
+  .theme-row{display:flex;gap:6px;margin-top:2px}
   .theme-opt{
-    display:flex;align-items:center;gap:9px;width:100%;
-    border:0;background:transparent;border-radius:8px;padding:7px 8px;
-    cursor:pointer;color:var(--chrome-text);text-align:left;
-    font-size:12px;font-weight:500;font-family:inherit;
-    transition:background .14s var(--ease), color .14s var(--ease);
+    width:32px;height:32px;padding:0;border:0;border-radius:10px;cursor:pointer;
+    display:grid;place-items:center;background:transparent;
+    transition:background .14s var(--ease);
   }
-  .theme-opt:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
-  .theme-opt[aria-checked="true"]{color:var(--chrome-text-hi);font-weight:600}
-  .theme-opt .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .theme-opt .tick{width:14px;height:14px;flex:none;opacity:0}
-  .theme-opt[aria-checked="true"] .tick{opacity:1}
+  .theme-opt:hover{background:var(--chrome-hover)}
+  .theme-opt .theme-swatch{width:24px;height:24px;border-radius:8px}
+  .theme-opt[aria-checked="true"] .theme-swatch{
+    box-shadow:0 0 0 2px var(--chrome-menu-bg), 0 0 0 4px var(--chrome-text-hi);
+  }
+  .tt-cur{font-weight:600;color:var(--chrome-text-hi)}
 
   /* Kenar cubugundaki butonlar (cikis) — icerik degil chrome token'lari,
      yoksa koyu kenar cubugunda beyaz pil gibi duruyor. */
@@ -784,69 +769,123 @@
 
   .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
 
-  /* ---------- Sidebar (beyaz) ---------- */
+  /* ---------- Kenar çubuğu ----------
+     Uygulama düzeni (kullanıcı isteği, 2026-10-10: "web sitesi gibi değil,
+     uygulama havası"): üstte çalışma alanı (logo + kuruluş), birincil eylem
+     Yeni Kayıt, amaca göre gruplanmış menü, dipte hesap düğmesi. Kişi, tema,
+     geri bildirim ve çıkış hesap menüsünde; alt bilgi ve telif satırı yok.
+     Renkler temaların chrome token'larından: her tema kendi kimliğini korur. */
   .sidebar{
     background:var(--chrome-bg);
     backdrop-filter:var(--chrome-blur);
     -webkit-backdrop-filter:var(--chrome-blur);
     border-right:1px solid var(--chrome-line);
-    color:var(--chrome-text-hi);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto;
-    display:flex;flex-direction:column;
+    color:var(--chrome-text-hi);padding:16px 14px 14px;position:sticky;top:0;height:100vh;overflow:auto;
+    display:flex;flex-direction:column;gap:14px;
   }
-  .brand{display:flex;gap:10px;align-items:center;margin:2px 6px 14px}
-  .logo{width:38px;height:38px;flex-shrink:0;display:grid;place-items:center}
+  .sidebar :focus-visible{outline:2px solid color-mix(in srgb, var(--chrome-text-hi) 70%, transparent);outline-offset:2px}
+
+  .brand{display:flex;gap:10px;align-items:center;padding:0 4px}
+  .logo{width:34px;height:34px;flex-shrink:0;display:grid;place-items:center}
   .logo svg{width:100%;height:100%;display:block}
   .brand h1{
-    font-size:19px;margin:0;line-height:1.1;color:var(--chrome-brand);
-    font-weight:800;letter-spacing:-.03em;
+    min-width:0;font-size:18px;margin:0;line-height:1.1;color:var(--chrome-brand);
+    font-weight:700;letter-spacing:-.025em;
   }
   .brand span{
-    display:block;color:var(--chrome-brand-2);font-size:12px;margin-top:2px;
-    font-weight:500;letter-spacing:.01em;
+    display:block;font-family:var(--f-sans);color:var(--chrome-brand-2);font-size:12px;margin-top:3px;
+    font-weight:500;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
+
+  /* Birincil eylem: menüdeki satırlardan ayrı, dolu düğme */
+  .compose{
+    display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    padding:9px 12px;border:0;border-radius:12px;cursor:pointer;
+    background:var(--chrome-cta-bg);color:var(--chrome-cta-fg);
+    font:inherit;font-size:13.5px;font-weight:650;letter-spacing:-.005em;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 6px 18px -6px rgba(0,0,0,.35);
+    transition:filter .16s var(--ease), transform .12s var(--ease);
+  }
+  .compose .ic{width:17px;height:17px}
+  .compose:hover{filter:brightness(1.06)}
+  .compose:active{transform:translateY(1px)}
+  /* Yeni Kayıt ekranındayken: düğmenin çevresinde ince halka */
+  .compose.active{box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 2px var(--chrome-line), 0 0 0 4px color-mix(in srgb, var(--chrome-text-hi) 35%, transparent)}
+
+  .nav{flex:1;display:flex;flex-direction:column;gap:1px}
+  /* Grup adı: büyük harf ve harf aralığı yok; uygulama menüsü gibi */
   .nav-section{
-    font-size:12px;font-weight:700;letter-spacing:var(--ls-wide);text-transform:uppercase;
-    color:var(--chrome-section);margin:12px 0 4px 12px;
+    font-size:12px;font-weight:600;color:var(--chrome-section);
+    margin:14px 0 4px 10px;letter-spacing:0;
   }
-  .nav{flex:1}
+  .nav-rule{border:0;border-top:1px solid var(--chrome-line);margin:12px 6px 10px}
   .nav button{
     width:100%;border:0;background:transparent;color:var(--chrome-text);
-    position:relative;text-align:left;padding:7px 12px;border-radius:var(--r-sm);
-    display:flex;align-items:center;gap:11px;line-height:1.4;
-    font-weight:500;cursor:pointer;font-size:13.5px;margin-bottom:1px;
+    position:relative;text-align:left;padding:7px 10px;border-radius:10px;
+    display:flex;align-items:center;gap:11px;line-height:1.35;
+    font:inherit;font-weight:500;cursor:pointer;font-size:13.5px;
     letter-spacing:var(--ls-snug);
-    transition:background .16s var(--ease), color .16s var(--ease);
+    transition:background .14s var(--ease), color .14s var(--ease);
   }
+  .nav button .ic{opacity:.82}
   .nav button:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
   .nav button.active::before{
-    content:'';position:absolute;left:-14px;top:7px;bottom:7px;width:3px;
+    content:'';position:absolute;left:-14px;top:8px;bottom:8px;width:3px;
     border-radius:0 3px 3px 0;background:var(--chrome-active-mark);
   }
   .nav button.active{
     background:var(--chrome-active-bg);color:var(--chrome-active-fg);font-weight:600;
-    box-shadow:var(--chrome-active-shadow, 0 6px 16px var(--glow));
+    box-shadow:var(--chrome-active-shadow);
   }
+  .nav button.active .ic{opacity:1}
   .nav button .lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .badge{
     background:var(--chrome-badge-bg);color:var(--chrome-badge-fg);border-radius:999px;
     padding:1px 8px;font-size:12px;font-weight:700;
     font-variant-numeric:tabular-nums;
   }
+  /* Menüde sayaç: posta uygulamasındaki okunmamış sayısı gibi kare köşeli */
+  .nav .badge{min-width:22px;text-align:center;border-radius:7px;padding:1px 6px;line-height:1.45}
   .badge[hidden]{display:none}
   .card[hidden]{display:none}
-  .nav button.active .badge{background:var(--chrome-badge-on-bg,rgba(255,255,255,.24));color:var(--chrome-badge-on-fg,#fff)}
+  .nav button.active .badge{background:var(--chrome-badge-on-bg);color:var(--chrome-badge-on-fg)}
+
+  /* Hesap düğmesi ve yukarı açılan hesap menüsü */
+  .account{position:relative}
+  .acct-btn{
+    width:100%;display:flex;align-items:center;gap:10px;padding:8px 9px 8px 8px;
+    border:1px solid var(--chrome-card-line);background:var(--chrome-card);border-radius:14px;
+    color:var(--chrome-text-hi);font:inherit;text-align:left;cursor:pointer;
+    transition:background .14s var(--ease);
+  }
+  .acct-btn:hover,.acct-btn[aria-expanded="true"]{background:var(--chrome-hover)}
+  .account .avatar.sm{width:34px;height:34px;border-radius:10px;font-size:11.5px}
+  .acct-who{flex:1;min-width:0;display:flex;flex-direction:column}
+  .acct-who .name,.acct-who .role{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acct-who .name{font-weight:650;font-size:13px;line-height:1.3;color:var(--chrome-name)}
+  .acct-who .role{font-size:12px;line-height:1.35;color:var(--chrome-role)}
+  .acct-chev{width:16px;height:16px;flex:none;color:var(--chrome-role)}
 
   .profile{
-    margin-top:12px;padding:10px 11px;border-radius:var(--r);
-    background:var(--chrome-card);border:1px solid var(--chrome-card-line);
+    position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:40;
+    background:var(--chrome-menu-bg);
+    backdrop-filter:var(--chrome-blur);-webkit-backdrop-filter:var(--chrome-blur);
+    border:1px solid var(--chrome-menu-line);border-radius:14px;box-shadow:var(--sh-3);
+    padding:4px;transform-origin:50% 100%;animation:acctIn .14s var(--ease);
   }
-  .profile .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .profile .name{font-weight:700;font-size:13px;line-height:1.25;color:var(--chrome-name)}
-  .profile .role{color:var(--chrome-role);font-size:12px;margin-top:1px}
+  @keyframes acctIn{from{opacity:0;transform:translateY(4px) scale(.98)}}
+  @media (prefers-reduced-motion: reduce){ .profile{animation:none} }
+  .acct-head{padding:9px 10px 7px;font-size:12px;line-height:1.4;color:var(--chrome-role)}
+  .acct-sec{padding:9px 10px 10px;border-top:1px solid var(--chrome-menu-line)}
+  .acct-links{padding:4px}
+  .profile .switch-lbl{
+    font-size:12px;color:var(--chrome-role);margin-bottom:6px;font-weight:600;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
   .profile select{
-    width:100%;padding:6px 9px;border-radius:9px;
+    width:100%;padding:7px 9px;border-radius:9px;
     background:var(--chrome-input-bg);color:var(--chrome-input-fg);
-    border:1px solid var(--chrome-input-line);font-size:12px;font-weight:500;
+    border:1px solid var(--chrome-input-line);font-size:12.5px;font-weight:500;
   }
   /* Açılan liste her temada beyaz zemin, koyu yazı. Koyu temalarda kutunun
      yarı saydam zemini listeye de geçiyor, liste gri ve okunmaz oluyordu
@@ -855,44 +894,24 @@
   .profile select optgroup{background:#fff;color:#12275c}
   .profile select optgroup{font-weight:700}
   .profile select option{font-weight:500}
-  /* Tek satır: büyük harfli etiket iki satıra taşıp yer kaplıyordu */
-  .profile .switch-lbl{
-    font-size:12px;color:var(--chrome-role);margin-bottom:4px;font-weight:600;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  .profile .chrome-btn{margin-top:8px}
+  .acct-item{
+    display:flex;align-items:center;gap:10px;width:100%;
+    border:0;background:transparent;border-radius:10px;padding:8px 8px;
+    color:var(--chrome-text);font:inherit;font-size:13px;font-weight:500;text-align:left;cursor:pointer;
+    transition:background .14s var(--ease), color .14s var(--ease);
   }
-  .side-foot{
-    border-top:1px solid var(--chrome-line);margin-top:10px;padding:8px 8px 0;
-    font-size:12px;color:var(--chrome-foot);line-height:1.5;
-    display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
-  }
-  /* Uygulama geri bildirimi: telif satırının üstünde küçük bağlantı */
-  .fb-link{
-    display:inline;border:0;background:none;padding:0;margin:0;cursor:pointer;
-    font:inherit;font-size:12px;font-weight:600;color:var(--chrome-text);text-decoration:underline;
-    text-underline-offset:2px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
-  }
-  .fb-link:hover,.fb-link:focus-visible{color:var(--chrome-text-hi)}
+  .acct-item .ic{width:17px;height:17px}
+  .acct-item:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
 
   /* Kısa ekran (ör. 1366×768 dizüstü): menü kaydırma istemesin */
-  @media (max-height:820px) and (min-width:901px){
-    .sidebar{padding:14px 12px}
-    .brand{margin:0 6px 8px}
-    .logo{width:32px;height:32px}
-    .brand h1{font-size:17px}
+  @media (max-height:760px) and (min-width:901px){
+    .sidebar{padding-top:12px;gap:10px}
     .brand span{display:none}
-    .nav-section{margin:8px 0 2px 12px}
-    .nav button{padding:5px 12px}
-    .nav button.active::before{top:5px;bottom:5px}
-    .profile .avatar.sm{width:30px;height:30px}
-    .profile .role{display:none}
-    .profile .who{margin-bottom:6px}
-  }
-  /* Çok kısa ekran (1366×768'de tarayıcı çubuklarıyla ~650px) */
-  @media (max-height:700px) and (min-width:901px){
-    .nav button{padding:4px 12px}
-    .nav button.active::before{top:4px;bottom:4px}
-    .profile .switch-lbl{display:none}
-    .side-foot .copy{display:none}
+    .logo{width:30px;height:30px}
+    .nav-section{margin-top:10px}
+    .nav button{padding:5px 10px}
+    .nav button.active::before{top:6px;bottom:6px}
   }
 
   /* ---------- Yeni modüller: Arama, Bilgi Bankası ---------- */
@@ -1352,8 +1371,6 @@
   .ml-match .ml-solved .ic{width:14px;height:14px}
   /* Yeni kayıt formunda sıradaki adım */
   .next-step{margin:12px 0 0;font-size:12.5px;color:var(--muted)}
-  /* Yeni Kayıt sayfasındayken üstteki "Yeni Kayıt" düğmesi gereksiz */
-  body[data-page="new-ticket"] .topbar [data-view="new-ticket"],
   .next-step b{color:var(--text-2);font-weight:700}
   /* Ek dosyalar: seçici, taslak etiketleri, indirme bağlantıları */
   .attach{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
@@ -1915,7 +1932,6 @@
     .mobile-tabs .badge[hidden]{display:none}
     .main{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
     /* Yeni Kayıt alt çubukta; üstteki kopya gizlenir */
-    .topbar .actions .btn-primary[data-view="new-ticket"]{display:none}
     #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
     .chat{bottom:calc(80px + env(safe-area-inset-bottom))}
     .agent.docked{bottom:calc(97px + env(safe-area-inset-bottom))}  /* alt çubuğun (73px) 24px üstü */
@@ -1971,16 +1987,16 @@
       <div class="logo">
         <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="50" cy="50" r="34" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="3 3" opacity=".55"/><circle cx="50" cy="50" r="21" stroke="#3b82f6" stroke-width="3.4" opacity=".3"/><path d="M50 29V19M50 81V71M29 50H19M81 50H71M35.2 35.2l-7-7M64.8 64.8l7 7M64.8 35.2l7-7M35.2 64.8l-7 7" stroke="#2563eb" stroke-width="1.7" opacity=".5"/><circle cx="50" cy="16" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.4 19.4c0-1.7 1.5-2.6 3.6-2.6s3.6.9 3.6 2.6M50 15.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8" fill="#2563eb"/><circle cx="76" cy="27" r="11" fill="#fff" stroke="#f59e0b" stroke-width="2.6"/><path d="M76 21.5a4 4 0 0 0-2.3 7.3v1.4h4.6v-1.4A4 4 0 0 0 76 21.5M74.4 32h3.2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><circle cx="84" cy="55" r="11" fill="#fff" stroke="#4caf3f" stroke-width="2.6"/><path d="M80 55.2l2.9 2.9 5.3-5.6" stroke="#4caf3f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="84" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.6 78.6h5l2 2v6.8h-7z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><path d="M48.4 83h3.2M48.4 85.2h3.2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="66" r="11" fill="#fff" stroke="#7c4ddb" stroke-width="2.6"/><circle cx="18" cy="66" r="2.6" stroke="#7c4ddb" stroke-width="2"/><path d="M18 60.4v-1.8M18 73.4v-1.8M23.6 66h1.8M10.6 66h1.8M21.9 62.1l1.3-1.3M12.8 71.2l1.3-1.3M21.9 69.9l1.3 1.3M12.8 60.8l1.3 1.3" stroke="#7c4ddb" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="31" r="11" fill="#fff" stroke="#0d9c92" stroke-width="2.6"/><path d="M13.4 34.4v-4M17 34.4v-7.6M20.6 34.4v-5.6" stroke="#0d9c92" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="50" r="14.5" fill="#12275c"/><path d="M43.5 44.5h13a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-5.2l-3.6 3.2v-3.2h-4.2a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2" fill="#fff"/><circle cx="46.6" cy="49.8" r="1.35" fill="#12275c"/><circle cx="50" cy="49.8" r="1.35" fill="#12275c"/><circle cx="53.4" cy="49.8" r="1.35" fill="#12275c"/></svg>
       </div>
-      <h1>İç Hatlar<span>Bilgi ve Öneri Sistemi</span></h1>
+      <h1>İç Hatlar<span id="orgName">Bilgi ve Öneri Sistemi</span></h1>
     </div>
-    <div class="nav">
-      <div class="nav-section">Ana Menü</div>
+    <button type="button" class="compose" data-view="new-ticket">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      Yeni Kayıt</button>
+    <nav class="nav" aria-label="Ana menü">
       <button class="active" data-view="dashboard">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.6"/><rect x="14" y="3" width="7" height="5" rx="1.6"/><rect x="14" y="12" width="7" height="9" rx="1.6"/><rect x="3" y="16" width="7" height="5" rx="1.6"/></svg>
         <span class="lbl">Genel Bakış</span></button>
-      <button data-view="new-ticket">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        <span class="lbl">Yeni Kayıt</span></button>
+      <div class="nav-section">Kayıtlarım</div>
       <button data-view="my-tickets">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span class="lbl">Açtıklarım</span> <span class="badge" id="bMy" hidden>0</span></button>
@@ -1990,6 +2006,7 @@
       <button data-view="owned-tickets">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.14"/><path d="M22 4 12 14.02l-3-3"/></svg>
         <span class="lbl">Üzerimdekiler</span> <span class="badge" id="bOwned" hidden>0</span></button>
+      <div class="nav-section">Kurum</div>
       <button data-view="all-records">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="5" rx="1.6"/><path d="M4.5 9v9a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9M10 13.5h4"/></svg>
         <span class="lbl">Tüm Kayıtlar</span></button>
@@ -2004,23 +2021,34 @@
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M9 7h7M9 11h5"/></svg>
         <span class="lbl">Bilgi Bankası</span></button>
       <!-- Yönetim yalnızca yönetici ve sistem yöneticisine görünür (api-store.js) -->
-      <div class="nav-section" data-role-min="manager">Sistem</div>
+      <hr class="nav-rule" data-role-min="manager">
       <button data-view="management" data-role-min="manager">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-6.5M4 10.5V3M12 21v-9.5M12 7.5V3M20 21v-4.5M20 12.5V3M1.5 14.5h5M9.5 7.5h5M17.5 16.5h5"/></svg>
         <span class="lbl">Yönetim</span></button>
-    </div>
-    <div class="profile">
-      <div class="who">
-        <div class="avatar sm grad" id="pAvatar">ÖU</div>
-        <div>
-          <div class="name" id="pName">—</div>
-          <div class="role" id="pRole">—</div>
+    </nav>
+
+    <!-- Hesap: dipte tek düğme. Kişi, tema, geri bildirim ve çıkış yukarı açılan
+         menüde (.profile: theme.js temayı, api-store.js çıkışı buraya koyar). -->
+    <div class="account">
+      <div class="profile" id="acctMenu" hidden>
+        <div class="acct-head" id="pRoleFull">—</div>
+        <div class="acct-sec">
+          <div class="switch-lbl">Kullanıcı olarak görüntüle</div>
+          <select id="userSwitch" aria-label="Kullanıcı olarak görüntüle"></select>
+        </div>
+        <div class="acct-sec" data-theme-slot></div>
+        <div class="acct-sec acct-links">
+          <button type="button" class="acct-item" id="fbOpen">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg>
+            Geri bildirim gönder</button>
         </div>
       </div>
-      <div class="switch-lbl">Kullanıcı olarak görüntüle</div>
-      <select id="userSwitch" aria-label="Kullanıcı olarak görüntüle"></select>
+      <button type="button" class="acct-btn" id="acctBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu">
+        <span class="avatar sm grad" id="pAvatar">ÖU</span>
+        <span class="acct-who"><span class="name" id="pName">—</span><span class="role" id="pRole">—</span></span>
+        <svg class="acct-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+      </button>
     </div>
-    <div class="side-foot"><button type="button" class="fb-link" id="fbOpen">Uygulama için geri bildirim</button><span class="copy">© 2026 İç Hatlar</span></div>
   </aside>
 
   <!-- ================= MAIN ================= -->
@@ -2038,8 +2066,6 @@
         <button class="btn btn-ghost" id="bellBtn" aria-label="Bildirimler">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5A6 6 0 0 0 6 8.5c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></svg>
           <span id="bellCount">0</span></button>
-        <button class="btn btn-primary" data-view="new-ticket">
-          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Yeni Kayıt</button>
       </div>
     </header>
 
@@ -2739,7 +2765,7 @@ function show(id, param, opts){
   document.body.dataset.page = id;
   $$('.view').forEach(v => v.classList.remove('active'));
   const el = document.getElementById(id); if (el) el.classList.add('active');
-  $$('.nav button, .mobile-tabs [data-view]').forEach(b => {
+  $$('.nav button, .compose, .mobile-tabs [data-view]').forEach(b => {
     const on = b.dataset.view === id;
     b.classList.toggle('active', on);
     if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
@@ -2791,7 +2817,9 @@ function renderView(id){
 function renderChrome(){
   const me = Store.me(), recs = Store.data.records;
   $('#pName').textContent = me.name;
-  $('#pRole').textContent = me.dept ? me.role + ' • ' + unitLabel(me.dept) : me.role;
+  /* Düğmede ekip; rol ve departmanı hesap menüsünün başında */
+  $('#pRole').textContent = me.dept ? deptName(me.dept) : me.role;
+  $('#pRoleFull').textContent = me.dept ? me.role + ' • ' + unitLabel(me.dept) : me.role;
   $('#pAvatar').textContent = initials(me.name);
 
   /* Rozet "bakmanız gereken" sayıyı söyler ve sıfırsa görünmez:
@@ -2842,7 +2870,20 @@ function setMenu(open){
   $$('[data-menu-toggle]').forEach(b => b.setAttribute('aria-expanded', String(open)));
   if (open) { const first = sb.querySelector('.nav button:not([hidden])'); if (first) first.focus(); }
 }
+/* Hesap menüsü: dışarı tıklayınca, Esc'le ve geri bildirim açılınca kapanır. */
+function setAccount(open){
+  $('#acctMenu').hidden = !open;
+  $('#acctBtn').setAttribute('aria-expanded', String(open));
+}
+$('#acctBtn').addEventListener('click', () => setAccount($('#acctMenu').hidden));
+$('#fbOpen').addEventListener('click', () => setAccount(false));
+document.addEventListener('pointerdown', e => {
+  if (!$('#acctMenu').hidden && !e.target.closest('.account')) setAccount(false);
+}, true);
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#acctMenu').hidden) {
+    setAccount(false); $('#acctBtn').focus(); e.stopPropagation(); return;
+  }
   if (e.key === 'Escape' && $('#sidebar').classList.contains('open')) {
     setMenu(false);
     const t = document.querySelector('.mobile-tabs [data-menu-toggle]'); if (t) t.focus();
@@ -4098,7 +4139,7 @@ window.addEventListener('error', e => {
     d.id = 'fatalErr'; d.className = 'card';
     d.style.cssText = 'padding:20px;margin-bottom:16px;border-left:4px solid var(--danger)';
     d.innerHTML = '<b style="color:var(--danger-ink)">Beklenmeyen bir hata oluştu.</b>'
-      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse kenar çubuğundaki “Uygulama için geri bildirim” ile bildirin.</p>'
+      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse sol alttaki hesap menüsünden “Geri bildirim gönder” ile bildirin.</p>'
       + '<details class="hint" style="margin-top:6px"><summary>Teknik ayrıntı</summary>' + esc(e.message || 'Bilinmeyen hata') + '</details>';
     main.prepend(d);
   }
