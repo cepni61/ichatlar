@@ -1,3 +1,4 @@
+import { setImmediate as tick } from 'node:timers/promises';
 import { tokenize } from '../domain/similarity.js';
 
 /**
@@ -191,15 +192,21 @@ interface Scored {
   id: string;
   name: string;
   score: number;
-  /** kök → bu ekibe katkısı (ekipler ortalamasına göre) */
-  contrib: Map<string, number>;
+}
+
+/** Sorgunun modelin tanıdığı kökü: her ekipteki log p(kök | ekip) ve ortalaması. */
+interface Known {
+  t: string;
+  w: number;
+  lp: number[];
+  mean: number;
 }
 
 /**
  * Ham log-olasılıklar. `exclude` verilirse o kayıt modelden çıkarılmış gibi
  * hesaplanır — birini-dışarıda-bırak testi için, modeli yeniden eğitmeden.
  */
-function logScores(model: Model, f: Features, exclude?: Doc): { scored: Scored[]; known: number } {
+function logScores(model: Model, f: Features, exclude?: Doc): { scored: Scored[]; known: Known[] } {
   const { alpha } = model.params;
   const K = model.departments.length;
   const V = Math.max(1, model.vocabSize);
@@ -214,8 +221,7 @@ function logScores(model: Model, f: Features, exclude?: Doc): { scored: Scored[]
     };
   });
 
-  // Sorgunun modelin tanıdığı kökleri ve her ekipteki log p(kök | ekip)
-  const known: { t: string; w: number; lp: number[] }[] = [];
+  const known: Known[] = [];
   for (const [t, w] of f.weights) {
     const row = model.counts.get(t);
     if (!row) continue;
@@ -225,21 +231,19 @@ function logScores(model: Model, f: Features, exclude?: Doc): { scored: Scored[]
       return Math.max(0, c);
     });
     if (cs.every((c) => c === 0)) continue; // yalnızca dışarıda bırakılan kayıtta geçiyordu
-    known.push({ t, w, lp: cs.map((c, i) => Math.log((c + alpha) / (depts[i]!.tokenCount + alpha * V))) });
+    const lp = cs.map((c, i) => Math.log((c + alpha) / (depts[i]!.tokenCount + alpha * V)));
+    known.push({ t, w, lp, mean: lp.reduce((a, b) => a + b, 0) / lp.length });
   }
 
+  // Ortalama ve kelime katkıları ekip döngüsünün dışında: yeniden eğitimdeki
+  // birini-dışarıda-bırak testi bunu her kayıt için çağırır (olay döngüsü).
   const scored = depts.map((x, i) => {
     let score = model.params.priorWeight * Math.log((x.docCount + 1) / (N + K));
-    const contrib = new Map<string, number>();
-    for (const k of known) {
-      score += k.w * k.lp[i]!;
-      const mean = k.lp.reduce((a, b) => a + b, 0) / k.lp.length;
-      contrib.set(k.t, k.w * (k.lp[i]! - mean));
-    }
-    return { id: x.d.id, name: x.d.name, score, contrib };
+    for (const k of known) score += k.w * k.lp[i]!;
+    return { id: x.d.id, name: x.d.name, score };
   });
 
-  return { scored, known: known.length };
+  return { scored, known };
 }
 
 function softmax(scores: number[], T: number): number[] {
@@ -265,7 +269,7 @@ export interface PredictResult {
 
 export function predict(model: Model, f: Features, exclude?: Doc): PredictResult {
   const { scored, known } = logScores(model, f, exclude);
-  if (known === 0 || scored.length === 0) return { ranked: [], knownTerms: 0, lowConfidence: true };
+  if (known.length === 0 || scored.length === 0) return { ranked: [], knownTerms: 0, lowConfidence: true };
 
   const probs = softmax(scored.map((s) => s.score), model.params.temperature);
   const ranked = scored
@@ -273,7 +277,9 @@ export function predict(model: Model, f: Features, exclude?: Doc): PredictResult
       departmentId: s.id,
       departmentName: s.name,
       probability: probs[i]!,
-      terms: [...s.contrib.entries()]
+      // Bu ekibi ekipler ortalamasından fazla işaret eden kelimeler.
+      terms: known
+        .map((k) => [k.t, k.w * (k.lp[i]! - k.mean)] as const)
         .filter(([, v]) => v > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3)
@@ -282,8 +288,8 @@ export function predict(model: Model, f: Features, exclude?: Doc): PredictResult
     .sort((a, b) => b.probability - a.probability);
 
   // Tek tanıdık kelimeyle verilen karar kırılgandır; güven yüksek görünse de işaretle.
-  const lowConfidence = ranked[0]!.probability < LOW_CONFIDENCE || known < 2;
-  return { ranked, knownTerms: known, lowConfidence };
+  const lowConfidence = ranked[0]!.probability < LOW_CONFIDENCE || known.length < 2;
+  return { ranked, knownTerms: known.length, lowConfidence };
 }
 
 export interface Evaluation {
@@ -302,7 +308,7 @@ export interface Evaluation {
  * "ezber" değil, modelin görmediği kayıttaki başarısıdır. Aynı turda sıcaklık
  * da seçilir: doğru ekibe verilen olasılığın log-kaybını en aza indiren değer.
  */
-export function evaluate(model: Model, docs: Doc[]): Evaluation {
+export async function evaluate(model: Model, docs: Doc[]): Promise<Evaluation> {
   const perDepartment: Evaluation['perDepartment'] = {};
   const predicted = new Map<string, string | null>();
   const rows: { scores: number[]; truth: number }[] = [];
@@ -310,7 +316,9 @@ export function evaluate(model: Model, docs: Doc[]): Evaluation {
   let inTop3 = 0;
   let counted = 0;
 
-  for (const doc of docs) {
+  for (const [n, doc] of docs.entries()) {
+    // Binlerce kayıtta saniyeler sürer: arada isteklere sıra ver.
+    if (n % 100 === 99) await tick();
     const idx = model.departments.findIndex((d) => d.id === doc.departmentId);
     if (idx < 0) continue;
     const { scored, known } = logScores(model, doc.features, doc);
@@ -318,7 +326,7 @@ export function evaluate(model: Model, docs: Doc[]): Evaluation {
     pd.total += 1;
     counted += 1;
 
-    if (known === 0) {
+    if (known.length === 0) {
       predicted.set(doc.code, null);
       continue;
     }

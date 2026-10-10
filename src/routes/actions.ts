@@ -537,8 +537,12 @@ export default async function actionRoutes(app: FastifyInstance) {
       plan: (r) => ({
         nextStatus: RecordStatus.CALISILIYOR,
         // İşe yaramayan çözüm "güncel çözüm" olarak görünmesin ve ML onu benzer
-        // kayıtlarda önermesin; metni süreç geçmişinde kalıyor.
-        data: { status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null },
+        // kayıtlarda önermesin; metni süreç geçmişinde kalıyor. "Doğrulanmış
+        // çözüm" işareti de düşer: yeni çözüm doğrulanmadan öne çıkmasın.
+        data: {
+          status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null,
+          renewed: false, renewedAt: null, renewedById: null,
+        },
         event: {
           type: EventType.REOPEN,
           text: `${r.type === RecordType.ONERI ? 'Öneri yeniden değerlendirmeye alındı' : 'Kayıt yeniden açıldı'}. Gerekçe: ${parsed.data.reason}`,
@@ -552,6 +556,7 @@ export default async function actionRoutes(app: FastifyInstance) {
         },
       }),
     });
+    relearn(req.log); // veri değişmediyse yalnızca bir sorgu
     return { record: await serializeRecord(rec, a) };
   });
 

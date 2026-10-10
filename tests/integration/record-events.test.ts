@@ -99,6 +99,7 @@ describe('yeniden açma', () => {
 
   it('açan, gerekçe yazarak çözülen kaydı yeniden açar; sahip bildirim alır', async () => {
     const w = await resolved();
+    await prisma.record.update({ where: { id: w.rec.id }, data: { renewed: true, renewedAt: new Date() } });
     const res = await post(`/api/records/${w.rec.code}/reopen`, await loginAs(app, w.opener.id), {
       reason: 'Fark ödenmedi, ekim maaşında da yok.',
     });
@@ -109,6 +110,7 @@ describe('yeniden açma', () => {
     expect(rec.status).toBe(RecordStatus.CALISILIYOR);
     expect(rec.resolvedAt).toBeNull();
     expect(rec.resolution).toBeNull(); // işe yaramayan çözüm güncel çözüm gibi kalmaz
+    expect(rec.renewed).toBe(false); // "doğrulanmış çözüm" işareti de düşer
     expect((await notesOf(w.owner.id)).map((n) => n.type)).toEqual(['REOPENED']);
   });
 
