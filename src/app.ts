@@ -108,15 +108,19 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
   app.addHook('onSend', async (_req, reply) => { reply.header('x-ih-build', build); });
 
   // Çapraz site istek sahteciliği: oturum çerezi SameSite=Lax, ama kardeş alt
-  // alan adları "aynı site" sayılır ve çerezi taşır. Tarayıcı her yazma
-  // isteğinde Origin gönderir; başka kökenden geleni reddet. Origin yoksa
-  // istek tarayıcıdan değildir (çerez de taşımaz).
+  // alan adları "aynı site" sayılır ve çerezi taşır. Güncel tarayıcılar
+  // Sec-Fetch-Site gönderir; yoksa Origin'e bakılır. Origin "null" olabilir:
+  // Referrer-Policy no-referrer iken aynı sitedeki form gönderimi de öyle
+  // gelir. Başlık hiç yoksa istek tarayıcıdan değildir (çerez de taşımaz).
   const appOrigin = new URL(env.APP_URL).origin;
   app.addHook('onRequest', async (req) => {
     if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return;
+    const site = req.headers['sec-fetch-site'];
     const origin = req.headers.origin;
-    if (!origin || origin === appOrigin || URL.canParse(origin) && new URL(origin).host === req.host) return;
-    throw forbidden('Başka bir siteden gelen istek reddedildi.');
+    const ok = site
+      ? site === 'same-origin' || site === 'none'
+      : !origin || origin === 'null' || origin === appOrigin || (URL.canParse(origin) && new URL(origin).host === req.host);
+    if (!ok) throw forbidden('Başka bir siteden gelen istek reddedildi.');
   });
 
   /** ACCESS_CODE doluysa her istek önce erişim kapısından geçer (statik dosyalar dahil). */

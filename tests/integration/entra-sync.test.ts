@@ -70,8 +70,19 @@ describe('Entra girişinde kullanıcı eşleme', () => {
 
 describe('yazma isteklerinde köken kontrolü', () => {
   it('başka siteden gelen POST reddedilir', async () => {
-    const res = await app.inject({ method: 'POST', url: '/auth/logout', headers: { origin: 'https://kardes.example.com' } });
-    expect(res.statusCode).toBe(403);
+    for (const headers of [
+      { origin: 'https://kardes.example.com' },
+      { 'sec-fetch-site': 'same-site', origin: 'https://kardes.example.com' },
+      { 'sec-fetch-site': 'cross-site', origin: 'null' },
+    ]) {
+      const res = await app.inject({ method: 'POST', url: '/auth/logout', headers });
+      expect(res.statusCode, JSON.stringify(headers)).toBe(403);
+    }
+  });
+
+  it('aynı sitedeki form gönderimi Origin "null" gelse de geçer (Referrer-Policy no-referrer)', async () => {
+    const res = await app.inject({ method: 'POST', url: '/auth/logout', headers: { 'sec-fetch-site': 'same-origin', origin: 'null' } });
+    expect(res.statusCode).toBe(200);
   });
 
   it('uygulamanın kendi kökeninden ve Origin başlığı olmadan geçer', async () => {

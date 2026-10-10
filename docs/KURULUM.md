@@ -158,9 +158,9 @@ vekilin eklediği adrese güvenir (tek vekil varsayılır; iki vekil arka arkays
 vekil erişebilmeli** (güvenlik duvarı veya `localhost`'a bağlı vekil); aksi
 hâlde istemci IP'si taklit edilip hız sınırı atlatılabilir.
 
-Yazma istekleri (POST/PATCH/DELETE) tarayıcının gönderdiği `Origin` başlığıyla
-denetlenir: `APP_URL` ya da isteğin `Host` adresi olmayan kökenden gelen istek
-reddedilir. `APP_URL` kullanıcıların tarayıcıda gördüğü adresle aynı olmalı.
+Yazma istekleri (POST/PATCH/DELETE) tarayıcının gönderdiği `Sec-Fetch-Site`
+(yoksa `Origin`) başlığıyla denetlenir: başka bir siteden — kardeş alt alan
+adları dahil — gelen istek reddedilir. Vekil bu başlıkları silmemeli.
 
 **Entra ID uygulama kaydı** (kiracı yöneticisi):
 
