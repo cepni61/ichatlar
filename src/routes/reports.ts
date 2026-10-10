@@ -5,7 +5,6 @@ import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
 import { actorOf, requireRole, requireUser } from '../auth/guard.js';
 import {
-  DONE_STATUSES,
   HOUR_MS,
   isOpen,
   PRIORITY_LABELS,
@@ -145,7 +144,6 @@ export default async function reportRoutes(app: FastifyInstance) {
 
       const open = rows.filter((r) => isOpen(r.status));
       const late = open.filter((r) => breached(r, now));
-      const closed = rows.filter((r) => (DONE_STATUSES as string[]).includes(r.status));
       const oneri = rows.filter((r) => r.type === 'ONERI');
       const oneriOk = oneri.filter(oneriAccepted);
       const oneriDone = oneri.filter(oneriDecided);
@@ -164,10 +162,8 @@ export default async function reportRoutes(app: FastifyInstance) {
         return {
           id: d.id,
           name: d.name,
-          short: d.short,
           total: all.length,
           open: dOpen.length,
-          late: dOpen.filter((r) => breached(r, now)).length,
           resp: avg(
             all
               .filter((r) => r.firstResponseAt)
@@ -178,8 +174,6 @@ export default async function reportRoutes(app: FastifyInstance) {
               .filter((r) => r.resolvedAt)
               .map((r) => (r.resolvedAt!.getTime() - r.createdAt.getTime()) / HOUR_MS),
           ),
-          slaPct: slaPct(all, now),
-          oneriSolved: all.filter(oneriAccepted).length,
         };
       });
 
@@ -204,13 +198,9 @@ export default async function reportRoutes(app: FastifyInstance) {
           records: rows.length,
           open: open.length,
           late: late.length,
-          warn: open.length - late.length, // ayrıntılı kırılım /api/records ile alınır
-          closed: closed.length,
-          owned: rows.filter((r) => isOpen(r.status)).length,
           anonymousPct: rows.length ? Math.round((anon.length / rows.length) * 100) : 0,
           slaPct: slaPct(rows, now),
           oneriAcceptPct: oneriDone.length ? Math.round((oneriOk.length / oneriDone.length) * 100) : null,
-          oneriSolved: oneriOk.length,
           avgFirstResponseHours: avg(respHours),
           avgSolveHours: avg(solveHours),
         },

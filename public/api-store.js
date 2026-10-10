@@ -898,10 +898,6 @@
         priority: $('#fPrio').value || 'normal',
         anonymous: !!form.anon,
         restricted: !!($('#fRestricted') && $('#fRestricted').checked),
-        shownSuggestions: (form.matches || []).map((m) => ({
-          code: m.record.code,
-          score: m.percent / 100,
-        })),
         mlInferenceId: form.mlInferenceId || null,
         mlInferenceIds: form.mlInferenceIds || [],
         deptSuggestionApplied: !!form.deptApplied,

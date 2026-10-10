@@ -60,8 +60,6 @@ export function mlDb(): MlPrismaClient | null {
   return ready ? client : null;
 }
 
-export const mlReady = () => ready;
-
 export async function disconnectMl() {
   if (client) await client.$disconnect();
 }

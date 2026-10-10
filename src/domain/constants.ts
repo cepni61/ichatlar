@@ -133,13 +133,4 @@ export const ONERI_OUTCOMES: RecordStatus[] = [
   RecordStatus.UYGUN_BULUNMADI,
 ];
 
-/** Sonuçlanmış kayıt: çözülen, kapatılan ya da değerlendirmesi biten. */
-export const DONE_STATUSES: RecordStatus[] = [
-  RecordStatus.COZULDU,
-  RecordStatus.KAPATILDI,
-  RecordStatus.DEGERLENDIRILDI,
-  RecordStatus.FAYDA_SAGLADI,
-  RecordStatus.UYGUN_BULUNMADI,
-];
-
 export const HOUR_MS = 60 * 60 * 1000;

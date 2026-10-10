@@ -1,4 +1,4 @@
-import { EventType, NotificationType, RecordStatus } from '../domain/enums.js';
+import { EventType, NotificationType } from '../domain/enums.js';
 import type { FastifyBaseLogger } from 'fastify';
 import { prisma } from '../db.js';
 import { OPEN_STATUSES } from '../domain/constants.js';
@@ -125,10 +125,3 @@ export function startJobs(log: FastifyBaseLogger) {
     clearInterval(pruneTimer);
   };
 }
-
-/** Kapanan kayıtta gözcünün tekrar tetiklenmemesi için yardımcı. */
-export const closedStatuses = [
-  RecordStatus.COZULDU,
-  RecordStatus.KAPATILDI,
-  RecordStatus.REDDEDILDI,
-];

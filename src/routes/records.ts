@@ -98,8 +98,6 @@ const createBody = z.object({
   anonymous: z.boolean().default(false),
   /** "Yalnızca ilgili ekip görsün": içerik paylaşılan kanallara (öneriler, arama) çıkmaz. */
   restricted: z.boolean().default(false),
-  /** Kayıt açılırken gösterilen öneriler — modelin işe yararlılığını ölçmek için. */
-  shownSuggestions: z.array(z.object({ code: z.string(), score: z.number() })).max(5).optional(),
   /** /api/similar'ın döndürdüğü ML çalıştırma kimliği — sonuç ML veritabanına bağlanır. */
   mlInferenceId: z.string().max(64).nullish(),
   /** Taslak yazılırken yapılan bütün taramalar (kısıtlı/anonim kayıtta temizlenir). */
@@ -339,24 +337,6 @@ export default async function recordRoutes(app: FastifyInstance) {
         },
         include: withDetail,
       });
-
-      // Gösterilen öneriler kaydedilir: kullanıcı yine de kayıt açtıysa
-      // eşleşme işe yaramamış demektir. accepted=false bunu işaretler.
-      if (body.shownSuggestions?.length) {
-        const matches = await tx.record.findMany({
-          where: { code: { in: body.shownSuggestions.map((s) => s.code) } },
-          select: { id: true, code: true },
-        });
-        const byCode = new Map(matches.map((m) => [m.code, m.id]));
-        await tx.suggestion.createMany({
-          data: body.shownSuggestions.flatMap((s) => {
-            const matchId = byCode.get(s.code);
-            return matchId
-              ? [{ sourceRecordId: rec.id, matchRecordId: matchId, score: s.score, accepted: false }]
-              : [];
-          }),
-        });
-      }
 
       await tx.auditLog.create({
         data: {

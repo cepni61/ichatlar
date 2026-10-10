@@ -56,8 +56,6 @@ export interface Relation {
   isAssignee: boolean;
   inTeam: boolean;
   isAdmin: boolean;
-  /** Yönetici, kendi ekibinin tüm kayıtlarını görür. */
-  isDeptManager: boolean;
   /** Kişinin departmanındaki bir ekibe düşmüş kayıt (Tüm Kayıtlar kapsamı). */
   inDepartment: boolean;
   open: boolean;
@@ -76,10 +74,6 @@ export function relate(rec: RecordShape, actor: Actor): Relation {
     // "Yalnızca ilgili ekip görsün" kayıtta sistem yöneticisinin ayrıcalığı yok:
     // ekibinde değilse görmez, işlem de yapamaz (kullanıcı isteği, 2026-10-09).
     isAdmin: actor.role === Role.ADMIN && !rec.restricted,
-    isDeptManager:
-      actor.role === Role.MANAGER &&
-      actor.departmentId != null &&
-      (actor.departmentId === rec.departmentId || actor.departmentId === rec.department2Id),
     inDepartment:
       actor.departmentRootId != null &&
       (actor.departmentRootId === rec.departmentRootId || actor.departmentRootId === rec.department2RootId),
@@ -95,7 +89,7 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
     // okunabilir; "yalnızca ilgili ekip" işaretli olanlar hariç.
     case 'view':
       return (
-        r.isCreator || r.isAssignee || r.inTeam || r.isAdmin || r.isDeptManager ||
+        r.isCreator || r.isAssignee || r.inTeam || r.isAdmin ||
         (r.inDepartment && !rec.restricted)
       );
 
@@ -142,7 +136,7 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
     // ekipte, kaydı açanda ve üzerine alanda kalır.
     case 'comment':
     case 'attach':
-      return r.isCreator || r.isAssignee || r.inTeam || r.isAdmin || r.isDeptManager;
+      return r.isCreator || r.isAssignee || r.inTeam || r.isAdmin;
 
     default:
       return false;
