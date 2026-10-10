@@ -4,12 +4,13 @@ import { prisma } from '../db.js';
 import { env } from '../env.js';
 import {
   authorizationUrl,
+  entraPolicy,
   exchangeCode,
   newTransaction,
   safeReturnTo,
-  upsertUserFromClaims,
   type AuthTransaction,
 } from '../auth/entra.js';
+import { upsertUserFromClaims } from '../auth/directory.js';
 import {
   clearSessionCookie,
   createSession,
@@ -22,14 +23,14 @@ import { badRequest, forbidden } from '../lib/errors.js';
 const TX_COOKIE = 'ih_txn';
 
 export default async function authRoutes(app: FastifyInstance) {
-  /** Girişi başlatır: Entra'ya yönlendirir. */
+  /** Girişi başlatır: Entra'ya ya da giriş sayfasına (AD, test ortamı) yönlendirir. */
   app.get('/auth/login', async (req, reply) => {
     const returnTo = safeReturnTo((req.query as Record<string, unknown>)?.returnTo);
 
-    if (!env.entraConfigured && env.devAuth) {
-      // Test ortamında kişi kim olduğunu kendisi seçer (gerekirse önce erişim
-      // kodu sorulur). Eskiden herkes sessizce varsayılan kullanıcıyla açılıyor,
-      // seçmeyi unutan kaydını başkasının adına açıyordu.
+    if (env.ldapConfigured || env.devAuth) {
+      // AD'de kullanıcı adı ve parola giriş sayfasında sorulur. Test ortamında
+      // kişi kim olduğunu kendisi seçer: eskiden herkes sessizce varsayılan
+      // kullanıcıyla açılıyor, seçmeyi unutan kaydını başkasının adına açıyordu.
       return reply.redirect('/giris?returnTo=' + encodeURIComponent(returnTo));
     }
 
@@ -50,7 +51,7 @@ export default async function authRoutes(app: FastifyInstance) {
       path: '/auth',
       httpOnly: true,
       sameSite: 'lax',
-      secure: env.isProd,
+      secure: env.httpsSite,
       signed: true,
       maxAge: 600,
     });
@@ -76,7 +77,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     const url = `${env.APP_URL}${req.url}`;
     const claims = await exchangeCode(url, tx);
-    const user = await upsertUserFromClaims(claims);
+    const user = await upsertUserFromClaims(claims, entraPolicy());
     // Oturum açılsa da attachUser kapalı hesabı tanımaz; giriş döngüye girerdi.
     if (!user.active) throw forbidden('Hesabınız devre dışı. Sistem yöneticisine başvurun.');
 

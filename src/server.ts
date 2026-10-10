@@ -15,7 +15,7 @@ try {
   app.log.error(
     'Veritabanına bağlanılamadı (' +
       env.DATABASE_URL.replace(/:\/\/[^@]*@/, '://***@') +
-      '). `docker compose up -d` çalıştırıp DATABASE_URL değerini kontrol edin.',
+      '). PostgreSQL hizmetinin çalıştığını ve DATABASE_URL değerini kontrol edin.',
   );
   process.exit(1);
 }
@@ -42,6 +42,7 @@ process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 await app.listen({ port: env.PORT, host: env.HOST });
 
+if (env.ldapConfigured) app.log.info(`Giriş: Active Directory (${env.LDAP_URL})`);
 if (env.devAuth) {
   app.log.warn(
     `Geliştirme girişi açık: ${env.APP_URL}/giris adresinde kişi seçilerek girilir ` +

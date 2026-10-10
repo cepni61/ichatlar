@@ -5,9 +5,12 @@ import { prisma } from '../db.js';
 import { env } from '../env.js';
 import { safeReturnTo } from '../auth/entra.js';
 import { createSession, setSessionCookie } from '../auth/session.js';
+import { upsertUserFromClaims } from '../auth/directory.js';
+import { ldapLogin, ldapPolicy, type LdapFailure } from '../auth/ldap.js';
 
 /**
- * Test yayını için erişim kapısı ve geliştirme giriş sayfası.
+ * Giriş sayfası: Active Directory girişi (kullanıcı adı + parola), test
+ * yayını için erişim kapısı ve geliştirme ortamının kişi seçicisi.
  *
  * ACCESS_CODE doluysa (ör. uygulama Cloudflare tüneliyle internete açıldığında)
  * kodu girmeyen hiçbir isteğe — statik dosyalar dahil — cevap verilmez.
@@ -52,7 +55,16 @@ const ROLE_LABEL: Record<string, string> = {
   USER: 'Çalışan',
 };
 
-async function renderPage(opts: { needCode: boolean; returnTo: string; error?: string }) {
+const LDAP_MESSAGE: Record<LdapFailure, string> = {
+  credentials: 'Kullanıcı adı veya parola hatalı.',
+  locked: 'Hesabınız çok sayıda hatalı deneme nedeniyle kilitlendi. Bir süre sonra tekrar deneyin ya da BT ile görüşün.',
+  expired: 'Parolanızın süresi dolmuş. Windows\'ta parolanızı değiştirip tekrar deneyin.',
+  disabled: 'Kurumsal hesabınız devre dışı. BT ile görüşün.',
+  notFound: 'Hesabınız kurumsal dizinde bulunamadı. BT ile görüşün.',
+  unavailable: 'Kimlik sunucusuna şu an ulaşılamıyor. Birkaç dakika sonra tekrar deneyin.',
+};
+
+async function renderPage(opts: { needCode: boolean; returnTo: string; error?: string; username?: string }) {
   const users = env.devAuth
     ? await prisma.user.findMany({
         where: { active: true },
@@ -104,7 +116,15 @@ async function renderPage(opts: { needCode: boolean; returnTo: string; error?: s
        <input id="code" name="code" type="password" autocomplete="off" required autofocus
               placeholder="Size iletilen kod">`
     : '';
-  const userField = env.devAuth
+  const ldapField = `<label for="username">Kullanıcı adı</label>
+       <input id="username" name="username" autocomplete="username" required maxlength="128"
+              ${opts.needCode ? '' : 'autofocus'} value="${esc(opts.username ?? '')}" placeholder="Windows kullanıcı adınız">
+       <label for="password">Parola</label>
+       <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256">
+       <p class="hint">Bilgisayarınıza girerken kullandığınız kullanıcı adı ve parola.</p>`;
+  const userField = env.ldapConfigured
+    ? ldapField
+    : env.devAuth
     ? `<label for="email">Kim olarak gireceksiniz?</label>
        <select id="email" name="email" required ${opts.needCode ? '' : 'autofocus'}>
          <option value="" disabled selected>Kullanıcı seçin</option>${options}
@@ -152,9 +172,13 @@ async function renderPage(opts: { needCode: boolean; returnTo: string; error?: s
 </head>
 <body>
 <main>
-  <div class="mark"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="50" cy="50" r="34" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="3 3" opacity=".55"/><circle cx="50" cy="50" r="21" stroke="#3b82f6" stroke-width="3.4" opacity=".3"/><path d="M50 29V19M50 81V71M29 50H19M81 50H71M35.2 35.2l-7-7M64.8 64.8l7 7M64.8 35.2l7-7M35.2 64.8l-7 7" stroke="#2563eb" stroke-width="1.7" opacity=".5"/><circle cx="50" cy="16" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.4 19.4c0-1.7 1.5-2.6 3.6-2.6s3.6.9 3.6 2.6M50 15.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8" fill="#2563eb"/><circle cx="76" cy="27" r="11" fill="#fff" stroke="#f59e0b" stroke-width="2.6"/><path d="M76 21.5a4 4 0 0 0-2.3 7.3v1.4h4.6v-1.4A4 4 0 0 0 76 21.5M74.4 32h3.2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><circle cx="84" cy="55" r="11" fill="#fff" stroke="#4caf3f" stroke-width="2.6"/><path d="M80 55.2l2.9 2.9 5.3-5.6" stroke="#4caf3f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="84" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.6 78.6h5l2 2v6.8h-7z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><path d="M48.4 83h3.2M48.4 85.2h3.2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="66" r="11" fill="#fff" stroke="#7c4ddb" stroke-width="2.6"/><circle cx="18" cy="66" r="2.6" stroke="#7c4ddb" stroke-width="2"/><path d="M18 60.4v-1.8M18 73.4v-1.8M23.6 66h1.8M10.6 66h1.8M21.9 62.1l1.3-1.3M12.8 71.2l1.3-1.3M21.9 69.9l1.3 1.3M12.8 60.8l1.3 1.3" stroke="#7c4ddb" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="31" r="11" fill="#fff" stroke="#0d9c92" stroke-width="2.6"/><path d="M13.4 34.4v-4M17 34.4v-7.6M20.6 34.4v-5.6" stroke="#0d9c92" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="50" r="14.5" fill="#12275c"/><path d="M43.5 44.5h13a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-5.2l-3.6 3.2v-3.2h-4.2a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2" fill="#fff"/><circle cx="46.6" cy="49.8" r="1.35" fill="#12275c"/><circle cx="50" cy="49.8" r="1.35" fill="#12275c"/><circle cx="53.4" cy="49.8" r="1.35" fill="#12275c"/></svg><div><b>İç Hatlar</b><small>Bilgi ve Öneri Sistemi · test ortamı</small></div></div>
+  <div class="mark"><svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="50" cy="50" r="34" stroke="#2563eb" stroke-width="1.6" stroke-dasharray="3 3" opacity=".55"/><circle cx="50" cy="50" r="21" stroke="#3b82f6" stroke-width="3.4" opacity=".3"/><path d="M50 29V19M50 81V71M29 50H19M81 50H71M35.2 35.2l-7-7M64.8 64.8l7 7M64.8 35.2l7-7M35.2 64.8l-7 7" stroke="#2563eb" stroke-width="1.7" opacity=".5"/><circle cx="50" cy="16" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.4 19.4c0-1.7 1.5-2.6 3.6-2.6s3.6.9 3.6 2.6M50 15.4a1.9 1.9 0 1 0 0-3.8 1.9 1.9 0 0 0 0 3.8" fill="#2563eb"/><circle cx="76" cy="27" r="11" fill="#fff" stroke="#f59e0b" stroke-width="2.6"/><path d="M76 21.5a4 4 0 0 0-2.3 7.3v1.4h4.6v-1.4A4 4 0 0 0 76 21.5M74.4 32h3.2" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/><circle cx="84" cy="55" r="11" fill="#fff" stroke="#4caf3f" stroke-width="2.6"/><path d="M80 55.2l2.9 2.9 5.3-5.6" stroke="#4caf3f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="84" r="11" fill="#fff" stroke="#2563eb" stroke-width="2.6"/><path d="M46.6 78.6h5l2 2v6.8h-7z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/><path d="M48.4 83h3.2M48.4 85.2h3.2" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/><circle cx="18" cy="66" r="11" fill="#fff" stroke="#7c4ddb" stroke-width="2.6"/><circle cx="18" cy="66" r="2.6" stroke="#7c4ddb" stroke-width="2"/><path d="M18 60.4v-1.8M18 73.4v-1.8M23.6 66h1.8M10.6 66h1.8M21.9 62.1l1.3-1.3M12.8 71.2l1.3-1.3M21.9 69.9l1.3 1.3M12.8 60.8l1.3 1.3" stroke="#7c4ddb" stroke-width="1.8" stroke-linecap="round"/><circle cx="17" cy="31" r="11" fill="#fff" stroke="#0d9c92" stroke-width="2.6"/><path d="M13.4 34.4v-4M17 34.4v-7.6M20.6 34.4v-5.6" stroke="#0d9c92" stroke-width="2.4" stroke-linecap="round"/><circle cx="50" cy="50" r="14.5" fill="#12275c"/><path d="M43.5 44.5h13a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2h-5.2l-3.6 3.2v-3.2h-4.2a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2" fill="#fff"/><circle cx="46.6" cy="49.8" r="1.35" fill="#12275c"/><circle cx="50" cy="49.8" r="1.35" fill="#12275c"/><circle cx="53.4" cy="49.8" r="1.35" fill="#12275c"/></svg><div><b>İç Hatlar</b><small>Bilgi ve Öneri Sistemi${env.devAuth ? ' · test ortamı' : ''}</small></div></div>
   <h1>Giriş</h1>
-  <p class="lead">${opts.needCode ? 'Devam etmek için size iletilen erişim kodunu girin.' : 'Devam etmek için kullanıcı seçin.'}</p>
+  <p class="lead">${
+    opts.needCode
+      ? 'Devam etmek için size iletilen erişim kodunu girin.'
+      : env.ldapConfigured ? 'Kurumsal hesabınızla giriş yapın.' : 'Devam etmek için kullanıcı seçin.'
+  }</p>
   ${opts.error ? `<p class="err" role="alert">${esc(opts.error)}</p>` : ''}
   <form method="post" action="/giris">
     <input type="hidden" name="returnTo" value="${esc(opts.returnTo)}">
@@ -178,6 +202,8 @@ async function renderPage(opts: { needCode: boolean; returnTo: string; error?: s
 const postBody = z.object({
   code: z.string().optional(),
   email: z.string().email().optional(),
+  username: z.string().max(128).optional(),
+  password: z.string().max(256).optional(),
   returnTo: z.string().optional(),
 });
 
@@ -189,18 +215,30 @@ export default async function gateRoutes(app: FastifyInstance) {
     (_req, body, done) => done(null, Object.fromEntries(new URLSearchParams(body as string))),
   );
 
+  // Hız sınırına takılan kişi ham JSON değil giriş sayfasını görsün. Diğer
+  // hatalar üstteki genel işleyiciye gider.
+  app.setErrorHandler(async (err, req, reply) => {
+    if ((err as { statusCode?: number }).statusCode !== 429) throw err;
+    const page = await renderPage({
+      needCode: !passedGate(req),
+      returnTo: '/',
+      error: 'Çok fazla deneme yapıldı. Bir dakika sonra tekrar deneyin.',
+    });
+    return reply.code(429).type('text/html; charset=utf-8').send(page);
+  });
+
   app.get('/giris', async (req, reply) => {
     const returnTo = safeReturnTo((req.query as Record<string, unknown>)?.returnTo);
     const needCode = !passedGate(req);
     if (!needCode && req.user) return reply.redirect(returnTo);
     // Entra bağlıysa kapıdan sonra kimlik doğrulamayı Entra yapar.
-    if (!needCode && !env.devAuth) return reply.redirect('/auth/login?returnTo=' + encodeURIComponent(returnTo));
+    if (!needCode && !env.devAuth && !env.ldapConfigured) return reply.redirect('/auth/login?returnTo=' + encodeURIComponent(returnTo));
     return reply.type('text/html; charset=utf-8').send(await renderPage({ needCode, returnTo }));
   });
 
   app.post(
     '/giris',
-    // Kod tahminini yavaşlat: IP başına dakikada 10 deneme.
+    // Kod ve parola tahminini yavaşlat: IP başına dakikada 10 deneme.
     { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const parsed = postBody.safeParse(req.body ?? {});
@@ -208,7 +246,7 @@ export default async function gateRoutes(app: FastifyInstance) {
       const returnTo = safeReturnTo(data.returnTo);
       let needCode = !passedGate(req);
       const html = (error: string, status: number) =>
-        renderPage({ needCode, returnTo, error }).then((page) =>
+        renderPage({ needCode, returnTo, error, username: data.username }).then((page) =>
           reply.code(status).type('text/html; charset=utf-8').send(page),
         );
 
@@ -222,11 +260,25 @@ export default async function gateRoutes(app: FastifyInstance) {
           path: '/',
           httpOnly: true,
           sameSite: 'lax',
-          secure: env.isProd || req.protocol === 'https',
+          secure: env.httpsSite,
           signed: true,
           maxAge: GATE_DAYS * 24 * 60 * 60,
         });
         needCode = false; // kod doğruysa kullanıcı hatasında tekrar sorulmasın
+      }
+
+      if (env.ldapConfigured) {
+        const out = await ldapLogin(data.username ?? '', data.password ?? '', req.log);
+        if (!out.ok) {
+          req.log.warn({ username: data.username, reason: out.reason, ip: req.ip }, 'AD girişi başarısız');
+          return html(LDAP_MESSAGE[out.reason], out.reason === 'unavailable' ? 503 : 401);
+        }
+        const user = await upsertUserFromClaims(out.claims, ldapPolicy());
+        if (!user.active) return html('Hesabınız İç Hatlar\'da devre dışı. Sistem yöneticisine başvurun.', 403);
+        const session = await createSession(user.id, { userAgent: req.headers['user-agent'], ip: req.ip });
+        setSessionCookie(reply, session.id, session.expiresAt);
+        req.log.info({ userId: user.id, email: out.claims.email }, 'giriş yapıldı (AD)');
+        return reply.redirect(returnTo);
       }
 
       if (!env.devAuth) return reply.redirect('/auth/login?returnTo=' + encodeURIComponent(returnTo));

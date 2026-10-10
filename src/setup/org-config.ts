@@ -18,8 +18,11 @@ const unitSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{2,32}$/, 'küçük harf, rakam ve tire; 2-32 karakter'),
   name: z.string().trim().min(2).max(80),
   short: z.string().trim().min(1).max(24),
-  /** ENTRA_USE_GROUPS=true ise bu gruptaki kişiler bu birime atanır. */
-  entraGroupId: z.string().trim().max(64).optional(),
+  /**
+   * Bu gruptaki kişiler bu ekibe atanır. AD (LDAP) girişinde grubun adı ya da
+   * tam DN'i; Entra'da (ENTRA_USE_GROUPS=true) grubun nesne kimliği.
+   */
+  group: z.string().trim().max(256).optional(),
 });
 
 export const orgConfigSchema = z
@@ -106,7 +109,7 @@ export async function applyOrgConfig(prisma: PrismaClient, input: OrgConfigInput
     const result: ApplyResult = { created: [], updated: [], notInConfig: [], moved: { records: 0, users: 0, kb: 0 } };
 
     const upsert = async (u: z.infer<typeof unitSchema>, parentId: string | null, order: number) => {
-      const data = { name: u.name, short: u.short, entraGroupId: u.entraGroupId || null, order, active: true, parentId };
+      const data = { name: u.name, short: u.short, entraGroupId: u.group || null, order, active: true, parentId };
       const old = byId.get(u.id);
       if (!old) {
         await tx.department.create({ data: { id: u.id, ...data } });

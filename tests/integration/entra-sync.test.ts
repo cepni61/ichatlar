@@ -13,11 +13,13 @@ process.env.ENTRA_ADMIN_GROUP_ID = ADMIN_GROUP;
 let app: FastifyInstance;
 let h: typeof import('./helpers.js');
 let entra: typeof import('../../src/auth/entra.js');
+let dir: typeof import('../../src/auth/directory.js');
 let Role: typeof import('../../src/domain/enums.js').Role;
 
 beforeAll(async () => {
   h = await import('./helpers.js');
   entra = await import('../../src/auth/entra.js');
+  dir = await import('../../src/auth/directory.js');
   ({ Role } = await import('../../src/domain/enums.js'));
   app = await h.makeApp();
 });
@@ -40,27 +42,27 @@ const claimsOf = (u: { entraOid: string; email: string; name: string }, groups: 
 describe('Entra girişinde kullanıcı eşleme', () => {
   it('devre dışı bırakılan kişi girişle yeniden açılmaz', async () => {
     const u = await h.createUser({ name: 'Eski Çalışan', active: false });
-    const out = await entra.upsertUserFromClaims(claimsOf(u));
+    const out = await dir.upsertUserFromClaims(claimsOf(u), entra.entraPolicy());
     expect(out.active).toBe(false);
   });
 
   it('yönetici grubundan çıkarılan kişi yöneticiliğini kaybeder', async () => {
     const d = await h.createDept('Bilgi Teknolojileri');
     const u = await h.createUser({ name: 'Eski Yönetici', role: Role.ADMIN, departmentId: d.id });
-    await entra.upsertUserFromClaims(claimsOf(u, ['baska-grup']));
+    await dir.upsertUserFromClaims(claimsOf(u, ['baska-grup']), entra.entraPolicy());
     const after = await h.prisma.user.findUniqueOrThrow({ where: { id: u.id } });
     expect(after.role).toBe(Role.TEAM_MEMBER);
   });
 
   it('grup listesi gelmezse yöneticiliğe dokunulmaz', async () => {
     const u = await h.createUser({ name: 'Yönetici', role: Role.ADMIN });
-    await entra.upsertUserFromClaims(claimsOf(u, []));
+    await dir.upsertUserFromClaims(claimsOf(u, []), entra.entraPolicy());
     expect((await h.prisma.user.findUniqueOrThrow({ where: { id: u.id } })).role).toBe(Role.ADMIN);
   });
 
   it('aynı e-postayla yeni Entra kimliği gelince eski satır kapanır, yenisi açılır', async () => {
     const old = await h.createUser({ name: 'Ayşe Kaya' });
-    const out = await entra.upsertUserFromClaims({ oid: 'yeni-oid', email: old.email, name: 'Ayşe Kaya', groups: [] });
+    const out = await dir.upsertUserFromClaims({ oid: 'yeni-oid', email: old.email, name: 'Ayşe Kaya', groups: [] }, entra.entraPolicy());
     expect(out.id).not.toBe(old.id);
     const prev = await h.prisma.user.findUniqueOrThrow({ where: { id: old.id } });
     expect(prev.active).toBe(false);

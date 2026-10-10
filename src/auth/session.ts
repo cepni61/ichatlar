@@ -37,7 +37,7 @@ export function setSessionCookie(reply: FastifyReply, id: string, expiresAt: Dat
     path: '/',
     httpOnly: true,
     sameSite: 'lax', // Entra geri dönüşü çapraz siteden geldiği için 'strict' olamaz
-    secure: env.isProd,
+    secure: env.httpsSite,
     signed: true,
     expires: expiresAt,
   });

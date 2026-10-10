@@ -66,7 +66,7 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
   // HTTPS'e zorlayan başlıklar orada betikleri ve API çağrılarını https://'e
   // yükseltip kırıyor; arayüz sunucusuz prototip verisine düşüyordu. Bu yüzden
   // yalnızca APP_URL https ise açılırlar.
-  const httpsSite = env.APP_URL.startsWith('https://');
+  const httpsSite = env.httpsSite;
 
   await app.register(helmet, {
     strictTransportSecurity: httpsSite,

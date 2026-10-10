@@ -1,6 +1,5 @@
 import { Issuer, generators, type Client } from 'openid-client';
-import { Role } from '../domain/enums.js';
-import { prisma } from '../db.js';
+import type { DirectoryClaims, DirectoryPolicy } from './directory.js';
 import { env } from '../env.js';
 
 /**
@@ -71,17 +70,10 @@ export async function authorizationUrl(tx: AuthTransaction) {
   });
 }
 
-export interface EntraClaims {
-  oid: string;
-  email: string;
-  name: string;
-  groups: string[];
-}
-
 export async function exchangeCode(
   currentUrl: string,
   tx: AuthTransaction,
-): Promise<EntraClaims> {
+): Promise<DirectoryClaims> {
   const client = await entraClient();
 
   const params = client.callbackParams(currentUrl);
@@ -108,93 +100,13 @@ export async function exchangeCode(
   return { oid, email: email.toLowerCase(), name, groups };
 }
 
-/**
- * Kullanıcı ilk girişte oluşturulur, sonraki girişlerde ad/e-posta tazelenir.
- * Kimliğin anahtarı oid — e-posta değişse bile aynı kullanıcı kalır.
- *
- * Rol ve departman:
- *  - ENTRA_USE_GROUPS açıksa grup kimlikleri Department.entraGroupId ile
- *    eşleştirilir, eşleşen kullanıcı o ekibin üyesi olur.
- *  - Kapalıysa kullanıcı departmansız ve USER rolüyle açılır; yönetici
- *    ekranından atanır. Yetkinin sessizce genişlemesi bundan iyidir.
- */
-export async function upsertUserFromClaims(claims: EntraClaims) {
-  let departmentId: string | null = null;
-  let role: Role = Role.USER;
-
-  if (env.ENTRA_USE_GROUPS && claims.groups.length) {
-    const dept = await prisma.department.findFirst({
-      where: { entraGroupId: { in: claims.groups }, active: true },
-      select: { id: true },
-    });
-    if (dept) {
-      departmentId = dept.id;
-      role = Role.TEAM_MEMBER;
-    }
-  }
-
-  if (env.ENTRA_ADMIN_GROUP_ID && claims.groups.includes(env.ENTRA_ADMIN_GROUP_ID)) {
-    role = Role.ADMIN;
-  }
-
-  const existing = await prisma.user.findUnique({
-    where: { entraOid: claims.oid },
-    select: { id: true, role: true, departmentId: true },
-  });
-
-  // Yönetici grubu tanımlı ve belirteç grupları taşıyorsa yöneticilik gruptan
-  // gelir: gruptan çıkarılan kişi bir sonraki girişte yöneticiliğini kaybeder.
-  // Grup listesi boşsa (çok grup → Entra listeyi göndermez) dokunulmaz.
-  const leftAdminGroup =
-    !!env.ENTRA_ADMIN_GROUP_ID && claims.groups.length > 0 && !claims.groups.includes(env.ENTRA_ADMIN_GROUP_ID);
-
-  if (existing) {
-    // Elle verilmiş rolü ve departmanı ezmiyoruz: yönetici birine MANAGER
-    // dediyse her girişte TEAM_MEMBER'a düşmesi doğru olmaz. Devre dışı
-    // bırakılan kişi girişle yeniden açılmaz.
-    const demoted = existing.role === Role.ADMIN && leftAdminGroup;
-    return prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        email: await freeEmail(claims.email, existing.id),
-        name: claims.name,
-        lastLoginAt: new Date(),
-        ...(existing.departmentId == null && departmentId ? { departmentId } : {}),
-        ...(existing.role === Role.USER && role !== Role.USER ? { role } : {}),
-        ...(demoted ? { role: existing.departmentId ? Role.TEAM_MEMBER : role } : {}),
-      },
-      select: { id: true, active: true },
-    });
-  }
-
-  return prisma.user.create({
-    data: {
-      entraOid: claims.oid,
-      email: await freeEmail(claims.email, null),
-      name: claims.name,
-      role,
-      departmentId,
-      lastLoginAt: new Date(),
-    },
-    select: { id: true, active: true },
-  });
-}
-
-/**
- * E-posta benzersiz; aynı adres başka bir Entra kimliğindeyse (işten ayrılıp
- * yeniden gelen, adresi devralınan kişi) eski satır kapatılır ve adresi
- * boşaltılır. Eski kayıtların sahibi olarak geçmişte kalır.
- */
-async function freeEmail(email: string, selfId: string | null) {
-  const other = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  if (other && other.id !== selfId) {
-    await prisma.user.update({
-      where: { id: other.id },
-      data: { email: `${email}#eski-${other.id}`, active: false },
-    });
-  }
-  return email;
-}
+/** Entra grupları: ekip ENTRA_USE_GROUPS ile, yönetici ENTRA_ADMIN_GROUP_ID ile. */
+export const entraPolicy = (): DirectoryPolicy => ({
+  useGroups: env.ENTRA_USE_GROUPS,
+  adminGroup: env.ENTRA_ADMIN_GROUP_ID,
+  managerGroup: '',
+  authoritative: false,
+});
 
 /** Dönüş adresinin açık yönlendirme (open redirect) olmadığını doğrular. */
 export function safeReturnTo(value: unknown): string {

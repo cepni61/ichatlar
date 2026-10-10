@@ -7,7 +7,7 @@ import { createRecord, createUser, prisma, resetDb } from './helpers.js';
 const base: OrgConfigInput = {
   departments: [
     { id: 'ik', name: 'İnsan Kaynakları', short: 'İK' },
-    { id: 'bt', name: 'Bilgi Teknolojileri', short: 'BT', entraGroupId: 'g-bt' },
+    { id: 'bt', name: 'Bilgi Teknolojileri', short: 'BT', group: 'g-bt' },
   ],
   sla: { NORMAL: 40, YUKSEK: 20, KRITIK: 4, warnRatio: 0.8 },
 };
