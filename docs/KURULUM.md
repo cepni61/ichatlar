@@ -152,10 +152,15 @@ Kurulum klasörünü OneDrive gibi eşitlenen bir yere koymayın.
 ## 5. HTTPS ve Entra ID
 
 **Ters vekil.** Uygulama HTTP konuşur; TLS'i önündeki vekil (IIS + ARR, nginx…)
-sonlandırır. Canlıda uygulama vekilden gelen `X-Forwarded-For` başlığına güvenir
-— bu yüzden **uygulama portuna yalnızca vekil erişebilmeli** (güvenlik duvarı
-veya `localhost`'a bağlı vekil). Aksi hâlde istemci IP'si taklit edilip hız
-sınırı atlatılabilir.
+sonlandırır. Canlıda uygulama `X-Forwarded-For` başlığında yalnızca en yakın
+vekilin eklediği adrese güvenir (tek vekil varsayılır; iki vekil arka arkaysa
+`src/app.ts` içindeki `trustProxy` ayarına bakın). **Uygulama portuna yalnızca
+vekil erişebilmeli** (güvenlik duvarı veya `localhost`'a bağlı vekil); aksi
+hâlde istemci IP'si taklit edilip hız sınırı atlatılabilir.
+
+Yazma istekleri (POST/PATCH/DELETE) tarayıcının gönderdiği `Origin` başlığıyla
+denetlenir: `APP_URL` ya da isteğin `Host` adresi olmayan kökenden gelen istek
+reddedilir. `APP_URL` kullanıcıların tarayıcıda gördüğü adresle aynı olmalı.
 
 **Entra ID uygulama kaydı** (kiracı yöneticisi):
 

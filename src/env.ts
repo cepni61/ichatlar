@@ -92,7 +92,7 @@ export const env = {
   isProd,
   entraConfigured,
   /** Geliştirme girişi yalnızca üretim dışında ve Entra yokken açılır. */
-  devAuth: !isProd && raw.DEV_AUTH_BYPASS,
+  devAuth: !isProd && !entraConfigured && raw.DEV_AUTH_BYPASS,
   maxUploadBytes: raw.MAX_UPLOAD_MB * 1024 * 1024,
   sessionTtlMs: raw.SESSION_TTL_HOURS * 60 * 60 * 1000,
 } as const;

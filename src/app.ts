@@ -10,7 +10,7 @@ import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
 import { env } from './env.js';
 import { attachUser } from './auth/guard.js';
-import { AppError } from './lib/errors.js';
+import { AppError, forbidden } from './lib/errors.js';
 import authRoutes from './routes/auth.js';
 import bootstrapRoutes from './routes/bootstrap.js';
 import recordRoutes from './routes/records.js';
@@ -54,9 +54,11 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
       level: env.isProd ? 'info' : 'debug',
       transport: env.isProd ? undefined : { target: 'pino-pretty', options: { translateTime: 'HH:MM:ss' } },
     },
-    // Geliştirmede yalnızca aynı makinedeki vekile (Cloudflare tüneli) güven:
-    // gerçek istemci IP'si hız sınırı ve kayıtlar için X-Forwarded-For'dan gelir.
-    trustProxy: env.isProd ? true : 'loopback',
+    // Gerçek istemci IP'si hız sınırı ve kayıtlar için X-Forwarded-For'dan
+    // gelir. Yalnızca en yakın vekilin eklediği değere güvenilir (`true` en
+    // soldakini, yani istemcinin kendi yazdığını alırdı). Geliştirmede vekil
+    // aynı makinedeki Cloudflare tüneli.
+    trustProxy: env.isProd ? (_addr: string, hop: number) => hop === 0 : 'loopback',
     bodyLimit: 1024 * 1024,
   });
 
@@ -104,6 +106,18 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
 
   const build = uiBuild();
   app.addHook('onSend', async (_req, reply) => { reply.header('x-ih-build', build); });
+
+  // Çapraz site istek sahteciliği: oturum çerezi SameSite=Lax, ama kardeş alt
+  // alan adları "aynı site" sayılır ve çerezi taşır. Tarayıcı her yazma
+  // isteğinde Origin gönderir; başka kökenden geleni reddet. Origin yoksa
+  // istek tarayıcıdan değildir (çerez de taşımaz).
+  const appOrigin = new URL(env.APP_URL).origin;
+  app.addHook('onRequest', async (req) => {
+    if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return;
+    const origin = req.headers.origin;
+    if (!origin || origin === appOrigin || URL.canParse(origin) && new URL(origin).host === req.host) return;
+    throw forbidden('Başka bir siteden gelen istek reddedildi.');
+  });
 
   /** ACCESS_CODE doluysa her istek önce erişim kapısından geçer (statik dosyalar dahil). */
   app.addHook('onRequest', gateHook);

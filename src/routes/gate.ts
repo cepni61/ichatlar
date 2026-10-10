@@ -233,7 +233,7 @@ export default async function gateRoutes(app: FastifyInstance) {
 
       const user = data.email
         ? await prisma.user.findUnique({
-            where: { email: data.email.toLocaleLowerCase('tr-TR') },
+            where: { email: data.email.toLowerCase() },
             select: { id: true, active: true },
           })
         : null;

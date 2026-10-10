@@ -17,7 +17,7 @@ import {
   setSessionCookie,
   SESSION_COOKIE,
 } from '../auth/session.js';
-import { badRequest } from '../lib/errors.js';
+import { badRequest, forbidden } from '../lib/errors.js';
 
 const TX_COOKIE = 'ih_txn';
 
@@ -77,6 +77,8 @@ export default async function authRoutes(app: FastifyInstance) {
     const url = `${env.APP_URL}${req.url}`;
     const claims = await exchangeCode(url, tx);
     const user = await upsertUserFromClaims(claims);
+    // Oturum açılsa da attachUser kapalı hesabı tanımaz; giriş döngüye girerdi.
+    if (!user.active) throw forbidden('Hesabınız devre dışı. Sistem yöneticisine başvurun.');
 
     const session = await createSession(user.id, {
       userAgent: req.headers['user-agent'],
@@ -116,7 +118,7 @@ export default async function authRoutes(app: FastifyInstance) {
       const user = await prisma.user.findUnique({
         where: parsed.data.userId
           ? { id: parsed.data.userId }
-          : { email: parsed.data.email!.toLocaleLowerCase('tr-TR') },
+          : { email: parsed.data.email!.toLowerCase() },
         select: { id: true, active: true, email: true },
       });
       if (!user || !user.active) throw badRequest('Bu e-postayla kullanıcı yok. Önce `npm run db:seed`.');

@@ -1,4 +1,3 @@
-import { randomBytes, createHash } from 'node:crypto';
 import { Issuer, generators, type Client } from 'openid-client';
 import { Role } from '../domain/enums.js';
 import { prisma } from '../db.js';
@@ -29,7 +28,11 @@ export async function entraClient(): Promise<Client> {
           redirect_uris: [`${env.APP_URL}/auth/callback`],
           response_types: ['code'],
         }),
-    );
+    ).catch((e) => {
+      // Geçici ağ hatası kalıcı olmasın: sonraki giriş keşfi yeniden dener.
+      clientPromise = null;
+      throw e;
+    });
   }
   return clientPromise;
 }
@@ -102,7 +105,7 @@ export async function exchangeCode(
 
   const groups = Array.isArray(claims.groups) ? (claims.groups as string[]) : [];
 
-  return { oid, email: email.toLocaleLowerCase('tr-TR'), name, groups };
+  return { oid, email: email.toLowerCase(), name, groups };
 }
 
 /**
@@ -139,49 +142,69 @@ export async function upsertUserFromClaims(claims: EntraClaims) {
     select: { id: true, role: true, departmentId: true },
   });
 
+  // Yönetici grubu tanımlı ve belirteç grupları taşıyorsa yöneticilik gruptan
+  // gelir: gruptan çıkarılan kişi bir sonraki girişte yöneticiliğini kaybeder.
+  // Grup listesi boşsa (çok grup → Entra listeyi göndermez) dokunulmaz.
+  const leftAdminGroup =
+    !!env.ENTRA_ADMIN_GROUP_ID && claims.groups.length > 0 && !claims.groups.includes(env.ENTRA_ADMIN_GROUP_ID);
+
   if (existing) {
     // Elle verilmiş rolü ve departmanı ezmiyoruz: yönetici birine MANAGER
-    // dediyse her girişte TEAM_MEMBER'a düşmesi doğru olmaz.
+    // dediyse her girişte TEAM_MEMBER'a düşmesi doğru olmaz. Devre dışı
+    // bırakılan kişi girişle yeniden açılmaz.
+    const demoted = existing.role === Role.ADMIN && leftAdminGroup;
     return prisma.user.update({
       where: { id: existing.id },
       data: {
-        email: claims.email,
+        email: await freeEmail(claims.email, existing.id),
         name: claims.name,
         lastLoginAt: new Date(),
-        active: true,
         ...(existing.departmentId == null && departmentId ? { departmentId } : {}),
         ...(existing.role === Role.USER && role !== Role.USER ? { role } : {}),
+        ...(demoted ? { role: existing.departmentId ? Role.TEAM_MEMBER : role } : {}),
       },
-      select: { id: true },
+      select: { id: true, active: true },
     });
   }
 
   return prisma.user.create({
     data: {
       entraOid: claims.oid,
-      email: claims.email,
+      email: await freeEmail(claims.email, null),
       name: claims.name,
       role,
       departmentId,
       lastLoginAt: new Date(),
     },
-    select: { id: true },
+    select: { id: true, active: true },
   });
+}
+
+/**
+ * E-posta benzersiz; aynı adres başka bir Entra kimliğindeyse (işten ayrılıp
+ * yeniden gelen, adresi devralınan kişi) eski satır kapatılır ve adresi
+ * boşaltılır. Eski kayıtların sahibi olarak geçmişte kalır.
+ */
+async function freeEmail(email: string, selfId: string | null) {
+  const other = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (other && other.id !== selfId) {
+    await prisma.user.update({
+      where: { id: other.id },
+      data: { email: `${email}#eski-${other.id}`, active: false },
+    });
+  }
+  return email;
 }
 
 /** Dönüş adresinin açık yönlendirme (open redirect) olmadığını doğrular. */
 export function safeReturnTo(value: unknown): string {
   // "/\evil.com" tarayıcıda "//evil.com" gibi yorumlanır; ters bölü de reddedilir.
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+  // Tarayıcı sekme/satır sonunu adresten siler: "/\t/evil.com" → "//evil.com".
+  if (
+    typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') ||
+    value.includes('\\') || /[\x00-\x1f\x7f]/.test(value)
+  ) {
     return '/';
   }
   return value;
-}
-
-export function hashState(state: string) {
-  return createHash('sha256').update(state).digest('base64url');
-}
-
-export function randomId() {
-  return randomBytes(16).toString('base64url');
 }
