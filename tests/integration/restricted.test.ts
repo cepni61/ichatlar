@@ -96,6 +96,25 @@ describe('yalnızca ilgili ekip (kısıtlı kayıt)', () => {
     expect((await app.inject({ method: 'GET', url: '/api/attachments/' + att.id, ...h })).statusCode).toBe(404);
   });
 
+  it('ekipteki USER rolü kısıtlı kaydı listede görmez, kayıt ona devredilemez', async () => {
+    const w = await world();
+    const ikUser = await createUser({ name: 'İK Kullanıcı', departmentId: w.ik.id });
+    const { secret, open } = await solvedPair(w);
+    const h = { headers: await loginAs(app, ikUser.id) };
+    for (const scope of ['visible', 'team', 'all']) {
+      const list = (await app.inject({ method: 'GET', url: '/api/records?scope=' + scope, ...h })).json().records as { code: string }[];
+      expect(list.map((r) => r.code), scope).not.toContain(secret.code);
+      // Ekibin açık kaydını departman kapsamından görmeye devam eder.
+      if (scope !== 'team') expect(list.map((r) => r.code), scope).toContain(open.code);
+    }
+    const live = await createRecord({ createdById: w.opener.id, departmentId: w.ik.id, assigneeId: w.ikMember.id, status: RecordStatus.CALISILIYOR, restricted: true });
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${live.code}/forward`, headers: await loginAs(app, w.ikMember.id),
+      payload: { assigneeId: ikUser.id },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
   it('ilgili ekibin yöneticisi, üyesi ve kaydı açan görmeye devam eder', async () => {
     const w = await world();
     const ikManager = await createUser({ name: 'İK Yönetici', role: Role.MANAGER, departmentId: w.ik.id });

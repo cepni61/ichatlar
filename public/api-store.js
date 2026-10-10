@@ -759,6 +759,8 @@
           // SÖZCÜKSEL kapsamda durur, window üzerinde DEĞİL. `window.form`
           // yazmak undefined döndürüyordu ve tür bonusu (+5) hiç gitmiyordu.
           type: f ? f.type || null : null,
+          // İşaretliyse sunucu taramayı ML veritabanına hiç yazmaz.
+          restricted: !!($('#fRestricted') && $('#fRestricted').checked),
         });
         // Yanıt gelene dek form sıfırlandıysa (kayıt açıldı, "işime yaradı")
         // eski sonuç boş forma çizilmesin.
@@ -783,6 +785,8 @@
         deptCache = out.department || null;
         // Kayıt açılırsa sonucu ML veritabanındaki bu çalıştırmaya bağlamak için.
         f.mlInferenceId = out.inferenceId || null;
+        // Kayıt kısıtlı ya da anonim açılırsa önceki taramalar da temizlensin.
+        if (out.inferenceId) (f.mlInferenceIds = f.mlInferenceIds || []).push(out.inferenceId);
         f.deptApplied = false;
       } catch (err) {
         if (f !== form) return;
@@ -875,6 +879,7 @@
           score: m.percent / 100,
         })),
         mlInferenceId: form.mlInferenceId || null,
+        mlInferenceIds: form.mlInferenceIds || [],
         deptSuggestionApplied: !!form.deptApplied,
       };
     }

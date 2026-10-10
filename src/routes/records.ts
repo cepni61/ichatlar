@@ -10,11 +10,11 @@ import {
   STATUS_FROM_SLUG,
   TYPE_FROM_SLUG,
 } from '../domain/constants.js';
-import { can, type Actor } from '../domain/permissions.js';
+import { can, isTeamRole, type Actor } from '../domain/permissions.js';
 import { actorInTree, inDepartmentTree, inTeam, isAssignableUnit, loadOrgTree, withRoots } from '../domain/org.js';
 import { dueDateFor } from '../domain/sla.js';
 import { findSimilar } from '../domain/similarity.js';
-import { forgetInference, logInference, recordOutcome, suggestDepartment } from '../ml/service.js';
+import { logInference, recordOutcome, releaseDrafts, suggestDepartment } from '../ml/service.js';
 import { nextRecordCode } from '../lib/code.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
@@ -29,7 +29,9 @@ const withDetail = detailInclude;
  * görmemesi gereken kayıtlar hiç sorgudan dönmemeli.
  */
 function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
-  const teamFilter: Prisma.RecordWhereInput = actor.departmentId ? inTeam(actor.departmentId) : { id: '__none__' };
+  // Yetki kuralıyla aynı: ekipteki USER ekibin kısıtlı kayıtlarını görmez.
+  const teamFilter: Prisma.RecordWhereInput =
+    actor.departmentId && isTeamRole(actor.role) ? inTeam(actor.departmentId) : { id: '__none__' };
 
   const departmentWide: Prisma.RecordWhereInput[] = actor.departmentRootId
     ? [{ AND: [{ restricted: false }, inDepartmentTree(actor.departmentRootId)] }]
@@ -100,6 +102,8 @@ const createBody = z.object({
   shownSuggestions: z.array(z.object({ code: z.string(), score: z.number() })).max(5).optional(),
   /** /api/similar'ın döndürdüğü ML çalıştırma kimliği — sonuç ML veritabanına bağlanır. */
   mlInferenceId: z.string().max(64).nullish(),
+  /** Taslak yazılırken yapılan bütün taramalar (kısıtlı/anonim kayıtta temizlenir). */
+  mlInferenceIds: z.array(z.string().max(64)).max(200).default([]),
   /** Kullanıcı "Bu ekibi seç" ile ML'in ekip önerisini uyguladı mı. */
   deptSuggestionApplied: z.boolean().default(false),
 }).superRefine((b, ctx) => {
@@ -367,9 +371,10 @@ export default async function recordRoutes(app: FastifyInstance) {
     app.log.info({ code: created.code, by: actor.id }, 'kayıt oluşturuldu');
 
     // İşlem bittikten SONRA ve ayrı veritabanına: yazılamazsa kayıt yine açılmış olur.
-    // Kısıtlı kayıt ML hafızasına girmez: taslağın kontrol kaydı da silinir.
-    if (body.mlInferenceId && body.restricted) {
-      await forgetInference(req.log, body.mlInferenceId);
+    // Kısıtlı kayıt ML hafızasına girmez: taslağın bütün taramaları silinir.
+    const drafts = [...new Set([...body.mlInferenceIds, ...(body.mlInferenceId ? [body.mlInferenceId] : [])])];
+    if (body.restricted) {
+      await releaseDrafts(req.log, actor.id, drafts, 'forget');
     } else if (body.mlInferenceId) {
       await recordOutcome(req.log, {
         inferenceId: body.mlInferenceId,
@@ -380,6 +385,7 @@ export default async function recordRoutes(app: FastifyInstance) {
         anonymous: body.anonymous,
       });
     }
+    if (!body.restricted && body.anonymous) await releaseDrafts(req.log, actor.id, drafts, 'anonymize');
 
     reply.code(201);
     return { record: await serializeRecord(created, actor, tree) };

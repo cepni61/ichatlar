@@ -7,7 +7,7 @@ import { actorOf, requireUser } from '../auth/guard.js';
 import {
   ONERI_OUTCOMES, ONERI_WORK_STATUSES, STATUS_FROM_SLUG, STATUS_LABELS, WORK_STATUSES,
 } from '../domain/constants.js';
-import { can, canTransition, type Action } from '../domain/permissions.js';
+import { can, canTransition, isTeamRole, type Action } from '../domain/permissions.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeRecord } from '../lib/serialize.js';
 import { MAX_FILES } from '../domain/attachments.js';
@@ -239,10 +239,11 @@ export default async function actionRoutes(app: FastifyInstance) {
     } else {
       const mate = await prisma.user.findFirst({
         where: { id: assigneeId!, active: true },
-        select: { name: true, departmentId: true },
+        select: { name: true, departmentId: true, role: true },
       });
       if (!mate) throw badRequest('Kişi bulunamadı.');
-      mateDept = mate.departmentId;
+      // Ekip rolü olmayan kişi ekibin kaydını göremez; üzerine düşerse görünür olurdu.
+      mateDept = isTeamRole(mate.role) ? mate.departmentId : null;
 
       // Devir bir sahip değişikliğidir, durum değişikliği değil: yeni kayıt
       // "Üzerime Alındı"ya geçer, üzerinde çalışılan kayıt durumunu korur.

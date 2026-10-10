@@ -463,16 +463,25 @@ export async function recordOutcome(
 }
 
 /**
- * Kısıtlı kayıt açıldı: kayıt öncesi "ML ile Kontrol Et" çağrısının metni ve
- * önerileri ML veritabanından silinir. Kayıt ML hafızasına hiç girmez.
+ * Kayıt açıldı; taslak yazılırken yapılan her tarama (metin ve öneriler)
+ * kişinin kendi çalıştırmalarıyla sınırlı olarak:
+ *  - kısıtlı kayıtta silinir: kayıt ML hafızasına hiç girmez;
+ *  - anonim kayıtta kişiden koparılır: taramalar açanı göstermez.
  */
-export async function forgetInference(log: FastifyBaseLogger, inferenceId: string) {
+export async function releaseDrafts(
+  log: FastifyBaseLogger,
+  userId: string,
+  inferenceIds: string[],
+  how: 'forget' | 'anonymize',
+) {
   const ml = mlDb();
-  if (!ml) return;
+  if (!ml || !inferenceIds.length) return;
+  const where = { id: { in: inferenceIds }, userId };
   try {
-    await ml.inference.deleteMany({ where: { id: inferenceId } });
+    if (how === 'forget') await ml.inference.deleteMany({ where });
+    else await ml.inference.updateMany({ where, data: { userId: null } });
   } catch (err) {
-    log.warn({ err: (err as Error).message }, 'ML kontrol kaydı silinemedi');
+    log.warn({ err: (err as Error).message }, 'ML taslak taramaları temizlenemedi');
   }
 }
 

@@ -7,6 +7,9 @@ import { isOpen, ONERI_OUTCOMES, ONERI_WORK_STATUSES, WORK_STATUSES } from './co
  * çağrısında sunucu aynı fonksiyonlarla yeniden doğrular.
  */
 
+/** Ekibin işini yapan roller. USER ekipte görünse de ekip kaydı ona düşmez. */
+export const isTeamRole = (role: string) => role === Role.TEAM_MEMBER || role === Role.MANAGER || role === Role.ADMIN;
+
 export interface Actor {
   id: string;
   role: string;
@@ -64,7 +67,7 @@ export function relate(rec: RecordShape, actor: Actor): Relation {
   const inTeam =
     actor.departmentId != null &&
     (actor.departmentId === rec.departmentId || actor.departmentId === rec.department2Id) &&
-    (actor.role === Role.TEAM_MEMBER || actor.role === Role.MANAGER || actor.role === Role.ADMIN);
+    isTeamRole(actor.role);
 
   return {
     isCreator: rec.createdById === actor.id,
