@@ -63,6 +63,7 @@ export async function createUser(opts: {
       email: `${id}@test.local`,
       name: opts.name,
       role: opts.role ?? Role.USER,
+      baseRole: opts.role ?? Role.USER,
       departmentId: opts.departmentId ?? null,
       active: opts.active ?? true,
     },

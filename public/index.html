@@ -914,6 +914,25 @@
     .nav button.active::before{top:6px;bottom:6px}
   }
 
+  /* ---------- Yetkiler ---------- */
+  .perm-form{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .perm-form select{flex:1 1 220px;min-width:0}
+  .perm-form #permRole{flex:0 1 200px}
+  /* Raporlardaki filtrelerle aynı kutu (Bilgi Bankası yetki seçicisi de çıplaktı) */
+  .perm-form select,#kbGrantUser{
+    border:1px solid var(--line-2);border-radius:var(--r-sm);
+    background:var(--panel);color:var(--text);padding:9px 12px;font-size:14px;
+  }
+  .perm-form select:focus,#kbGrantUser:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3.5px var(--focus-ring)}
+  @media(max-width:640px){ .perm-form select,#kbGrantUser{font-size:16px} }
+  .perm-help{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:16px 0 0;font-size:13px;line-height:1.5}
+  .perm-help dt{font-weight:650;color:var(--text)}
+  .perm-help dd{margin:0;color:var(--text-2)}
+  @media(max-width:640px){ .perm-help{grid-template-columns:1fr} .perm-help dd{margin-bottom:6px} }
+  .perm-who{display:flex;align-items:center;gap:10px;min-width:0}
+  .perm-who small{display:block;color:var(--muted);font-size:12px}
+  #permRows .mini-btn{white-space:nowrap}
+
   /* ---------- Yeni modüller: Arama, Bilgi Bankası ---------- */
   .src-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--successbg);color:var(--success)}
   .src-badge.kb{background:var(--primary2);color:var(--on-soft)}
@@ -2025,6 +2044,10 @@
       <button data-view="management" data-role-min="manager">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-6.5M4 10.5V3M12 21v-9.5M12 7.5V3M20 21v-4.5M20 12.5V3M1.5 14.5h5M9.5 7.5h5M17.5 16.5h5"/></svg>
         <span class="lbl">Yönetim</span></button>
+      <!-- Yetkiler yalnızca sistem yöneticisine (api-store.js data-admin-only) -->
+      <button data-view="perms" data-admin-only hidden>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+        <span class="lbl">Yetkiler</span></button>
     </nav>
 
     <!-- Hesap: dipte tek düğme. Kişi, tema, geri bildirim ve çıkış yukarı açılan
@@ -2379,9 +2402,42 @@
       <div class="card" data-admin-only hidden><div class="card-body" style="padding:18px 20px">
         <p class="hint" style="margin:0;line-height:1.6"><b style="color:var(--text)">Bu ayarlar nasıl değiştirilir?</b><br>
         Ekipler ve hedef süreler kurulum dosyasından (<code>config/kurulus.json</code>) yönetilir; sistem yöneticisi
-        güncelleyip <code>setup</code> komutunu çalıştırır. Kişilerin ekibi ve yönetici rolü kurumsal girişteki
-        (Entra ID) gruplardan gelir. Değişiklik talebiniz için sistem yöneticinize başvurun.</p>
+        güncelleyip <code>setup</code> komutunu çalıştırır. Kişilerin ekibi ve rolü kurumsal dizindeki (AD)
+        gruplardan gelir; ekip yöneticisi ve sistem yöneticisi yetkisi ayrıca <b>Yetkiler</b> ekranından verilir.</p>
       </div></div>
+    </section>
+
+    <!-- ---------- YETKİLER (yalnızca sistem yöneticisi, modules.js) ---------- -->
+    <section id="perms" class="view">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-head"><h3>Yetki ver</h3></div>
+        <div class="card-body">
+          <div class="perm-form">
+            <select id="permUser" aria-label="Yetki verilecek kişi"></select>
+            <select id="permRole" aria-label="Verilecek yetki">
+              <option value="MANAGER">Ekip yöneticisi</option>
+              <option value="ADMIN">Sistem yöneticisi</option>
+            </select>
+            <button class="btn btn-primary" type="button" id="permGrant">Yetki ver</button>
+          </div>
+          <dl class="perm-help">
+            <dt>Ekip yöneticisi</dt>
+            <dd>Raporları ve Yönetim ekranını görür, ekibinin Bilgi Bankası maddelerini yönetir, ekibinde hedef süresi aşılan kayıtlar için bildirim alır. Kişinin bir ekibi olmalı.</dd>
+            <dt>Sistem yöneticisi</dt>
+            <dd>Bütün departmanların kayıtlarını (yalnızca ilgili ekibe açık olanlar hariç), Yönetim ve Yetkiler ekranlarını görür; yetki verir ve geri alır.</dd>
+          </dl>
+          <p class="hint" style="margin:10px 0 0">Kişi listede yoksa uygulamaya henüz hiç giriş yapmamıştır. Verdiğiniz yetki kişinin kurumsal dizindeki rolünün üstüne eklenir; geri aldığınızda dizindeki rolüne döner.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Yetkili kişiler</h3><span class="pill blue" id="permCount">0 kişi</span></div>
+        <div class="card-body table-wrap">
+          <table class="table">
+            <thead><tr><th>Kişi</th><th>Ekip</th><th>Yetki</th><th>Nereden</th><th><span class="sr-only">İşlem</span></th></tr></thead>
+            <tbody id="permRows"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -2710,6 +2766,7 @@ const TITLES = {
   'management':    ['Yönetim','Ekipler, ekip üyeleri, hedef süreler ve uygulama geri bildirimleri.'],
   'search':        ['Kaynak Bul','Kurumsal uygulamaları, süreç sayfalarını ve daha önce çözülmüş talepleri tek yerden bulun.'],
   'kb':            ['Bilgi Bankası','Ekiplerin hazır yanıtları ve uygulama bağlantıları.'],
+  'perms':         ['Yetkiler','Kişileri ekip yöneticisi ya da sistem yöneticisi yapın, verdiğiniz yetkiyi geri alın.'],
   'detail':        ['Kayıt','Kayıt geçmişi, yönlendirme ve sahiplenme.'],
 };
 
@@ -2727,7 +2784,7 @@ let HOME_VIEW = 'dashboard';
 const ROUTES = {
   'dashboard':'genel-bakis', 'new-ticket':'yeni-kayit', 'my-tickets':'actiklarim',
   'team-tickets':'ekibime-gelenler', 'owned-tickets':'uzerimdekiler', 'all-records':'tum-kayitlar',
-  'reports':'raporlar', 'management':'yonetim', 'search':'arama', 'kb':'bilgi-bankasi',
+  'reports':'raporlar', 'management':'yonetim', 'search':'arama', 'kb':'bilgi-bankasi', 'perms':'yetkiler',
 };
 const ROUTE_VIEW = Object.fromEntries(Object.entries(ROUTES).map(([v, slug]) => [slug, v]));
 
@@ -2807,6 +2864,7 @@ function renderView(id){
   /* Yeni modüller modules.js içinde (API'ye bağlı) */
   if (id === 'search' && typeof renderSearch === 'function') renderSearch();
   if (id === 'kb'     && typeof renderKb === 'function')     renderKb();
+  if (id === 'perms'  && typeof renderPerms === 'function')  renderPerms();
   if (id === 'management' && typeof renderFeedbackAdmin === 'function') renderFeedbackAdmin();
   renderChrome();
 }

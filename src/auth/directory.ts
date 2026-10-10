@@ -1,6 +1,7 @@
 import { Role } from '../domain/enums.js';
 import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { prisma } from '../db.js';
+import { effectiveRole } from '../domain/roles.js';
 
 /**
  * Kurumsal dizinden (Entra ID ya da Active Directory) gelen kişiyi uygulama
@@ -64,34 +65,42 @@ async function fromGroups(claims: DirectoryClaims, policy: DirectoryPolicy) {
   return { departmentId, role };
 }
 
-/** İlk girişte kullanıcıyı oluşturur, sonrakilerde ad/e-posta ve (politikaya göre) ekip/rolü tazeler. */
+/**
+ * İlk girişte kullanıcıyı oluşturur, sonrakilerde ad/e-posta ve (politikaya
+ * göre) ekip/rolü tazeler. Gruplardan gelen rol baseRole'e yazılır; Yetkiler
+ * ekranında verilen yetki (roleGrant) korunur, etkin rol ikisinin yükseğidir.
+ */
 export async function upsertUserFromClaims(claims: DirectoryClaims, policy: DirectoryPolicy) {
   const target = await fromGroups(claims, policy);
   const existing = await prisma.user.findUnique({
     where: { entraOid: claims.oid },
-    select: { id: true, role: true, departmentId: true },
+    select: { id: true, baseRole: true, roleGrant: true, departmentId: true },
   });
 
   if (existing) {
-    let sync: { departmentId?: string | null; role?: Role };
+    let departmentId = existing.departmentId;
+    let base = existing.baseRole;
     if (policy.authoritative) {
-      sync = target;
+      ({ departmentId, role: base } = target);
     } else {
       // Grup listesi boşsa yöneticiliğe dokunulmaz (Entra listeyi göndermemiş olabilir).
       const leftAdmin =
         !!policy.adminGroup && claims.groups.length > 0 && !inGroup(claims.groups, policy.adminGroup);
-      sync = {
-        ...(existing.departmentId == null && target.departmentId ? { departmentId: target.departmentId } : {}),
-        ...(existing.role === Role.USER && target.role !== Role.USER ? { role: target.role } : {}),
-        ...(existing.role === Role.ADMIN && leftAdmin
-          ? { role: existing.departmentId ? Role.TEAM_MEMBER : target.role }
-          : {}),
-      };
+      if (departmentId == null && target.departmentId) departmentId = target.departmentId;
+      if (base === Role.USER && target.role !== Role.USER) base = target.role;
+      else if (base === Role.ADMIN && leftAdmin) base = departmentId ? Role.TEAM_MEMBER : target.role;
     }
     // Devre dışı bırakılan kişi girişle yeniden açılmaz.
     return prisma.user.update({
       where: { id: existing.id },
-      data: { email: await freeEmail(claims.email, existing.id), name: claims.name, lastLoginAt: new Date(), ...sync },
+      data: {
+        email: await freeEmail(claims.email, existing.id),
+        name: claims.name,
+        lastLoginAt: new Date(),
+        departmentId,
+        baseRole: base,
+        role: effectiveRole(base, existing.roleGrant, departmentId),
+      },
       select: { id: true, active: true },
     });
   }
@@ -101,7 +110,9 @@ export async function upsertUserFromClaims(claims: DirectoryClaims, policy: Dire
       entraOid: claims.oid,
       email: await freeEmail(claims.email, null),
       name: claims.name,
-      ...target,
+      departmentId: target.departmentId,
+      role: target.role,
+      baseRole: target.role,
       lastLoginAt: new Date(),
     },
     select: { id: true, active: true },

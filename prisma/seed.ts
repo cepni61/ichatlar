@@ -13,6 +13,7 @@ import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { Priority, RecordStatus, RecordType } from '../src/domain/enums.js';
 import { applyOrgConfig, mainTeamId, orgConfigSchema } from '../src/setup/org-config.js';
+import { effectiveRole } from '../src/domain/roles.js';
 import { CONTEXT, COUNTS, KB_ARTICLES, TITLES, TOPICS, USERS } from './demo-data.js';
 
 const prisma = new PrismaClient();
@@ -126,6 +127,9 @@ async function main() {
   console.log('Demo kullanıcılar…');
   const userIds = new Map<string, string>();
   for (const u of USERS) {
+    // Yetkiler ekranında verilmiş yetki her açılıştaki tohumlamada kaybolmasın.
+    const prev = await prisma.user.findUnique({ where: { entraOid: `seed:${u.key}` }, select: { roleGrant: true } });
+    const role = effectiveRole(u.role, prev?.roleGrant, teamOf(u.dept));
     const row = await prisma.user.upsert({
       // Entra yoksa oid yerine kararlı bir yer tutucu kullanılır; gerçek
       // girişte oid ile eşleşen ayrı kullanıcı açılır.
@@ -136,9 +140,10 @@ async function main() {
         name: u.name,
         title: TITLES[u.key] ?? null,
         role: u.role,
+        baseRole: u.role,
         departmentId: teamOf(u.dept),
       },
-      update: { name: u.name, title: TITLES[u.key] ?? null, role: u.role, departmentId: teamOf(u.dept), active: true },
+      update: { name: u.name, title: TITLES[u.key] ?? null, role, baseRole: u.role, departmentId: teamOf(u.dept), active: true },
       select: { id: true },
     });
     userIds.set(u.key, row.id);

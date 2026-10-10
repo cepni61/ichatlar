@@ -66,8 +66,19 @@ model User {
   email    String  @unique
   name     String
 
-  /// src/domain/enums.ts → Role
+  /// src/domain/enums.ts → Role. ETKİN rol: baseRole ile roleGrant'ın yükseği
+  /// (src/domain/roles.ts). Bütün yetki kodu bunu okur.
   role   String  @default("USER")
+  /// Kurumsal dizinden (AD/Entra grupları) ya da kurulumdan gelen rol. AD
+  /// girişinde her seferinde yeniden yazılır.
+  baseRole String @default("USER")
+  /// Sistem yöneticisinin Yetkiler ekranında verdiği rol (MANAGER | ADMIN).
+  /// Dizin senkronu buna dokunmaz; geri alınınca etkin rol baseRole'e döner.
+  roleGrant     String?
+  roleGrantAt   DateTime?
+  roleGrantById String?
+  roleGrantBy   User?   @relation("roleGrant", fields: [roleGrantById], references: [id], onDelete: SetNull)
+  roleGranted   User[]  @relation("roleGrant")
   active Boolean @default(true)
 
   /// Unvan (ör. "İK Uzmanı"). Kişi aramasında görünür; kurumsal dizinden
