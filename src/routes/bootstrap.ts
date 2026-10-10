@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
 import { requireUser } from '../auth/guard.js';
+import { isTeamRole } from '../domain/permissions.js';
 import { env } from '../env.js';
 import { ALLOWED, MAX_FILES } from '../domain/attachments.js';
 import { BENEFITS } from '../domain/suggestion.js';
@@ -86,6 +87,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
         name: u.name,
         dept: u.departmentId,
         role: u.role === 'MANAGER' ? 'Yönetici' : u.role === 'ADMIN' ? 'Sistem Yöneticisi' : 'Ekip Üyesi',
+        /** Ekip kaydı üzerine alınabilir mi (USER da "Ekip Üyesi" yazıyor). */
+        teamRole: isTeamRole(u.role),
       })),
       types: Object.entries(TYPE_LABELS).map(([k, label]) => ({
         id: TYPE_TO_SLUG[k as keyof typeof TYPE_TO_SLUG],

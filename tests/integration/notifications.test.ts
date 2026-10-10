@@ -54,6 +54,26 @@ describe('SLA ihlal bildirimi', () => {
     expect(await recipientsOf(r.id)).toEqual([t.member1.id, t.manager.id].sort());
   });
 
+  it('ikinci ekip de bildirim alır', async () => {
+    const t = await team();
+    const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, department2Id: t.kalite.id, slaDueAt: past() });
+    await checkSlaBreaches(silentLog);
+    expect(await recipientsOf(r.id)).toContain(t.outsider.id);
+  });
+
+  it('gecikmiş kayıt başka ekibe yönlendirilince yeni ekip de bildirim alır', async () => {
+    const t = await team();
+    const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });
+    await checkSlaBreaches(silentLog);
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${r.code}/forward`, headers: await loginAs(app, t.member1.id),
+      payload: { departmentId: t.kalite.id },
+    });
+    expect(res.statusCode).toBe(200);
+    await checkSlaBreaches(silentLog);
+    expect(await recipientsOf(r.id)).toContain(t.outsider.id);
+  });
+
   it('ikinci çalıştırmada aynı kayda tekrar bildirim yazılmaz', async () => {
     const t = await team();
     const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });

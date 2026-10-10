@@ -29,8 +29,10 @@ export async function checkSlaBreaches(log: FastifyBaseLogger) {
       id: true,
       code: true,
       departmentId: true,
+      department2Id: true,
       assigneeId: true,
       department: { select: { name: true } },
+      department2: { select: { name: true } },
     },
     take: 500,
   });
@@ -42,15 +44,18 @@ export async function checkSlaBreaches(log: FastifyBaseLogger) {
     // İşaret, akış olayı ve bildirimler tek işlemde: biri yazılıp diğeri
     // kalırsa ya bildirimsiz ihlal ya da ihlalsiz bildirim oluşurdu.
     notified += await prisma.$transaction(async (tx) => {
-      await tx.record.update({ where: { id: rec.id }, data: { slaBreachedAt: now } });
+      // Koşullu işaret: iki gözcü aynı anda çalışırsa olay ikinci kez düşmez.
+      const marked = await tx.record.updateMany({ where: { id: rec.id, slaBreachedAt: null }, data: { slaBreachedAt: now } });
+      if (marked.count === 0) return 0;
       const count = await notifySlaBreach(tx, rec);
+      const teams = rec.department2 ? `${rec.department.name} ve ${rec.department2.name} ekiplerinden` : `${rec.department.name} ekibinden`;
       await tx.recordEvent.create({
         data: {
           recordId: rec.id,
           type: EventType.SLA_BREACH,
           // byId boş: bu bir sistem olayı, kişi değil.
           text: count
-            ? `Hedef süre aşıldı. ${rec.department.name} ekibinden ${count} kişiye bildirim gönderildi.`
+            ? `Hedef süre aşıldı. ${teams} ${count} kişiye bildirim gönderildi.`
             : `Hedef süre aşıldı. ${rec.department.name} ekibinde bildirilecek etkin kullanıcı bulunamadı.`,
           at: now,
         },
@@ -81,7 +86,7 @@ export async function backfillSlaNotifications(log: FastifyBaseLogger) {
       slaBreachedAt: { not: null },
       notifications: { none: { type: NotificationType.SLA_BREACH } },
     },
-    select: { id: true, code: true, departmentId: true, assigneeId: true },
+    select: { id: true, code: true, departmentId: true, department2Id: true, assigneeId: true },
     take: 500,
   });
   let notified = 0;

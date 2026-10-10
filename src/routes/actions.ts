@@ -234,6 +234,9 @@ export default async function actionRoutes(app: FastifyInstance) {
         department: { connect: { id: departmentId } },
         assignee: { disconnect: true },
         status: RecordStatus.YENI,
+        // Gecikmiş kayıt yeni ekibe gidince gözcü ihlali yeniden işler: yeni
+        // ekip bildirim alır, akışa olay düşer.
+        slaBreachedAt: null,
       };
       text = `Kayıt ${dept.name} ekibine yönlendirildi.`;
     } else {

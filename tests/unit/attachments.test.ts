@@ -1,5 +1,9 @@
+import { readdir } from 'node:fs/promises';
+import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 import { cleanFilename, contentDisposition, mimeFor } from '../../src/domain/attachments.js';
+import { saveStream } from '../../src/lib/storage.js';
+import { env } from '../../src/env.js';
 
 describe('ek dosya türü', () => {
   it('iş belgeleri ve görseller kabul edilir, tür uzantıdan belirlenir', () => {
@@ -40,5 +44,21 @@ describe('indirme başlığı', () => {
 
   it('yedek ad Türkçe harfleri okunur ASCII karşılığına çevirir', () => {
     expect(contentDisposition('İzin Çizelgesi ığüşö.pdf')).toContain('filename="Izin Cizelgesi iguso.pdf"');
+  });
+});
+
+describe('ek dosyanın diske yazılması', () => {
+  it('yarıda kesilen yükleme diskte parça dosya bırakmaz', async () => {
+    const files = () => readdir(env.STORAGE_DIR, { recursive: true, withFileTypes: true })
+      .then((l) => l.filter((e) => e.isFile()).length, () => 0);
+    const before = await files();
+    const cut = new Readable({
+      read() {
+        this.push(Buffer.alloc(1024));
+        this.destroy(new Error('bağlantı koptu'));
+      },
+    });
+    await expect(saveStream(cut)).rejects.toThrow('bağlantı koptu');
+    expect(await files()).toBe(before);
   });
 });

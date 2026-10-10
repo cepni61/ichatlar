@@ -34,7 +34,14 @@ export async function saveStream(stream: Readable): Promise<{ key: string; size:
   const key = `${dir}/${randomUUID()}`;
   const full = resolveKey(key);
   await mkdir(path.dirname(full), { recursive: true });
-  await pipeline(stream, createWriteStream(full, { flags: 'wx' }));
+  try {
+    await pipeline(stream, createWriteStream(full, { flags: 'wx' }));
+  } catch (err) {
+    // İstemci koptu ya da boyut sınırı aşıldı: anahtar çağırana dönmediği için
+    // yarım dosyayı başka kimse silemez.
+    await rm(full, { force: true });
+    throw err;
+  }
   const { size } = await stat(full);
   return { key, size };
 }

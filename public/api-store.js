@@ -487,7 +487,10 @@
 
   window.actForward = function (r) {
     const me = Store.me();
-    const mates = USERS.filter((u) => u.dept === me.dept && u.id !== me.id);
+    // Kaydın ekip(ler)indeki, kaydı üzerine alabilen kişiler (sunucu da yalnızca
+    // bunları kabul eder). Yönlendiren başka ekipten (ör. sistem yöneticisi) olabilir.
+    const teams = [r.department, r.department2].filter(Boolean);
+    const mates = USERS.filter((u) => teams.includes(u.dept) && u.teamRole && u.id !== me.id);
     // "Yalnızca ilgili ekip görsün" kaydı başka ekibe gönderilemez (sunucu da
     // reddeder); ekip içinde devir serbest (kullanıcı isteği, 2026-10-09).
     const teamPart = r.restricted

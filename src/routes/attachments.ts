@@ -92,17 +92,23 @@ export default async function attachmentRoutes(app: FastifyInstance) {
     }
     if (saved.length === 0) throw badRequest('Dosya seçilmedi.');
 
-    const rows = await prisma.$transaction(
-      saved.map((s) =>
-        prisma.attachment.create({
-          data: {
-            recordId: rec.id, name: s.name, size: s.size, mime: s.mime, storageKey: s.key, uploadedById: actor.id,
-            eventId: createEventId,
-          },
-          select: { id: true, name: true, size: true, mime: true },
-        }),
-      ),
-    );
+    const rows = await prisma
+      .$transaction(
+        saved.map((s) =>
+          prisma.attachment.create({
+            data: {
+              recordId: rec.id, name: s.name, size: s.size, mime: s.mime, storageKey: s.key, uploadedById: actor.id,
+              eventId: createEventId,
+            },
+            select: { id: true, name: true, size: true, mime: true },
+          }),
+        ),
+      )
+      .catch(async (err) => {
+        // Satır yazılamadıysa dosyalara hiçbir yerden ulaşılamaz.
+        await Promise.all(saved.map((s) => remove(s.key)));
+        throw err;
+      });
     return { attachments: rows };
   });
 
