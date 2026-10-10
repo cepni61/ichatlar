@@ -1716,6 +1716,9 @@
   .agent.docked.hot .a-tip,
   .agent.docked:focus-visible .a-tip{transform:translateY(0) scale(1)}
   .agent.docked .a-tip::after{left:auto;right:16px;transform:none}
+  /* Yerleşince konumu CSS tutar: pencere değişince tarayıcı ayarlar, kare
+     döngüsü durur (bkz. Agent.tick). */
+  .agent.docked{left:auto;top:auto;right:24px;bottom:24px;transform:none}
   .agent.paused .a-tip{opacity:0 !important}
 
   .agent:focus-visible{outline:none}
@@ -1915,6 +1918,7 @@
     .topbar .actions .btn-primary[data-view="new-ticket"]{display:none}
     #toast{bottom:calc(84px + env(safe-area-inset-bottom))}
     .chat{bottom:calc(80px + env(safe-area-inset-bottom))}
+    .agent.docked{bottom:calc(97px + env(safe-area-inset-bottom))}  /* alt çubuğun (73px) 24px üstü */
   }
 
   @media(max-width:640px){
@@ -4360,7 +4364,7 @@ const Agent = {
   look:0, lookShown:0,
   hot:false, paused:false,
   state:'idle', stateTimer:null,
-  nextWander:0, blinkAt:0, glance:null, lastFrame:0, lastEmit:0,
+  nextWander:0, glance:null, lastFrame:0, lastEmit:0,
   raf:null, placed:false,
 
   /* Sag alta yerlesme: ilk DOCK_MS boyunca dolasir, sonra sag alt koseye
@@ -4418,6 +4422,7 @@ const Agent = {
     this.x = b.maxX; this.y = b.maxY;
     this.vx = this.vy = 0;
     this.el.classList.add('docked');
+    this.el.style.transform = '';          // konum artık .agent.docked'ta
     if (immediate) this.placed = true;
   },
 
@@ -4500,9 +4505,7 @@ const Agent = {
     this.gl += ((durdu ? 0 : 1) - this.gl) * 0.09 * dt;
 
     if (this.docked) {
-      /* Yerlesti. Pencere yeniden boyutlanirsa kosede kalsin diye her
-         karede hedefe yaziliyor. */
-      this.x = b.maxX; this.y = b.maxY;
+      /* Yerlesti: konumu CSS tutar (.agent.docked). */
       this.vx = this.vy = 0;
     } else if (this.docking) {
       /* Koseye gidis: sabit hiz yerine yumusak lerp — kosede sert
@@ -4548,8 +4551,7 @@ const Agent = {
       this.setState(sp > 0.35 ? 'move' : 'idle');
     }
 
-    /* --- Boşta: göz kırpma + arada bakınma --- */
-    if (now > this.blinkAt) { this.blink(); this.blinkAt = now + 2800 + Math.random() * 3600; }
+    /* --- Boşta: arada bakınma (göz kırpma zamanlayıcıda, bkz. init) --- */
     if (!this.paused && !this.glance && sp < 0.25 && Math.random() < 0.004) this.startGlance(now);
 
     /* --- Yıldız tozu: hız arttıkça sıklaşır --- */
@@ -4563,6 +4565,9 @@ const Agent = {
       }
     }
 
+    /* Köşeye yerleşince döngü durur: her karede sayfa ölçülerini okuyup her
+       açık sekmede işlemci ve pil harcıyordu. Konumu CSS tutar. */
+    if (this.docked) { this.raf = null; return; }
     this.el.style.transform = 'translate3d(' + this.x.toFixed(1) + 'px,' + this.y.toFixed(1) + 'px,0)';
     this.raf = requestAnimationFrame(t => this.tick(t));
   },
@@ -4585,6 +4590,13 @@ const Agent = {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) { this.lastFrame = 0; this.pickWanderTarget(); }
     });
+
+    /* Göz kırpma kare döngüsünden bağımsız: döngü dururken de sürer. */
+    const kirp = () => {
+      if (!document.hidden) this.blink();
+      setTimeout(kirp, 2800 + Math.random() * 3600);
+    };
+    setTimeout(kirp, 2800);
 
     this.raf = requestAnimationFrame(t => this.tick(t));
   },
