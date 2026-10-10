@@ -11,6 +11,7 @@ import multipart from '@fastify/multipart';
 import { env } from './env.js';
 import { attachUser } from './auth/guard.js';
 import { AppError, forbidden } from './lib/errors.js';
+import { ipKey } from './lib/ip.js';
 import authRoutes from './routes/auth.js';
 import bootstrapRoutes from './routes/bootstrap.js';
 import recordRoutes from './routes/records.js';
@@ -101,7 +102,7 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
     max: 300,
     timeWindow: '1 minute',
     // Giriş uçları daha sıkı; kaba kuvvet denemesi pahalı olsun.
-    keyGenerator: (req) => req.ip,
+    keyGenerator: (req) => ipKey(req.ip),
   });
 
   const build = uiBuild();

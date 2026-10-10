@@ -261,22 +261,22 @@ Prototipteki yetki koşulları birebir korundu (`src/domain/permissions.ts`):
 Geçerli geçişler ayrı bir tabloda; yetkisi olan biri de geçersiz bir geçiş
 yapamaz (409 döner).
 
-## Entra ID kurulumu
+## Canlı kurulum ve kurumsal giriş
 
-BT'den istenecekler:
+Canlı kurulum Windows sunucusuna, betiklerle yapılır: **[docs/KURULUM.md](docs/KURULUM.md)**
+(paket → `deploy\windows\kur.ps1` → IIS + Windows hizmeti + gece yedeği).
 
-1. Entra portalında **App registration** (tek kiracı)
-2. **Redirect URI (Web):** `${APP_URL}/auth/callback`
-3. **Client secret**
-4. Token yapılandırmasında opsiyonel claim: **groups**
+Giriş iki yoldan biriyle, ikisi birden değil:
 
-Sonra `.env`: `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`.
+- **Active Directory (LDAP)** — `LDAP_URL` doluysa giriş sayfası Windows
+  kullanıcı adı ve parolası sorar (`src/auth/ldap.ts`). Ekip `config/kurulus.json`
+  içindeki `group` alanıyla AD grubundan, sistem yöneticisi ve ekip yöneticisi
+  rolü `LDAP_ADMIN_GROUP` / `LDAP_MANAGER_GROUP` gruplarından gelir. Her girişte
+  yeniden hesaplanır: AD doğruluk kaynağıdır.
+- **Microsoft Entra ID** — `ENTRA_*` doluysa (KURULUM.md Ek A). Grup listesi
+  eksik gelebildiği için ekip/rol yalnızca boşsa doldurulur.
 
-Departman eşlemesi: `ENTRA_USE_GROUPS=true` yapıp her departmanın
-`entraGroupId` alanına Entra grup kimliğini yazın. Kapalıysa kullanıcı ilk
-girişte **departmansız ve USER rolüyle** açılır, yönetici elle atar — yetkinin
-sessizce genişlemesindense bu tercih edildi. Elle verilen rol/departman sonraki
-girişlerde ezilmez.
+Kullanıcı eşleme ikisinde ortak: `src/auth/directory.ts`.
 
 ## Veri modeli notları
 

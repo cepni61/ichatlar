@@ -13,3 +13,6 @@ prisma/var/
 
 # Kuruluşun kendi yapılandırması (örnek: config/kurulus.example.json)
 config/kurulus.json
+
+# Windows kurulum paketi (deploy/windows/paket-hazirla.ps1)
+release/

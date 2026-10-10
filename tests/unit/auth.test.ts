@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { safeReturnTo } from '../../src/auth/entra.js';
+import { ipKey } from '../../src/lib/ip.js';
 
 describe('giriş sonrası dönüş adresi', () => {
   it('başka siteye çıkan adresleri reddeder', () => {
@@ -27,5 +28,15 @@ describe('geliştirme girişi', () => {
       keys.forEach((k, i) => (before[i] === undefined ? delete process.env[k] : (process.env[k] = before[i])));
       vi.resetModules();
     }
+  });
+});
+
+describe('hız sınırı anahtarı', () => {
+  it('vekilin eklediği bağlantı portu atılır; IPv6 bozulmaz', () => {
+    expect(ipKey('10.1.2.3:51234')).toBe('10.1.2.3');
+    expect(ipKey('[2001:db8::1]:443')).toBe('2001:db8::1');
+    expect(ipKey('10.1.2.3')).toBe('10.1.2.3');
+    expect(ipKey('::1')).toBe('::1');
+    expect(ipKey('::ffff:10.1.2.3')).toBe('::ffff:10.1.2.3');
   });
 });
