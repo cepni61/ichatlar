@@ -129,6 +129,9 @@ const oneriAccepted = (r: Row) =>
 const oneriDecided = (r: Row) => r.type === 'ONERI' && !isOpen(r.status);
 const slaPct = (rs: Row[], now: number) => slaCompliancePct(rs, (r) => isOpen(r.status), now);
 
+/** Excel bu karakterle başlayan hücreyi formül sayar: kullanıcının yazdığı başlık çalışmasın. */
+const FORMULA = /^[=+\-@\t\r]/;
+
 export default async function reportRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireUser);
 
@@ -278,38 +281,39 @@ export default async function reportRoutes(app: FastifyInstance) {
         'Durum', 'Açan', 'Sahip', 'Oluşturma', 'Son Güncelleme', 'SLA',
       ];
 
+      // Sunucu saat dilimi UTC olabilir; rapor Türkiye saatiyle yazılır.
       const fmt = (d: Date) =>
-        d.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        d.toLocaleString('tr-TR', {
+          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul',
+        });
 
-      // Kısıtlı kaydın başlığı yalnızca ilgili ekibin yöneticisine yazılır
-      // (sistem yöneticisi dahil diğerlerine değil); sayılar tutarlı kalsın
-      // diye satır durur.
+      // Kısıtlı kaydın başlığı ve kişileri yalnızca ilgili ekibin yöneticisine
+      // yazılır (sistem yöneticisi dahil diğerlerine değil): kimin kişisel bir
+      // konusu olduğu da bilgidir. Sayılar tutarlı kalsın diye satır durur.
       const actor = actorOf(req);
-      const titleFor = (r: (typeof rows)[number]) =>
+      const shown = (r: (typeof rows)[number]) =>
         !r.restricted ||
-        (actor.departmentId != null && (actor.departmentId === r.departmentId || actor.departmentId === r.department2Id))
-          ? r.title
-          : 'Kısıtlı kayıt';
+        (actor.departmentId != null && (actor.departmentId === r.departmentId || actor.departmentId === r.department2Id));
 
       const body = rows.map((r) => [
         r.code,
         TYPE_LABELS[r.type],
-        titleFor(r),
+        shown(r) ? r.title : 'Kısıtlı kayıt',
         names.get(rootOf(tree, r.departmentId) ?? '') ?? '',
         r.department.name,
         r.department2?.name ?? '',
         PRIORITY_LABELS[r.priority],
         STATUS_LABELS[r.status],
         // Anonim kaydın kimliği rapora da düşmez.
-        r.anonymous ? 'Anonim' : r.createdBy.name,
-        r.assignee?.name ?? '',
+        !shown(r) ? '' : r.anonymous ? 'Anonim' : r.createdBy.name,
+        shown(r) ? r.assignee?.name ?? '' : '',
         fmt(r.createdAt),
         fmt(r.updatedAt),
         isOpen(r.status) ? (r.slaDueAt.getTime() <= now ? 'Gecikmiş' : 'Sürede') : 'Kapandı',
       ]);
 
       const csv = [head, ...body]
-        .map((line) => line.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';'))
+        .map((line) => line.map((c) => `"${String(c).replace(FORMULA, "'$&").replace(/"/g, '""')}"`).join(';'))
         .join('\r\n');
 
       await prisma.auditLog.create({

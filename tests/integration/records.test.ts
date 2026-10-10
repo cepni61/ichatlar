@@ -203,6 +203,11 @@ describe('raporlar', () => {
     const csv = await app.inject({ method: 'GET', url: `/api/reports/export.csv?department=${w.kalite.id}`, ...h });
     expect(csv.body.trim().split('\r\n')).toHaveLength(1 + 2);
 
+    // Excel'de formül olarak çalışmaz.
+    await createRecord({ createdById: w.opener.id, departmentId: w.kalite.id, title: '=HYPERLINK("http://x","tıkla")' });
+    const f = await app.inject({ method: 'GET', url: `/api/reports/export.csv?department=${w.kalite.id}`, ...h });
+    expect(f.body).toContain(`"'=HYPERLINK(""http://x"",""tıkla"")"`);
+
     const bad = await app.inject({ method: 'GET', url: '/api/reports/summary?department=yok', ...h });
     expect(bad.statusCode).toBe(400);
   });

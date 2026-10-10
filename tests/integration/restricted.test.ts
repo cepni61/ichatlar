@@ -169,7 +169,10 @@ describe('yalnızca ilgili ekip (kısıtlı kayıt)', () => {
 
     const other = await app.inject({ method: 'GET', url: '/api/reports/export.csv', headers: await loginAs(app, w.kaliteManager.id) });
     expect(other.body).not.toContain('Maaş haczi');
-    expect(other.body).toContain('Kısıtlı kayıt');
+    // Kişiler de gizli: kimin kişisel bir konusu olduğu da bilgidir.
+    const line = other.body.split('\r\n').find((l) => l.includes('Kısıtlı kayıt'))!;
+    expect(line).not.toContain('Açan');
+    expect(line).not.toContain('İK Üye');
 
     // Sistem yöneticisi de ekip dışında sayılır (2026-10-09).
     const adm = await app.inject({ method: 'GET', url: '/api/reports/export.csv', headers: await loginAs(app, w.admin.id) });
