@@ -53,8 +53,12 @@ ALTER DEFAULT PRIVILEGES FOR ROLE $($db.Kullanici) IN SCHEMA rapor GRANT SELECT 
 
 Write-Host ''
 Write-Host 'Rapor kullanıcısı hazır (yalnızca rapor şemasını okur):'
-Write-Host "  Sunucu:     $($db.Sunucu):$($db.Port)"
+# Rapor aracı başka bilgisayarda çalışır: "localhost" ona bu sunucuyu değil kendisini gösterir.
+$sunucu = $db.Sunucu
+if ($sunucu -in @('localhost', '127.0.0.1')) { $sunucu = [Net.Dns]::GetHostEntry($env:COMPUTERNAME).HostName }
+Write-Host "  Sunucu:     ${sunucu}:$($db.Port)"
 Write-Host "  Veritabanı: $($db.Ad)"
 Write-Host "  Kullanıcı:  $Kullanici"
 Write-Host "  Parola:     $parola"
 Write-Host 'Parolayı rapor aracına girip bu pencereyi kapatın; bir yere kaydedilmedi. Yeniden çalıştırmak parolayı yeniler.'
+Write-Host 'Rapor aracı başka bir bilgisayardaysa PostgreSQL ağ erişimi ayrıca açılmalı (docs\KURULUM.md, Rapor kullanıcısı).'

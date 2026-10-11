@@ -40,7 +40,8 @@ URL Rewrite ve ARR'ı Microsoft'un sayfasından kurun:
 PostgreSQL kurulurken verilen `postgres` parolası kurulumda bir kez sorulur.
 Uygulama aynı sunucuda olduğu için PostgreSQL'i dışarıya kapatın:
 `postgresql.conf` içinde `listen_addresses = 'localhost'`, sonra hizmeti
-yeniden başlatın.
+yeniden başlatın. (Rapor aracına ağdan erişim gerekirse yalnızca rapor
+kullanıcısı için açılır: §7, Rapor kullanıcısı.)
 
 ## 2. BT'den istenecekler (Active Directory)
 
@@ -226,6 +227,28 @@ Araç uygulamanın kendi veritabanı hesabıyla değil, salt okunur kullanıcıy
 PostgreSQL yönetici parolasını sorar; `ichatlar_rapor` kullanıcısını oluşturur ve
 parolasını **bir kez** gösterir. Kullanıcı yalnızca `rapor` şemasındaki görünümleri
 okur, uygulama tablolarına erişemez ve yazamaz. Yeniden çalıştırmak parolayı yeniler.
+
+Rapor aracı (Power BI, Excel) başka bir bilgisayarda çalışıyorsa PostgreSQL'e ağdan
+yalnızca bu kullanıcıyla ve yalnızca analistlerin ağından erişilsin. Uygulama hesabı
+yerelde kalır:
+
+1. `postgresql.conf`: `listen_addresses = 'localhost,<sunucunun IP'si>'`.
+2. `pg_hba.conf` sonuna, analistlerin alt ağıyla (örnek `10.20.30.0/24`):
+
+   ```
+   hostssl  ichatlar  ichatlar_rapor  10.20.30.0/24  scram-sha-256
+   ```
+
+   `hostssl` için PostgreSQL'de sertifika tanımlı olmalı (`ssl = on`); yoksa BT ile
+   birlikte karar verin, parola ağda şifresiz gider.
+3. Güvenlik duvarı: 5432 yalnızca o alt ağa açık.
+
+   ```powershell
+   New-NetFirewallRule -Name IcHatlar-Rapor -DisplayName 'İç Hatlar rapor (PostgreSQL)' -Direction Inbound -Protocol TCP -LocalPort 5432 -RemoteAddress 10.20.30.0/24 -Action Allow
+   ```
+
+4. PostgreSQL hizmetini yeniden başlatın. Betiğin yazdığı sunucu adı ve parola rapor
+   aracına girilir.
 
 ## 8. Güncelleme
 

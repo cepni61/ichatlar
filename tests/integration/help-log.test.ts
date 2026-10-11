@@ -253,3 +253,71 @@ describe('kayıt açılışında yardım oturumu', () => {
     expect(ev.find((e) => e.type === 'ASSIGN')).toMatchObject({ toTeamId: fin.id });
   });
 });
+
+describe('taslağın birden çok oturumu (denetim bulgusu)', () => {
+  const create = (headers: Headers, extra: object = {}) =>
+    app.inject({
+      method: 'POST', url: '/api/records', headers,
+      payload: { type: 'bilgi', title: 'VPN bağlantısı kopuyor', description: 'Evden çalışırken VPN bağlantısı sık sık kopuyor.', ...extra },
+    });
+  const age = (id: string, minutes: number) =>
+    prisma.helpSession.update({ where: { id }, data: { startedAt: new Date(Date.now() - minutes * 60_000), lastActivityAt: new Date(Date.now() - minutes * 60_000) } });
+
+  /** Taslak yazılırken 30 dk'dan uzun ara verilince ikinci tarama yeni oturum açar. */
+  async function twoSessionDraft(headers: Headers) {
+    const s1 = (await scan(headers)).json().helpSessionId as string;
+    await age(s1, 31);
+    const s2 = (await scan(headers, { helpSessionId: s1, title: 'VPN bağlantısı kopuyor evde' })).json().helpSessionId as string;
+    expect(s2).not.toBe(s1);
+    return { s1, s2 };
+  }
+
+  it('taslağın oturumları kayıtta tek oturumda toplanır', async () => {
+    const { bt, headers } = await setup();
+    const { s1, s2 } = await twoSessionDraft(headers);
+    const res = await create(headers, { department: bt.id, helpSessionId: s2, helpSessionIds: [s1, s2] });
+    const rec = await prisma.record.findUniqueOrThrow({ where: { code: res.json().record.code } });
+    expect(await prisma.helpSession.findUnique({ where: { id: s1 } })).toBeNull();
+    const s = await prisma.helpSession.findUniqueOrThrow({ where: { id: s2 }, include: { queries: true } });
+    expect(s.recordId).toBe(rec.id);
+    expect(s.queries).toHaveLength(2);
+    expect(Date.now() - s.startedAt.getTime()).toBeGreaterThan(30 * 60_000);
+  });
+
+  it('anonim kayıtta taslağın hiçbir oturumunda kişi kalmaz; kısıtlıda hiçbir taslak metni kalmaz', async () => {
+    const { bt, u, headers } = await setup();
+    const a = await twoSessionDraft(headers);
+    await create(headers, { department: bt.id, helpSessionId: a.s2, helpSessionIds: [a.s1, a.s2], anonymous: true });
+    expect(await prisma.helpSession.count({ where: { userId: u.id } })).toBe(0);
+
+    const b = await twoSessionDraft(headers);
+    await create(headers, { department: bt.id, helpSessionId: b.s2, helpSessionIds: [b.s1, b.s2], restricted: true });
+    const texts = await prisma.helpQuery.findMany({ where: { session: { userId: u.id } }, select: { title: true, text: true } });
+    expect(texts.length).toBeGreaterThan(0);
+    expect(texts.every((q) => q.title === null && q.text === null)).toBe(true);
+  });
+
+  it('başkasının oturumu taslağa katılmaz', async () => {
+    const { bt, headers, otherHeaders, other } = await setup();
+    const theirs = (await scan(otherHeaders)).json().helpSessionId as string;
+    const mine = (await scan(headers)).json().helpSessionId as string;
+    await create(headers, { department: bt.id, helpSessionId: mine, helpSessionIds: [theirs, mine], anonymous: true });
+    expect(await prisma.helpSession.findUniqueOrThrow({ where: { id: theirs } })).toMatchObject({ userId: other.id, recordId: null });
+  });
+
+  it('taslağa ait olmayan eski oturum (asistan, Kaynak Bul) yalnızca 30 dk içindeyse kayda bağlanır', async () => {
+    const { bt, headers } = await setup();
+    const asked = (await scan(headers, { channel: 'ASISTAN', limit: 1, description: '' })).json().helpSessionId as string;
+    await age(asked, 120);
+    const res = await create(headers, { department: bt.id, helpSessionId: asked, type: 'bilgi' });
+    const rec = await prisma.record.findUniqueOrThrow({ where: { code: res.json().record.code } });
+    expect((await prisma.helpSession.findUniqueOrThrow({ where: { id: asked } })).recordId).toBeNull();
+    expect(await prisma.helpSession.findUnique({ where: { recordId: rec.id } })).not.toBeNull();
+
+    const draft = (await scan(headers)).json().helpSessionId as string;
+    await age(draft, 120);
+    const res2 = await create(headers, { department: bt.id, helpSessionId: draft, helpSessionIds: [draft], title: 'VPN yine kopuyor' });
+    const rec2 = await prisma.record.findUniqueOrThrow({ where: { code: res2.json().record.code } });
+    expect((await prisma.helpSession.findUniqueOrThrow({ where: { id: draft } })).recordId).toBe(rec2.id);
+  });
+});

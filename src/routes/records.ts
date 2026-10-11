@@ -109,6 +109,8 @@ const createBody = z.object({
   deptSuggestionApplied: z.boolean().default(false),
   /** Yardım oturumu (kayıt önleme günlüğü): kayıt bu oturuma bağlanır. */
   helpSessionId: z.string().max(64).nullish(),
+  /** Taslağın taramalarının oturumları; uzun aradan sonra açılanlar da kayda toplanır. */
+  helpSessionIds: z.array(z.string().max(64)).max(200).default([]),
 }).superRefine((b, ctx) => {
   const need = (ok: boolean, path: string, message: string) => {
     if (!ok) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
@@ -395,6 +397,7 @@ export default async function recordRoutes(app: FastifyInstance) {
     await linkHelpSession(req.log, {
       userId: actor.id,
       sessionId: body.helpSessionId ?? null,
+      draftSessionIds: [...new Set(body.helpSessionIds)],
       recordId: created.id,
       anonymous: body.anonymous,
       restricted: body.restricted,

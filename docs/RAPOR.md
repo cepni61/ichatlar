@@ -20,7 +20,10 @@ Betik `ichatlar_rapor` kullanıcısını oluşturur ve parolasını bir kez gös
 
 - **Yardım oturumu (tekil oturum):** Bir kişinin ardışık yardım adımları.
   30 dakika hareketsizlik ya da kayıt açılması oturumu kapatır. "İşime
-  yaradı" ile form kapanınca da yeni oturum başlar.
+  yaradı" ile form kapanınca da yeni oturum başlar. Taslak yazılırken uzun
+  ara verildiği için açılmış oturumlar, kayıt açılınca o kaydın oturumunda
+  toplanır; taslağın kendisi olmayan bir oturum (asistan, Kaynak Bul) kayda
+  yalnızca son 30 dakikada kullanıldıysa bağlanır.
 - **Kanal:** Oturumun başladığı yer — Yeni Kayıt, Kaynak Bul, Asistan.
 - **Sorgu:** Oturumdaki bir ML taraması, arama ya da asistan sorusu. Yazarken
   kendiliğinden yenilenen tarama ve aramalar tek sorgu satırında güncellenir.

@@ -145,26 +145,55 @@ export async function logHelpQuery(
 
 /**
  * Kaydı açıldığı yardım oturumuna bağlar; geçerli oturum yoksa sorgusuz bir
- * oturum açar ("kontrol etmeden açılan kayıt" da sayılsın). Kayıt işleminden
- * sonra ve ayrı çalışır: bağlanamasa da kayıt açılmış olur.
+ * oturum açar ("kontrol etmeden açılan kayıt" da sayılsın). Taslak yazılırken
+ * uzun aradan sonra açılmış öteki oturumlar (draftSessionIds) bu oturumda
+ * toplanır: anonim ve kısıtlı gizleme taslağın bütün taramalarına uygulanır.
+ * Kayıt işleminden sonra ve ayrı çalışır: bağlanamasa da kayıt açılmış olur.
  */
 export async function linkHelpSession(
   log: FastifyBaseLogger,
-  o: { userId: string; sessionId: string | null; recordId: string; anonymous: boolean; restricted: boolean },
+  o: {
+    userId: string;
+    sessionId: string | null;
+    /** Bu taslağın taramalarının döndürdüğü oturumlar (tarayıcı toplar). */
+    draftSessionIds: string[];
+    recordId: string;
+    anonymous: boolean;
+    restricted: boolean;
+  },
 ): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
       const now = new Date();
-      const data = { recordId: o.recordId, lastActivityAt: now, ...(o.anonymous ? { userId: null } : {}) };
-      let sessionId = await openSession(tx, o.userId, o.sessionId, HelpChannel.YENI_KAYIT, now, 'link');
+      // 24 saatlik bağlama yalnızca taslağın kendi tarama oturumuna; sekmedeki
+      // eski bir asistan / Kaynak Bul oturumu kayda dönüşmüş sayılmasın.
+      const ownDraft = Boolean(o.sessionId && o.draftSessionIds.includes(o.sessionId));
+      let sessionId = await openSession(tx, o.userId, o.sessionId, HelpChannel.YENI_KAYIT, now, ownDraft ? 'link' : 'query');
       // Aynı oturumla eşzamanlı ikinci kayıt öncekinin bağını ezmesin.
-      const { count } = await tx.helpSession.updateMany({ where: { id: sessionId, recordId: null }, data });
+      const { count } = await tx.helpSession.updateMany({
+        where: { id: sessionId, recordId: null }, data: { recordId: o.recordId, lastActivityAt: now },
+      });
       if (!count) {
         sessionId = (await tx.helpSession.create({
-          data: { userId: o.userId, channel: HelpChannel.YENI_KAYIT, startedAt: now, ...data }, select: { id: true },
+          data: { userId: o.userId, channel: HelpChannel.YENI_KAYIT, startedAt: now, lastActivityAt: now, recordId: o.recordId },
+          select: { id: true },
         })).id;
       }
+
+      const others = await tx.helpSession.findMany({
+        where: { id: { in: o.draftSessionIds.filter((id) => id !== sessionId) }, userId: o.userId, recordId: null },
+        select: { id: true, startedAt: true },
+      });
+      if (others.length) {
+        const ids = others.map((x) => x.id);
+        await tx.helpQuery.updateMany({ where: { sessionId: { in: ids } }, data: { sessionId } });
+        await tx.helpSession.deleteMany({ where: { id: { in: ids } } });
+        const first = new Date(Math.min(...others.map((x) => x.startedAt.getTime())));
+        await tx.helpSession.updateMany({ where: { id: sessionId, startedAt: { gt: first } }, data: { startedAt: first } });
+      }
+
       if (o.restricted) await tx.helpQuery.updateMany({ where: { sessionId }, data: { title: null, text: null } });
+      if (o.anonymous) await tx.helpSession.update({ where: { id: sessionId }, data: { userId: null } });
     });
   } catch (err) {
     log.warn({ err: (err as Error).message }, 'yardım oturumu kayda bağlanamadı');

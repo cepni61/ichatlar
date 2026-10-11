@@ -3296,7 +3296,8 @@ function renderDetail(){
   if (p.claim)   acts.push('<button class="btn btn-primary" data-act="claim">Üzerime Al</button>');
   if (p.forward) acts.push('<button class="btn btn-ghost" data-act="forward">Kaydı Yönlendir</button>');
   if (p.status)  acts.push('<button class="btn btn-soft" data-act="status">Durum Güncelle</button>');
-  if (p.infoRequest) acts.push('<button class="btn btn-soft" data-act="info">Ek Bilgi İste</button>');
+  /* Açık istek varken ikincisi istenemez (sunucu 409 döner) */
+  if (p.infoRequest && !r.infoRequest) acts.push('<button class="btn btn-soft" data-act="info">Ek Bilgi İste</button>');
   if (p.resolve) acts.push('<button class="btn btn-success" data-act="resolve">'+(isOneri ? 'Sonuçlandır' : 'Çözüldü olarak işaretle')+'</button>');
   if (p.evaluate) acts.push('<button class="btn btn-success" data-act="evaluate">Değerlendirmeyi Bitir</button>');
   if (p.reject)  acts.push('<button class="btn btn-danger" data-act="reject">Reddet</button>');

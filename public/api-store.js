@@ -146,6 +146,16 @@
         try { if (id) sessionStorage.setItem('ih_help', id); else sessionStorage.removeItem('ih_help'); } catch (_) { /* yok sayılabilir */ }
       },
     },
+    /** Oturumsuz ilk istek yanıtlanmadan gelen ikincisi beklesin: ikisi ayrı oturum açardı. */
+    pending: null,
+    async sessionFor() {
+      if (!this.session.get() && this.pending) await this.pending.catch(() => {});
+      return this.session.get();
+    },
+    track(p) {
+      if (!this.session.get()) this.pending = p;
+      return p;
+    },
     /** Sonuçla etkileşim; yazılamasa da arayüz etkilenmez. */
     mark(resultId, action) {
       if (resultId) req('POST', '/api/help/results/' + encodeURIComponent(resultId), { action }).catch(() => {});
@@ -793,7 +803,7 @@
       try {
         // Departman ve tür sunucudaki skorlamada bonus veriyor (bkz.
         // src/domain/similarity.ts), bu yüzden formdaki seçimler birlikte gönderilir.
-        const out = await Api.similar({
+        const call = Api.similar({
           title,
           description: desc,
           department: ($('#fDept1') && $('#fDept1').value) || null,
@@ -803,12 +813,20 @@
           type: f ? f.type || null : null,
           // İşaretliyse sunucu taramayı ML veritabanına hiç yazmaz.
           restricted: !!($('#fRestricted') && $('#fRestricted').checked),
-          helpSessionId: IhHelp.session.get(),
+          helpSessionId: await IhHelp.sessionFor(),
         });
+        IhHelp.track(call);
+        // Kayıt, süren tarama bitmeden gönderilmesin (createRecord bekler).
+        if (f) f.scanBusy = call.catch(() => {});
+        const out = await call;
         // Yanıt gelene dek form sıfırlandıysa (kayıt açıldı, "işime yaradı")
         // eski sonuç boş forma çizilmesin.
         if (f !== form) return;
-        if (out.helpSessionId) IhHelp.session.set(out.helpSessionId);
+        if (out.helpSessionId) {
+          IhHelp.session.set(out.helpSessionId);
+          // Taslak uzun aradan sonra yeni oturum açtıysa o da kayda toplanır.
+          if (f) (f.helpSessionIds = f.helpSessionIds || []).push(out.helpSessionId);
+        }
         // Prototipin beklediği şekle çevir: { record, percent, keywords }
         similarCache = out.matches.map((m) => ({
           record: {
@@ -903,7 +921,6 @@
         department: d1,
         anonymous: !!form.anon,
         restricted: !!($('#fRestricted') && $('#fRestricted').checked),
-        helpSessionId: IhHelp.session.get(),
       };
     } else {
       const desc = ($('#fDesc').value || '').trim();
@@ -920,7 +937,6 @@
         priority: $('#fPrio').value || 'normal',
         anonymous: !!form.anon,
         restricted: !!($('#fRestricted') && $('#fRestricted').checked),
-        helpSessionId: IhHelp.session.get(),
         mlInferenceId: form.mlInferenceId || null,
         mlInferenceIds: form.mlInferenceIds || [],
         deptSuggestionApplied: !!form.deptApplied,
@@ -932,6 +948,14 @@
     form.busy = true;
     syncCreateBtn();
     btn.textContent = isOneri ? 'Gönderiliyor…' : 'Oluşturuluyor…';
+    // Süren tarama bitmeden gönderilmesin: oturumu ve ML çalıştırması bu kayda
+    // bağlanmaz, anonim/kısıtlı gizlemesi de ona uygulanmazdı.
+    if (form.scanBusy) {
+      await form.scanBusy;
+      if (!isOneri) Object.assign(payload, { mlInferenceId: form.mlInferenceId || null, mlInferenceIds: form.mlInferenceIds || [] });
+    }
+    payload.helpSessionId = IhHelp.session.get();
+    payload.helpSessionIds = form.helpSessionIds || [];
     try {
       let rec = (await Api.create(payload)).record;
       IhHelp.session.set(null);   // kayıt açıldı: sonraki yardım yeni oturum

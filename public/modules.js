@@ -49,8 +49,10 @@
     const my = ++resSeq;
     $('#resRes').innerHTML = LOADING;
     try {
-      const sid = q && window.IhHelp ? IhHelp.session.get() : null;
-      const out = await api('GET', '/api/search/resources?' + new URLSearchParams(sid ? { q, helpSessionId: sid } : { q }));
+      const sid = q && window.IhHelp ? await IhHelp.sessionFor() : null;
+      const call = api('GET', '/api/search/resources?' + new URLSearchParams(sid ? { q, helpSessionId: sid } : { q }));
+      if (q && window.IhHelp) IhHelp.track(call);
+      const out = await call;
       if (out.helpSessionId && window.IhHelp) IhHelp.session.set(out.helpSessionId);
       if (my !== resSeq) return;
       const head = out.sample ? 'Örnek sonuçlar' : out.items.length + ' sonuç';
