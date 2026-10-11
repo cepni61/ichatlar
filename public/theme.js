@@ -5,10 +5,10 @@
    yeniden tanımlıyor, bileşen CSS'i hiç değişmiyor. Bu dosya yalnızca
    seçiciyi çizer ve tercihi saklar.
 
-   Seçici kenar çubuğundaki hesap menüsünde ([data-theme-slot]): beş renk
-   örneği yan yana, seçili olanın çevresinde halka. Menünün kendisi zaten
-   açılır kapanır; içinde ikinci bir açılır liste olmasın diye seçenekler
-   doğrudan görünür.
+   Seçici üst banttaki Tema düğmesinin penceresinde ([data-theme-slot]): beş
+   renk örneği yan yana, seçili olanın çevresinde halka. Pencere zaten açılır
+   kapanır; içinde ikinci bir açılır liste olmasın diye seçenekler doğrudan
+   görünür. Pencerenin açılıp kapanması index.html'de (setThemePop).
 
    Tercih localStorage'da tutuluyor, sunucuda değil: bu bir görüntü tercihi,
    kişinin kayıtlarıyla ilgisi yok ve cihaz başına farklı olması makul.
@@ -73,7 +73,7 @@
   /* ---------------------------------------------------------------- kur */
 
   function build() {
-    var host = document.querySelector('.sidebar [data-theme-slot]');
+    var host = document.querySelector('[data-theme-slot]');
     if (!host || host.querySelector('.theme-row')) return;
 
     var lbl = document.createElement('div');

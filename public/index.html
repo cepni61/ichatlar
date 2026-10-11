@@ -128,12 +128,7 @@
     --chrome-card-line:var(--line);
     --chrome-name:var(--text);
     --chrome-role:var(--muted);
-    --chrome-input-bg:var(--panel);
-    --chrome-input-fg:var(--text);
-    --chrome-input-line:var(--line-2);
     --chrome-foot:var(--muted);
-    --chrome-menu-bg:var(--panel);
-    --chrome-menu-line:var(--line-2);
     --chrome-cta-bg:var(--primary);
     --chrome-cta-fg:#ffffff;
 
@@ -183,8 +178,6 @@
     --ag-head:linear-gradient(135deg,#0b1630 0%,#1e3a8a 60%,#2563eb 100%);
     --ag-av:linear-gradient(140deg,#93c5fd,#3b82f6); --ag-on:rgba(191,219,254,.9); --ag-tip-fg:#eef4ff;
     color-scheme:dark;
-    --chrome-menu-bg:#1e2942;
-    --chrome-menu-line:#3a4767;              /* kaydirma cubugu ve form kontrolleri */
 
     --bg:#0d1220;
     --panel:#151c2e;
@@ -338,15 +331,10 @@
     --chrome-card-line:rgba(255,255,255,.11);
     --chrome-name:#ffffff;
     --chrome-role:rgba(167,243,208,.82);
-    --chrome-input-bg:rgba(3,33,26,.45);
-    --chrome-input-fg:#eafaf5;
-    --chrome-input-line:rgba(255,255,255,.14);
     --chrome-foot:rgba(215,240,232,.78);
-    --chrome-menu-bg:rgba(3,33,26,.94);
     /* Yeni Kayıt: koyu camın üstünde nane; metin en koyu zümrüt (≥7:1) */
     --chrome-cta-bg:linear-gradient(180deg,#6ee7b7,#34d399);
     --chrome-cta-fg:#032b21;
-    --chrome-menu-line:rgba(255,255,255,.16);
 
     --head-title:#ffffff;
     --head-sub:rgba(232,250,244,.72);
@@ -460,12 +448,7 @@
     --chrome-card-line:rgba(255,255,255,.10);
     --chrome-name:#ffffff;
     --chrome-role:rgba(180,192,214,.66);
-    --chrome-input-bg:rgba(9,13,22,.45);
-    --chrome-input-fg:#eaeefa;
-    --chrome-input-line:rgba(255,255,255,.14);
     --chrome-foot:rgba(170,182,204,.52);
-    --chrome-menu-bg:#212a3c;
-    --chrome-menu-line:rgba(255,255,255,.16);
   }
   /* Koyu bandin uzerindeki ikincil buton da cam olur */
   html[data-theme="softdark"] .topbar .btn-ghost{
@@ -614,15 +597,10 @@
     --chrome-card-line:rgba(255,240,215,.09);
     --chrome-name:#fbf5e9;
     --chrome-role:rgba(222,204,176,.74);
-    --chrome-input-bg:rgba(8,5,3,.32);
-    --chrome-input-fg:#f3eadb;
-    --chrome-input-line:rgba(255,236,205,.15);
     --chrome-foot:rgba(214,196,168,.70);
-    --chrome-menu-bg:#2b221b;
     /* Yeni Kayıt: bakalit üstünde pirinç plaka (profil rozetiyle aynı) */
     --chrome-cta-bg:linear-gradient(180deg,#d9b675,#c7a35e);
     --chrome-cta-fg:#1e1712;
-    --chrome-menu-line:rgba(255,236,205,.16);
 
     /* Üst bant açık kalır: başlık bakalit mürekkep, porselen zeminde */
     --head-title:var(--text);
@@ -698,37 +676,41 @@
   /* btn-soft zemini petrol, hover'ı --b-200 (kemik) — renk değişmesin */
   html[data-theme="santral"] .btn-soft:hover{background:#d2e1e4}
 
-  /* Tema seçimi hesap menüsünde: beş renk örneği yan yana, seçili olanın
-     çevresinde halka (theme.js). Chrome token'ları: koyu kenar çubuklu
-     temalarda menü de koyu. */
-  .theme-row{display:flex;gap:6px;margin-top:2px}
+  /* Üst bant simge düğmeleri (tema, geri bildirim): zil düğmesiyle aynı
+     btn-ghost, her temada üst banda göre boyanır. */
+  .icon-btn{width:40px;height:40px;padding:0;justify-content:center;flex:none}
+  .actions .icon-btn{flex:0 0 auto}
+  .icon-btn .ic{width:18px;height:18px}
+
+  /* Tema penceresi: Tema düğmesinin altında açılır; beş renk örneği yan
+     yana, seçili olanın çevresinde halka (theme.js). İçerik token'ları. */
+  .theme-anchor{position:relative}
+  .theme-pop{
+    position:absolute;right:0;top:calc(100% + 8px);z-index:45;
+    background:var(--panel);color:var(--text);
+    border:1px solid var(--line-2);border-radius:14px;box-shadow:var(--sh-3);
+    padding:11px 12px 12px;transform-origin:100% 0;animation:popIn .14s var(--ease);
+  }
+  @keyframes popIn{from{opacity:0;transform:translateY(-4px) scale(.98)}}
+  @media (prefers-reduced-motion: reduce){ .theme-pop{animation:none} }
+  .theme-pop .switch-lbl{font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;white-space:nowrap}
+  .theme-row{display:flex;gap:6px}
   .theme-opt{
     width:32px;height:32px;padding:0;border:0;border-radius:10px;cursor:pointer;
     display:grid;place-items:center;background:transparent;
     transition:background .14s var(--ease);
   }
-  .theme-opt:hover{background:var(--chrome-hover)}
+  .theme-opt:hover{background:var(--panel2)}
   .theme-opt .theme-swatch{width:24px;height:24px;border-radius:8px}
   .theme-opt[aria-checked="true"] .theme-swatch{
-    box-shadow:0 0 0 2px var(--chrome-menu-bg), 0 0 0 4px var(--chrome-text-hi);
+    box-shadow:0 0 0 2px var(--panel), 0 0 0 4px var(--text);
   }
-  .tt-cur{font-weight:600;color:var(--chrome-text-hi)}
-
-  /* Kenar cubugundaki butonlar (cikis) — icerik degil chrome token'lari,
-     yoksa koyu kenar cubugunda beyaz pil gibi duruyor. */
-  .chrome-btn{
-    width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
-    border:1px solid var(--chrome-input-line);background:var(--chrome-input-bg);
-    color:var(--chrome-text-hi);border-radius:10px;padding:9px 12px;
-    cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;
-    transition:background .16s var(--ease);
-  }
-  .chrome-btn:hover{background:var(--chrome-hover)}
+  .tt-cur{font-weight:600;color:var(--text)}
 
   /* Kucuk onizleme: temanin zemin + vurgu rengi */
   .theme-swatch{
     width:18px;height:18px;border-radius:6px;flex:none;
-    border:1px solid rgba(0,0,0,.18);position:relative;overflow:hidden;
+    border:1px solid var(--line-2);position:relative;overflow:hidden;
   }
   .theme-swatch::after{
     content:'';position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;
@@ -772,8 +754,8 @@
   /* ---------- Kenar çubuğu ----------
      Uygulama düzeni (kullanıcı isteği, 2026-10-10: "web sitesi gibi değil,
      uygulama havası"): üstte çalışma alanı (logo + kuruluş), birincil eylem
-     Yeni Kayıt, amaca göre gruplanmış menü, dipte hesap düğmesi. Kişi, tema,
-     geri bildirim ve çıkış hesap menüsünde; alt bilgi ve telif satırı yok.
+     Yeni Kayıt, amaca göre gruplanmış menü, dipte hesap satırı (kişi +
+     çıkış). Tema ve geri bildirim üst bantta; alt bilgi ve telif satırı yok.
      Renkler temaların chrome token'larından: her tema kendi kimliğini korur. */
   .sidebar{
     background:var(--chrome-bg);
@@ -850,59 +832,24 @@
   .card[hidden]{display:none}
   .nav button.active .badge{background:var(--chrome-badge-on-bg);color:var(--chrome-badge-on-fg)}
 
-  /* Hesap düğmesi ve yukarı açılan hesap menüsü */
-  .account{position:relative}
-  .acct-btn{
-    width:100%;display:flex;align-items:center;gap:10px;padding:8px 9px 8px 8px;
+  /* Hesap satırı: menü değil, sabit kimlik + tek eylem (çıkış; test
+     ortamında kişi değiştir). Tema ve geri bildirim üst bantta. */
+  .account{
+    display:flex;align-items:center;gap:10px;padding:8px 6px 8px 8px;
     border:1px solid var(--chrome-card-line);background:var(--chrome-card);border-radius:14px;
-    color:var(--chrome-text-hi);font:inherit;text-align:left;cursor:pointer;
-    transition:background .14s var(--ease);
   }
-  .acct-btn:hover,.acct-btn[aria-expanded="true"]{background:var(--chrome-hover)}
   .account .avatar.sm{width:34px;height:34px;border-radius:10px;font-size:11.5px}
   .acct-who{flex:1;min-width:0;display:flex;flex-direction:column}
   .acct-who .name,.acct-who .role{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .acct-who .name{font-weight:650;font-size:13px;line-height:1.3;color:var(--chrome-name)}
   .acct-who .role{font-size:12px;line-height:1.35;color:var(--chrome-role)}
-  .acct-chev{width:16px;height:16px;flex:none;color:var(--chrome-role)}
-
-  .profile{
-    position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:40;
-    background:var(--chrome-menu-bg);
-    backdrop-filter:var(--chrome-blur);-webkit-backdrop-filter:var(--chrome-blur);
-    border:1px solid var(--chrome-menu-line);border-radius:14px;box-shadow:var(--sh-3);
-    padding:4px;transform-origin:50% 100%;animation:acctIn .14s var(--ease);
-  }
-  @keyframes acctIn{from{opacity:0;transform:translateY(4px) scale(.98)}}
-  @media (prefers-reduced-motion: reduce){ .profile{animation:none} }
-  .acct-head{padding:9px 10px 7px;font-size:12px;line-height:1.4;color:var(--chrome-role)}
-  .acct-sec{padding:9px 10px 10px;border-top:1px solid var(--chrome-menu-line)}
-  .acct-links{padding:4px}
-  .profile .switch-lbl{
-    font-size:12px;color:var(--chrome-role);margin-bottom:6px;font-weight:600;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .profile select{
-    width:100%;padding:7px 9px;border-radius:9px;
-    background:var(--chrome-input-bg);color:var(--chrome-input-fg);
-    border:1px solid var(--chrome-input-line);font-size:12.5px;font-weight:500;
-  }
-  /* Açılan liste her temada beyaz zemin, koyu yazı. Koyu temalarda kutunun
-     yarı saydam zemini listeye de geçiyor, liste gri ve okunmaz oluyordu
-     (kullanıcı geri bildirimi, 2026-10-09). Departman başlıkları kalın. */
-  .profile select option,
-  .profile select optgroup{background:#fff;color:#12275c}
-  .profile select optgroup{font-weight:700}
-  .profile select option{font-weight:500}
-  .profile .chrome-btn{margin-top:8px}
-  .acct-item{
-    display:flex;align-items:center;gap:10px;width:100%;
-    border:0;background:transparent;border-radius:10px;padding:8px 8px;
-    color:var(--chrome-text);font:inherit;font-size:13px;font-weight:500;text-align:left;cursor:pointer;
+  .acct-act{
+    width:32px;height:32px;flex:none;display:grid;place-items:center;
+    border:0;border-radius:9px;background:transparent;color:var(--chrome-role);cursor:pointer;
     transition:background .14s var(--ease), color .14s var(--ease);
   }
-  .acct-item .ic{width:17px;height:17px}
-  .acct-item:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
+  .acct-act:hover{background:var(--chrome-hover);color:var(--chrome-text-hi)}
+  .acct-act .ic{width:17px;height:17px}
 
   /* Kısa ekran (ör. 1366×768 dizüstü): menü kaydırma istemesin */
   @media (max-height:760px) and (min-width:901px){
@@ -2061,26 +2008,13 @@
         <span class="lbl">Yetkiler</span></button>
     </nav>
 
-    <!-- Hesap: dipte tek düğme. Kişi, tema, geri bildirim ve çıkış yukarı açılan
-         menüde (.profile: theme.js temayı, api-store.js çıkışı buraya koyar). -->
+    <!-- Hesap: dipte sabit satır. Sağdaki düğme çıkış yapar; test ortamında
+         "Kişi değiştir" olur ve giriş sayfasındaki kişi listesine döner (api-store.js). -->
     <div class="account">
-      <div class="profile" id="acctMenu" hidden>
-        <div class="acct-head" id="pRoleFull">—</div>
-        <div class="acct-sec">
-          <div class="switch-lbl">Kullanıcı olarak görüntüle</div>
-          <select id="userSwitch" aria-label="Kullanıcı olarak görüntüle"></select>
-        </div>
-        <div class="acct-sec" data-theme-slot></div>
-        <div class="acct-sec acct-links">
-          <button type="button" class="acct-item" id="fbOpen">
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg>
-            Geri bildirim gönder</button>
-        </div>
-      </div>
-      <button type="button" class="acct-btn" id="acctBtn" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu">
-        <span class="avatar sm grad" id="pAvatar">ÖU</span>
-        <span class="acct-who"><span class="name" id="pName">—</span><span class="role" id="pRole">—</span></span>
-        <svg class="acct-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+      <span class="avatar sm grad" id="pAvatar">ÖU</span>
+      <span class="acct-who" id="pWho"><span class="name" id="pName">—</span><span class="role" id="pRole">—</span></span>
+      <button type="button" class="acct-act" id="acctAct" title="Çıkış yap" aria-label="Çıkış yap">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>
       </button>
     </div>
   </aside>
@@ -2097,6 +2031,15 @@
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
           <input id="globalSearch" type="search" aria-label="Kayıtlarda ara" placeholder="Kayıtlarda ara: numara, başlık, ekip" />
         </div>
+        <div class="theme-anchor">
+          <button type="button" class="btn btn-ghost icon-btn" id="themeBtn" title="Tema" aria-label="Tema" aria-haspopup="true" aria-expanded="false" aria-controls="themePop">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <div class="theme-pop" id="themePop" data-theme-slot hidden></div>
+        </div>
+        <button type="button" class="btn btn-ghost icon-btn" id="fbBtn" title="Geri bildirim gönder" aria-label="Geri bildirim gönder">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg>
+        </button>
         <button class="btn btn-ghost" id="bellBtn" aria-label="Bildirimler">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5A6 6 0 0 0 6 8.5c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></svg>
           <span id="bellCount">0</span></button>
@@ -2918,9 +2861,9 @@ function renderView(id){
 function renderChrome(){
   const me = Store.me(), recs = Store.data.records;
   $('#pName').textContent = me.name;
-  /* Düğmede ekip; rol ve departmanı hesap menüsünün başında */
+  /* Satırda ekip; rol ve departman üzerine gelince */
   $('#pRole').textContent = me.dept ? deptName(me.dept) : me.role;
-  $('#pRoleFull').textContent = me.dept ? me.role + ' • ' + unitLabel(me.dept) : me.role;
+  $('#pWho').title = me.dept ? me.role + ' • ' + unitLabel(me.dept) : me.role;
   $('#pAvatar').textContent = initials(me.name);
 
   /* Rozet "bakmanız gereken" sayıyı söyler ve sıfırsa görünmez:
@@ -2971,19 +2914,19 @@ function setMenu(open){
   $$('[data-menu-toggle]').forEach(b => b.setAttribute('aria-expanded', String(open)));
   if (open) { const first = sb.querySelector('.nav button:not([hidden])'); if (first) first.focus(); }
 }
-/* Hesap menüsü: dışarı tıklayınca, Esc'le ve geri bildirim açılınca kapanır. */
-function setAccount(open){
-  $('#acctMenu').hidden = !open;
-  $('#acctBtn').setAttribute('aria-expanded', String(open));
+/* Tema penceresi: dışarı tıklayınca ve Esc'le kapanır; açılınca seçili temaya odaklanır. */
+function setThemePop(open){
+  $('#themePop').hidden = !open;
+  $('#themeBtn').setAttribute('aria-expanded', String(open));
+  if (open) { const cur = $('#themePop [aria-checked="true"]'); if (cur) cur.focus(); }
 }
-$('#acctBtn').addEventListener('click', () => setAccount($('#acctMenu').hidden));
-$('#fbOpen').addEventListener('click', () => setAccount(false));
+$('#themeBtn').addEventListener('click', () => setThemePop($('#themePop').hidden));
 document.addEventListener('pointerdown', e => {
-  if (!$('#acctMenu').hidden && !e.target.closest('.account')) setAccount(false);
+  if (!$('#themePop').hidden && !e.target.closest('.theme-anchor')) setThemePop(false);
 }, true);
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !$('#acctMenu').hidden) {
-    setAccount(false); $('#acctBtn').focus(); e.stopPropagation(); return;
+  if (e.key === 'Escape' && !$('#themePop').hidden) {
+    setThemePop(false); $('#themeBtn').focus(); e.stopPropagation(); return;
   }
   if (e.key === 'Escape' && $('#sidebar').classList.contains('open')) {
     setMenu(false);
@@ -4241,7 +4184,7 @@ window.addEventListener('error', e => {
     d.id = 'fatalErr'; d.className = 'card';
     d.style.cssText = 'padding:20px;margin-bottom:16px;border-left:4px solid var(--danger)';
     d.innerHTML = '<b style="color:var(--danger-ink)">Beklenmeyen bir hata oluştu.</b>'
-      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse sol alttaki hesap menüsünden “Geri bildirim gönder” ile bildirin.</p>'
+      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse üst banttaki geri bildirim düğmesiyle bildirin.</p>'
       + '<details class="hint" style="margin-top:6px"><summary>Teknik ayrıntı</summary>' + esc(e.message || 'Bilinmeyen hata') + '</details>';
     main.prepend(d);
   }
@@ -4319,8 +4262,8 @@ function init(){
     if (r && typeof actLearn === 'function') actLearn(r, t.checked);
   });
 
-  /* Uygulama geri bildirimi (kenar çubuğu) */
-  $('#fbOpen').addEventListener('click', () => { if (typeof openFeedback === 'function') openFeedback(); });
+  /* Uygulama geri bildirimi (üst bant) */
+  $('#fbBtn').addEventListener('click', () => { if (typeof openFeedback === 'function') openFeedback(); });
 
   /* Tür kartları: gerçek radio — fare, Tab ve ok tuşlarıyla seçilir */
   $$('#typeCards input[name="fType"]').forEach(inp => {

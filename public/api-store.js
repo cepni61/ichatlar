@@ -1028,45 +1028,20 @@
       ).join('');
     }
 
-    // Test ortamında (geliştirme girişi) prototipteki kullanıcı seçici kalır;
-    // seçim yerel durumu değil, sunucudaki oturumu değiştirir.
-    const sw = $('#userSwitch');
-    if (sw && boot.devAuth) {
-      // Giriş sayfasıyla aynı düzen: sistem yöneticileri en üstte kendi
-      // grubunda, sonra ekipler, en sonda ekibi atanmamışlar. Eskiden sistem
-      // yöneticisi alfabetik sırada "Sistem Yöneticisi — —" diye kayboluyordu.
-      // Gruplar departman; kişinin yanında ekibi yazar ("Ad — Ekip"). Seçim
-      // kapandığında da kişinin nerede olduğu görünsün (2026-10-09).
-      const opt = (u) => '<option value="' + u.id + '"' + (u.id === boot.me.id ? ' selected' : '') + '>' +
-        esc(u.name) + (u.dept ? ' — ' + esc(deptName(u.dept)) : u.name === u.role ? '' : ' — ' + esc(u.role)) + '</option>';
-      const grp = (label, list) => list.length ? '<optgroup label="' + esc(label) + '">' + list.map(opt).join('') + '</optgroup>' : '';
-      const isSys = (u) => u.role === 'Sistem Yöneticisi';
-      const teamIds = (rootId) => teamsOfDept(rootId).map((t) => t.id);
-      const byTeamThenName = (ids) => (a, b) => ids.indexOf(a.dept) - ids.indexOf(b.dept) || a.name.localeCompare(b.name, 'tr');
-      sw.innerHTML =
-        grp('Sistem yönetimi', USERS.filter(isSys)) +
-        rootUnits().map((r) => {
-          const ids = teamIds(r.id);
-          return grp(r.name, USERS.filter((u) => !isSys(u) && ids.includes(u.dept)).sort(byTeamThenName(ids)));
-        }).join('') +
-        grp('Ekibi atanmamış', USERS.filter((u) => !isSys(u) && !teamUnits().some((d) => d.id === u.dept)));
-      sw.onchange = (e) => {
-        location.href = '/auth/dev-login?userId=' + encodeURIComponent(e.target.value) + '&returnTo=/';
-      };
-    } else if (sw) {
-      // Gerçek girişte seçici anlamsız: yerine oturum sahibi ve çıkış.
-      const wrap = sw.parentElement;
-      sw.remove();
-      const out = document.createElement('button');
-      out.className = 'chrome-btn';
-      out.textContent = 'Çıkış yap';
-      out.onclick = async () => {
+    // Hesap satırındaki tek düğme: çıkış. Test ortamında (geliştirme girişi)
+    // aynı çıkış "Kişi değiştir" olur: /auth/login giriş sayfasındaki kişi
+    // listesine döner. Canlıda kişi seçiciden iz kalmaz.
+    const act = $('#acctAct');
+    if (act) {
+      if (boot.devAuth) {
+        act.title = 'Kişi değiştir';
+        act.setAttribute('aria-label', 'Kişi değiştir');
+        act.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/></svg>';
+      }
+      act.onclick = async () => {
         await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
         location.href = '/auth/login';
       };
-      wrap.appendChild(out);
-      const lbl = wrap.querySelector('.switch-lbl');
-      if (lbl) lbl.textContent = boot.me.email;
     }
 
     // Demo verisini sıfırlama düğmesi üretimde olmamalı.
