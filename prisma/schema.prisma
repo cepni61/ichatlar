@@ -9,7 +9,8 @@
 //
 // Sabit kümeler (durum, rol, öncelik) PostgreSQL enum'u değil String kolon;
 // geçerlilik src/domain/enums.ts içinde denetlenir. Yeni bir durum eklemek
-// bu yüzden göç gerektirmez. JSON alanlar metin olarak saklanır.
+// bu yüzden göç gerektirmez. JSON alanlar metin olarak saklanır; RecordEvent.meta
+// jsonb (rapor sorguları için).
 
 generator client {
   provider = "prisma-client-js"
@@ -50,6 +51,9 @@ model Department {
   secondaryRecords Record[] @relation("secondaryDepartment")
   kbArticles       KbArticle[]
   grants           Grant[]
+  helpSelected     HelpQuery[]   @relation("helpSelectedTeam")
+  helpPredicted    HelpQuery[]   @relation("helpPredictedTeam")
+  eventsTo         RecordEvent[] @relation("eventToTeam")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -87,7 +91,7 @@ model User {
 
   createdRecords  Record[]      @relation("creator")
   assignedRecords Record[]      @relation("assignee")
-  events          RecordEvent[]
+  events          RecordEvent[] @relation("eventBy")
   attachments     Attachment[]
   sessions        Session[]
   auditLogs       AuditLog[]
@@ -97,6 +101,10 @@ model User {
   kbUpdated       KbArticle[] @relation("kbUpdater")
   grants          Grant[]     @relation("grants")
   grantsGiven     Grant[]     @relation("grantsGiven")
+  eventsTo        RecordEvent[] @relation("eventToUser")
+  helpSessions    HelpSession[]
+  infoRequested   InfoRequest[] @relation("infoRequester")
+  infoAnswered    InfoRequest[] @relation("infoAnswerer")
 
   @@index([departmentId, active])
 }
@@ -191,6 +199,9 @@ model Record {
   events        RecordEvent[]
   attachments   Attachment[]
   notifications Notification[]
+  helpSession   HelpSession?
+  helpResults   HelpResult[]
+  infoRequests  InfoRequest[]
 
   /// Kayıt açılırken gösterilen benzer kayıt önerileri.
   suggestionsGiven    Suggestion[] @relation("suggestionSource")
@@ -217,14 +228,25 @@ model RecordEvent {
 
   /// Sistem olaylarında (SLA ihlali) boş olur.
   byId String?
-  by   User?   @relation(fields: [byId], references: [id], onDelete: SetNull)
+  by   User?   @relation("eventBy", fields: [byId], references: [id], onDelete: SetNull)
 
-  /// Yapısal ek bilgi, JSON metni olarak (lehçe bağımsızlığı için).
-  meta String?
+  /// Durum değiştiyse önceki ve sonraki durum (src/routes/actions.ts → mutate).
+  fromStatus String?
+  toStatus   String?
+  /// Açılış ve yönlendirmede hedef ekip; üstlenme ve kişiye devirde hedef kişi.
+  toTeamId String?
+  toTeam   Department? @relation("eventToTeam", fields: [toTeamId], references: [id], onDelete: SetNull)
+  toUserId String?
+  toUser   User?       @relation("eventToUser", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  /// Yapısal ek bilgi.
+  meta Json?
 
   attachments Attachment[]
+  infoAnswers InfoRequest[]
 
   @@index([recordId, at])
+  @@index([toStatus, at])
 }
 
 model Attachment {
@@ -393,6 +415,7 @@ model KbArticle {
   url      String?
 
   active Boolean @default(true)
+  helpResults HelpResult[]
 
   createdById String?
   createdBy   User?   @relation("kbCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -430,4 +453,136 @@ model Grant {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Kayıt önleme günlüğü (docs/RAPOR.md)
+// ---------------------------------------------------------------------------
+
+/// Tekil yardım oturumu: bir kişinin ardışık yardım adımları. 30 dk
+/// hareketsizlik ya da kayıt açılması oturumu kapatır (src/domain/help.ts).
+/// Kod kolonlarının CHECK kısıtları ve kısmi index'ler migration SQL'inde;
+/// `prisma migrate diff` onları bilmez, çıktısında silmeye çalışırsa o
+/// satırları göçten çıkarın.
+model HelpSession {
+  id String @id @default(cuid())
+
+  /// Anonim kayıtta boşaltılır: günlükten kaydı kimin açtığı çıkmasın.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// YENI_KAYIT | KAYNAK_BUL | ASISTAN
+  channel String
+
+  startedAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+
+  /// Bu oturumdan açılan kayıt.
+  recordId String? @unique
+  record   Record? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+
+  queries HelpQuery[]
+
+  @@index([userId, startedAt])
+  @@index([startedAt])
+}
+
+/// Oturumdaki ML taraması, Kaynak Bul araması ya da asistan sorusu.
+model HelpQuery {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   HelpSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  at DateTime @default(now())
+
+  /// ML_TARAMA | ARAMA | ASISTAN
+  kind String
+
+  /// Kısıtlı kayıtta boş.
+  title String?
+  text  String?
+
+  /// BILGI | ONERI — yalnızca ML_TARAMA
+  recordType String?
+
+  selectedTeamId  String?
+  selectedTeam    Department? @relation("helpSelectedTeam", fields: [selectedTeamId], references: [id], onDelete: SetNull)
+  predictedTeamId String?
+  predictedTeam   Department? @relation("helpPredictedTeam", fields: [predictedTeamId], references: [id], onDelete: SetNull)
+  /// 0–1
+  confidence      Float?
+  lowConfidence   Boolean?
+
+  resultCount Int
+  durationMs  Int?
+
+  /// ML veritabanındaki (SQLite) Inference.id — ayrı veritabanı, FK değil.
+  mlInferenceId String?
+
+  results HelpResult[]
+
+  @@index([sessionId, at])
+  @@index([at])
+  @@index([predictedTeamId])
+}
+
+/// Sorguda gösterilen sonuç; tıklama ve "işime yaradı" beyanı burada.
+model HelpResult {
+  id String @id @default(cuid())
+
+  queryId String
+  query   HelpQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  /// 1'den başlar, ekrandaki sıra.
+  rank Int @db.SmallInt
+
+  /// KAYIT | BILGI_BANKASI | CORTEX
+  source String
+
+  recordId      String?
+  record        Record?    @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  kbArticleId   String?
+  kbArticle     KbArticle? @relation(fields: [kbArticleId], references: [id], onDelete: SetNull)
+  externalUrl   String?
+  externalTitle String?
+
+  /// Yüzde, 0–100 (ML eşleşmelerinde).
+  similarity Int? @db.SmallInt
+
+  openedAt  DateTime?
+  helpfulAt DateTime?
+
+  @@index([queryId])
+  @@index([recordId])
+  @@index([kbArticleId])
+}
+
+/// Ek bilgi isteği: kaydın sahibi açan kişiye soru sorar (src/routes/actions.ts).
+/// Kayıt başına en fazla bir açık istek (kısmi unique index, migration'da).
+model InfoRequest {
+  id String @id @default(cuid())
+
+  recordId String
+  record   Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  requestedById String?
+  requestedBy   User?    @relation("infoRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  requestedAt   DateTime @default(now())
+  question      String
+  /// İstekten önceki durum: yanıt gelince kayıt buna döner (src/domain/info-request.ts).
+  statusBefore  String
+
+  answeredById  String?
+  answeredBy    User?        @relation("infoAnswerer", fields: [answeredById], references: [id], onDelete: SetNull)
+  answeredAt    DateTime?
+  answer        String?
+  /// Yanıtın ekleri bu olaya bağlı.
+  answerEventId String?
+  answerEvent   RecordEvent? @relation(fields: [answerEventId], references: [id], onDelete: SetNull)
+
+  /// Yanıt beklenmeden devam edildi (durum değişti, çözüldü, yönlendirildi).
+  cancelledAt DateTime?
+
+  @@index([recordId, requestedAt])
 }

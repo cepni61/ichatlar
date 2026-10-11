@@ -105,9 +105,10 @@ async function loadTrainingData(params: Params) {
       code: r.code,
       departmentId: r.departmentId,
       features: scaled(featurize(r.title, r.description, params), r.renewed ? RENEWED_WEIGHT : 1),
-      corrected: r.events.some(
-        (e) => fromJsonText<{ departmentId?: string | null }>(e.meta)?.departmentId,
-      ),
+      corrected: r.events.some((e) => {
+        const m = e.meta as { departmentId?: unknown } | null;
+        return Boolean(m && typeof m === 'object' && m.departmentId);
+      }),
     }));
   for (const a of kb) {
     if (!activeIds.has(a.departmentId)) continue;

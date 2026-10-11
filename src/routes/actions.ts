@@ -109,7 +109,7 @@ async function mutate(
         type: planned.event.type,
         text: planned.event.text,
         byId: opts.actorId,
-        ...(planned.event.meta ? { meta: toJsonText(planned.event.meta) } : {}),
+        ...(planned.event.meta !== undefined ? { meta: planned.event.meta as Prisma.InputJsonValue } : {}),
       },
       select: { id: true },
     });

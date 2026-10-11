@@ -230,7 +230,7 @@ export default async function grantRoutes(app: FastifyInstance) {
             data: {
               recordId: r.id, type: EventType.FORWARD, byId: actor.id,
               text: `Kayıt ${from.name} kişisinden ${to.name} kişisine devredildi (sistem yöneticisi).`,
-              meta: toJsonText({ handover: true, from: from.id, to: to.id }),
+              meta: { handover: true, from: from.id, to: to.id },
             },
           });
           await tx.notification.createMany({
@@ -244,7 +244,7 @@ export default async function grantRoutes(app: FastifyInstance) {
             data: {
               recordId: r.id, type: EventType.FORWARD, byId: actor.id,
               text: `${from.name} kaydı bıraktığı için kayıt ${r.department.name} ekibinin havuzuna döndü (sistem yöneticisi).`,
-              meta: toJsonText({ handover: true, from: from.id }),
+              meta: { handover: true, from: from.id },
             },
           });
           pooled++;

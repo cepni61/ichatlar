@@ -77,6 +77,8 @@ async function resetDemo() {
 
   console.log('Demo verisi siliniyor…');
   await prisma.$transaction([
+    prisma.helpSession.deleteMany(),
+    prisma.infoRequest.deleteMany(),
     prisma.notification.deleteMany(),
     prisma.suggestion.deleteMany(),
     prisma.attachment.deleteMany(),

@@ -24,6 +24,8 @@ export const silentLog = {
  */
 export async function resetDb() {
   assertTestDatabase(process.env.DATABASE_URL);
+  await prisma.helpSession.deleteMany();
+  await prisma.infoRequest.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.feedback.deleteMany();
   await prisma.grant.deleteMany();
