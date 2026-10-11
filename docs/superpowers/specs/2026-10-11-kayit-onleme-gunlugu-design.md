@@ -1,6 +1,6 @@
 # Kayıt önleme günlüğü ve ek bilgi akışı — tasarım
 
-Tarih: 2026-10-11 · Durum: onaylandı (konuşmada, bölüm bölüm)
+Tarih: 2026-10-11 · Durum: onaylandı (konuşmada, bölüm bölüm; §12 plan yazılırken netleşenler)
 
 ## 1. Amaç
 
@@ -127,9 +127,10 @@ Index: (`sessionId`, `at`), (`at`), (`predictedTeamId`).
 | `openedAt` | timestamp null | Bağlantıya ilk tıklama |
 | `helpfulAt` | timestamp null | "Bu çözüm işime yaradı" |
 
-CHECK: `source='CORTEX'` ise `externalUrl` dolu; `source='KAYIT'` ya da
-`'BILGI_BANKASI'` ise `externalUrl` boş. (Kayıt/madde sonradan silinirse FK
-boşalabildiği için "FK dolu olmalı" kısıtı konmaz.)
+CHECK: yalnızca kaynağa uyan hedef kolon dolu olabilir — `recordId` yalnız
+KAYIT'ta, `kbArticleId` yalnız BILGI_BANKASI'nda, `externalUrl`/`externalTitle`
+yalnız CORTEX'te. (Kayıt/madde sonradan silinirse FK boşalabildiği, Cortex
+sonucunun bağlantısı da boş gelebildiği için "dolu olmalı" kısıtı konmaz.)
 
 Index: (`queryId`), (`recordId`), (`kbArticleId`).
 
@@ -304,3 +305,30 @@ Entegrasyon (`tests/integration`):
   bilgi bekleme süreleri, durum geçiş süreleri.
 - README: veri modeli, API ve ek bilgi bölümleri.
 - KURULUM.md: rapor kullanıcısı adımı.
+
+## 12. Plan yazılırken netleşenler (2026-10-11)
+
+- **ML taraması da birleşir.** Yeni Kayıt'taki tarama yazarken her 0,9 sn
+  duraklamada kendiliğinden çalışıyor. Aynı oturumda son sorgu ML_TARAMA ise,
+  60 sn içindeyse ve sonuçlarına dokunulmamışsa yeni satır açılmaz, o sorgu
+  güncellenir. Kaynak Bul kuralı aynı (10 sn + önek). Asistan soruları
+  birleşmez.
+- **Oturum bağlama kayıt işleminden sonra**, ayrı ve hata yutan bir adımda
+  (ML sonucunun yazıldığı yer gibi). Aynı oturum kimliğiyle iki kayıt
+  eşzamanlı gelirse ikincisi `recordId` tekilliğine takılıp kaydın kendisini
+  geri almasın; ikinci kayıt kendi sorgusuz oturumuna bağlanır.
+- **Cortex sonucunun bağlantısı boş olabilir**; CHECK kısıtı buna göre (§4).
+- **Rapor kullanıcısı:** `kur.ps1` betiği PostgreSQL yönetici parolasını
+  ikinci kez sormasın diye çağırmaz, kurulum sonunda hatırlatır;
+  `rapor-kullanicisi.ps1` ayrı çalıştırılır (KURULUM.md).
+- **`rapor.kayit`** zaman kolonları: `acilis`, `ilk_donus`, `cozulme`,
+  `kapanis` (`cozum` adı çözüm metniyle karışıyordu).
+- **`sonraki_*` kolonları** oturumun başlangıcından sonra aynı kişinin açtığı
+  ilk kaydı verir, oturumun kendi kaydı hariç. **Anonim kayıtlar sayılmaz**:
+  sayılsaydı zamanı `rapor.kayit` ile eşleştirilip açan kişi bulunurdu.
+- Ek bilgi yanıtında kayıt `statusBefore`'a döner; o durum `EK_BILGI` ise ya
+  da geçiş tablosu izin vermiyorsa (ör. `UZERIME_ALINDI`) bilgide
+  `CALISILIYOR`, öneride `DEGERLENDIRILIYOR`.
+- Yöneticinin devretme ekranı (Yetkiler) kaydı ekip havuzuna döndürürse
+  (`YENI`) açık ek bilgi isteği iptal olur; başka kişiye devrederse istek
+  açık kalır, yanıt yeni sahibe gider.
