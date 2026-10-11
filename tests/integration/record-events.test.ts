@@ -52,7 +52,7 @@ describe('kaydı açana bildirim', () => {
     await post(`/api/records/${w.rec.code}/status`, h, { status: 'inceleniyor' });
     expect(await notesOf(w.opener.id)).toEqual([]);
 
-    await post(`/api/records/${w.rec.code}/status`, h, { status: 'ek_bilgi', note: 'Bordro dönemini yazın' });
+    await post(`/api/records/${w.rec.code}/info-request`, h, { question: 'Bordro dönemini yazın' });
     expect((await notesOf(w.opener.id)).map((n) => n.type)).toEqual(['INFO_REQUESTED']);
   });
 

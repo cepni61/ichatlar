@@ -15,6 +15,7 @@ import { lockRecordByCode, toJsonText } from '../lib/dialect.js';
 import { recordForward, relearn } from '../ml/service.js';
 import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { notifyUsers } from '../lib/notify.js';
+import { statusAfterInfo } from '../domain/info-request.js';
 
 /** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
 const attachmentIds = z.array(z.string().min(1).max(64)).max(MAX_FILES).default([]);
@@ -60,6 +61,8 @@ async function mutate(
       createdById: string;
       /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez. */
       restricted: boolean;
+      /** Yanıt bekleyen ek bilgi isteği. */
+      openInfo: { id: string; statusBefore: string } | null;
     }) => {
       data: Prisma.RecordUpdateInput;
       event: PlanEvent;
@@ -68,6 +71,10 @@ async function mutate(
       notify?: { userIds: (string | null)[]; type: NotificationType; text: string };
       /** Bu olaya bağlanacak taslak ekler (bu kayda, bu kişinin yüklediği, henüz gönderilmemiş). */
       attachmentIds?: string[];
+      /** Yeni ek bilgi isteği; istekten önceki durum kaydın şimdiki durumudur. */
+      infoQuestion?: string;
+      /** Bu güncelleme açık ek bilgi isteğinin yanıtı. */
+      infoAnswer?: { id: string; answer: string };
     };
   },
 ) {
@@ -93,6 +100,7 @@ async function mutate(
         // Yetki kuralı (ör. kısıtlı kayıt öneri havuzuna giremez) bu alana bakar.
         restricted: true,
         firstResponseAt: true,
+        infoRequests: { where: { answeredAt: null, cancelledAt: null }, select: { id: true, statusBefore: true }, take: 1 },
       },
     });
     if (!rec) throw notFound();
@@ -101,7 +109,8 @@ async function mutate(
       throw forbidden(`Bu kayıtta "${opts.action}" işlemi için yetkiniz yok.`);
     }
 
-    const planned = opts.plan(rec);
+    const openInfo = rec.infoRequests[0] ?? null;
+    const planned = opts.plan({ ...rec, openInfo });
 
     if (planned.nextStatus && !canTransition(rec.status, planned.nextStatus)) {
       throw conflict(
@@ -138,6 +147,24 @@ async function mutate(
       if (count !== ids.length) {
         throw badRequest('Eklerden biri bulunamadı ya da zaten gönderilmiş. Sayfayı yenileyip tekrar deneyin.');
       }
+    }
+
+    const now = new Date();
+    if (planned.infoQuestion) {
+      await tx.infoRequest.create({
+        data: { recordId: rec.id, requestedById: opts.actorId, requestedAt: now, question: planned.infoQuestion, statusBefore: rec.status },
+      });
+    } else if (planned.infoAnswer) {
+      await tx.infoRequest.update({
+        where: { id: planned.infoAnswer.id },
+        data: { answeredAt: now, answeredById: opts.actorId, answer: planned.infoAnswer.answer, answerEventId: event.id },
+      });
+    } else if (openInfo && statusChanged) {
+      // Yanıt beklenmeden kayıt başka duruma geçti: istek açık kalmasın.
+      await tx.infoRequest.update({ where: { id: openInfo.id }, data: { cancelledAt: now } });
+      await tx.recordEvent.create({
+        data: { recordId: rec.id, type: EventType.INFO_CANCEL, text: 'Ek bilgi isteği yanıt beklenmeden kapandı.', byId: opts.actorId, at: now },
+      });
     }
 
     const updated = await tx.record.findUniqueOrThrow({ where: { id: rec.id }, include: detailInclude });
@@ -325,8 +352,9 @@ export default async function actionRoutes(app: FastifyInstance) {
     if (!parsed.success) throw badRequest('Geçersiz istek.');
 
     const next = STATUS_FROM_SLUG[parsed.data.status];
+    if (next === RecordStatus.EK_BILGI) throw badRequest('Ek bilgi “Ek Bilgi İste” ile istenir; soru zorunlu.');
     if (!next || !(WORK_STATUSES.includes(next) || ONERI_WORK_STATUSES.includes(next))) {
-      throw badRequest('Bu uçtan yalnızca ara durumlar (İnceleniyor, Çalışılıyor, Değerlendiriliyor, Ek Bilgi) ayarlanır.');
+      throw badRequest('Bu uçtan yalnızca ara durumlar (İnceleniyor, Çalışılıyor, Değerlendiriliyor) ayarlanır.');
     }
 
     const note = parsed.data.note;
@@ -341,8 +369,8 @@ export default async function actionRoutes(app: FastifyInstance) {
         const allowed = r.type === RecordType.ONERI ? ONERI_WORK_STATUSES : WORK_STATUSES;
         if (!allowed.includes(next)) {
           throw badRequest(r.type === RecordType.ONERI
-            ? 'Öneride ara durum olarak yalnızca Değerlendiriliyor ya da Ek Bilgi seçilebilir.'
-            : 'Bilgi talebinde ara durum olarak İnceleniyor, Çalışılıyor ya da Ek Bilgi seçilebilir.');
+            ? 'Öneride ara durum olarak yalnızca Değerlendiriliyor seçilebilir.'
+            : 'Bilgi talebinde ara durum olarak İnceleniyor ya da Çalışılıyor seçilebilir.');
         }
         return {
         nextStatus: next,
@@ -352,15 +380,40 @@ export default async function actionRoutes(app: FastifyInstance) {
           text: `Durum güncellendi: ${STATUS_LABELS[next]}${note ? ` — ${note}` : ''}`,
           meta: { from: r.status, to: next },
         },
-        ...(next === RecordStatus.EK_BILGI
-          ? {
-              notify: {
-                userIds: [r.createdById],
-                type: NotificationType.INFO_REQUESTED,
-                text: `${codeParam(req)} için sizden ek bilgi bekleniyor. Kayda güncelleme ekleyerek yanıtlayın.`,
-              },
-            }
-          : {}),
+        };
+      },
+    });
+    return { record: await serializeRecord(rec, a) };
+  });
+
+  /** Ek bilgi iste: soru zorunlu; yanıt, kaydı açanın güncellemesiyle gelir (yorum ucu). */
+  app.post('/api/records/:code/info-request', async (req) => {
+    const a = actorOf(req);
+    const parsed = z
+      .object({ question: z.string().trim().min(5, 'Sorunuzu en az 5 karakterle yazın.').max(1000) })
+      .safeParse(req.body);
+    if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
+    const question = parsed.data.question;
+
+    const rec = await mutate(app, {
+      code: codeParam(req),
+      actorId: a.id,
+      actorRole: a.role,
+      actorDept: a.departmentId,
+      action: 'infoRequest',
+      ip: req.ip,
+      plan: (r) => {
+        if (r.openInfo) throw conflict('Bu kayıtta yanıt bekleyen bir ek bilgi isteği zaten var.');
+        return {
+          nextStatus: RecordStatus.EK_BILGI,
+          data: { status: RecordStatus.EK_BILGI, ...stampFirstResponse(r) },
+          event: { type: EventType.INFO_REQUEST, text: `Ek bilgi istendi: ${question}` },
+          infoQuestion: question,
+          notify: {
+            userIds: [r.createdById],
+            type: NotificationType.INFO_REQUESTED,
+            text: `${codeParam(req)} için sizden ek bilgi bekleniyor. Kaydı açıp soruyu yanıtlayın.`,
+          },
         };
       },
     });
@@ -619,19 +672,38 @@ export default async function actionRoutes(app: FastifyInstance) {
       actorDept: a.departmentId,
       action: 'comment',
       ip: req.ip,
-      plan: (r) => ({
-        // Ekipten gelen ilk yorum da geri dönüş sayılır; kaydı açanın kendi
-        // yorumu sayılmamalı.
-        data: r.createdById === a.id ? {} : stampFirstResponse(r),
-        event: { type: EventType.COMMENT, text },
-        attachmentIds: parsed.data.attachmentIds,
-        // Açan yazdıysa sahibine (ek bilgi yanıtı), ekipten biri yazdıysa açana.
-        notify: {
-          userIds: r.createdById === a.id ? [r.assigneeId] : [r.createdById],
-          type: NotificationType.COMMENT,
-          text: `${codeParam(req)} kaydına yeni güncelleme eklendi.`,
-        },
-      }),
+      plan: (r) => {
+        // Açık ek bilgi isteği varken açanın güncellemesi yanıttır: istek kapanır,
+        // kayıt istekten önceki durumuna döner. Ekipten birinin yazdığı yanıt sayılmaz.
+        if (r.openInfo && r.createdById === a.id) {
+          const back = statusAfterInfo(r.type, r.openInfo.statusBefore);
+          return {
+            nextStatus: back,
+            data: { status: back },
+            event: { type: EventType.INFO_RESPONSE, text },
+            attachmentIds: parsed.data.attachmentIds,
+            infoAnswer: { id: r.openInfo.id, answer: text },
+            notify: {
+              userIds: [r.assigneeId],
+              type: NotificationType.INFO_PROVIDED,
+              text: `${codeParam(req)} için istenen ek bilgi geldi.`,
+            },
+          };
+        }
+        return {
+          // Ekipten gelen ilk yorum da geri dönüş sayılır; kaydı açanın kendi
+          // yorumu sayılmamalı.
+          data: r.createdById === a.id ? {} : stampFirstResponse(r),
+          event: { type: EventType.COMMENT, text },
+          attachmentIds: parsed.data.attachmentIds,
+          // Açan yazdıysa sahibine, ekipten biri yazdıysa açana.
+          notify: {
+            userIds: r.createdById === a.id ? [r.assigneeId] : [r.createdById],
+            type: NotificationType.COMMENT,
+            text: `${codeParam(req)} kaydına yeni güncelleme eklendi.`,
+          },
+        };
+      },
     });
     return { record: await serializeRecord(rec, a) };
   });

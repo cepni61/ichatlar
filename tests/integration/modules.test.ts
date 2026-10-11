@@ -61,7 +61,9 @@ describe('öneri değerlendirme akışı', () => {
     expect((await post(w.ikMember.id, `/api/records/${o.code}/resolve`, { resolution: 'Çözüldü diye işaretle.' })).statusCode).toBe(403);
     expect((await post(w.ikMember.id, `/api/records/${b.code}/evaluate`, { outcome: 'degerlendirildi', note: 'Değerlendirdim bunu.' })).statusCode).toBe(403);
     expect((await post(w.ikMember.id, `/api/records/${o.code}/status`, { status: 'calisiliyor' })).statusCode).toBe(400);
-    const ek = await post(w.ikMember.id, `/api/records/${o.code}/status`, { status: 'ek_bilgi' });
+    // Ek bilgi artık durum listesinden değil, soruyla istenir.
+    expect((await post(w.ikMember.id, `/api/records/${o.code}/status`, { status: 'ek_bilgi' })).statusCode).toBe(400);
+    const ek = await post(w.ikMember.id, `/api/records/${o.code}/info-request`, { question: 'Hangi birimde uygulanacak?' });
     expect(ek.json().record.status).toBe('ek_bilgi');
     expect((await post(w.ikMember.id, `/api/records/${o.code}/evaluate`, { outcome: 'uygun_bulunmadi', note: 'kısa' })).statusCode).toBe(400);
   });

@@ -64,6 +64,12 @@ export const EventType = {
   REOPEN: 'REOPEN',
   /** Yenilenen kayıt işareti kondu / kaldırıldı (ML hafızası). */
   LEARN: 'LEARN',
+  /** Ek bilgi istendi (soru olay metninde, InfoRequest satırında). */
+  INFO_REQUEST: 'INFO_REQUEST',
+  /** Kaydı açan ek bilgiyi yanıtladı. */
+  INFO_RESPONSE: 'INFO_RESPONSE',
+  /** Ek bilgi isteği yanıt beklenmeden kapandı. */
+  INFO_CANCEL: 'INFO_CANCEL',
 } as const;
 export type EventType = (typeof EventType)[keyof typeof EventType];
 
@@ -76,6 +82,8 @@ export const NotificationType = {
   REJECTED: 'REJECTED',
   /** Ekip, açan kişiden ek bilgi bekliyor. */
   INFO_REQUESTED: 'INFO_REQUESTED',
+  /** Kaydı açan istenen ek bilgiyi yazdı (sahip). */
+  INFO_PROVIDED: 'INFO_PROVIDED',
   /** Açan kişi çözümü yetersiz bulup kaydı yeniden açtı (sahip). */
   REOPENED: 'REOPENED',
   /** Kayda yeni güncelleme yazıldı (karşı taraf). */

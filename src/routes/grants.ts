@@ -250,6 +250,15 @@ export default async function grantRoutes(app: FastifyInstance) {
               toStatus: r.status === RecordStatus.YENI ? null : RecordStatus.YENI,
             },
           });
+          // Havuza dönen kayıt ek bilgi beklemiyor artık; yanıt kimseye gitmezdi.
+          const cancelled = await tx.infoRequest.updateMany({
+            where: { recordId: r.id, answeredAt: null, cancelledAt: null }, data: { cancelledAt: new Date() },
+          });
+          if (cancelled.count) {
+            await tx.recordEvent.create({
+              data: { recordId: r.id, type: EventType.INFO_CANCEL, byId: actor.id, text: 'Ek bilgi isteği yanıt beklenmeden kapandı.' },
+            });
+          }
           pooled++;
         }
       }

@@ -1,4 +1,4 @@
-import type { Attachment, Record as DbRecord, RecordEvent } from '@prisma/client';
+import type { Attachment, InfoRequest, Record as DbRecord, RecordEvent } from '@prisma/client';
 import {
   OPEN_STATUSES,
   PRIORITY_TO_SLUG,
@@ -19,6 +19,7 @@ type AttachmentView = Pick<Attachment, 'id' | 'name' | 'size' | 'mime'>;
 export type FullRecord = DbRecord & {
   events?: (Pick<RecordEvent, 'type' | 'text' | 'at' | 'byId'> & { attachments?: AttachmentView[] })[];
   attachments?: AttachmentView[];
+  infoRequests?: Pick<InfoRequest, 'question' | 'requestedAt' | 'requestedById'>[];
 };
 
 const attachmentSelect = { select: { id: true, name: true, size: true, mime: true } } as const;
@@ -35,6 +36,11 @@ export const detailInclude = {
     select: { type: true, text: true, at: true, byId: true, attachments: attachmentSelect },
   },
   attachments: { where: { eventId: { not: null } }, ...attachmentSelect },
+  infoRequests: {
+    where: { answeredAt: null, cancelledAt: null },
+    select: { question: true, requestedAt: true, requestedById: true },
+    take: 1,
+  },
 };
 
 const viewAttachment = (a: AttachmentView) => ({ id: a.id, name: a.name, size: a.size, mime: a.mime });
@@ -112,6 +118,14 @@ export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: O
     })),
 
     attachments: (rec.attachments ?? []).map(viewAttachment),
+    /** Yanıt bekleyen ek bilgi isteği; liste yanıtında yok (yalnızca detay). */
+    infoRequest: rec.infoRequests?.[0]
+      ? {
+          question: rec.infoRequests[0].question,
+          requestedAt: rec.infoRequests[0].requestedAt.toISOString(),
+          requestedBy: rec.infoRequests[0].requestedById,
+        }
+      : null,
 
     permissions: permissionsFor(shaped, a),
   };

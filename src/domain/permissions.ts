@@ -55,7 +55,8 @@ export type Action =
   | 'comment'
   | 'attach'
   | 'evaluate'
-  | 'learn';
+  | 'learn'
+  | 'infoRequest';
 
 export interface Relation {
   isCreator: boolean;
@@ -106,7 +107,8 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
     case 'forward':
       return r.open && (r.inTeam || r.isAdmin);
 
-    // Ara durumları ve çözümü yalnızca kaydı üzerine alan kişi değiştirir.
+    // Ara durumları, çözümü ve ek bilgi isteğini yalnızca kaydı üzerine alan kişi yapar.
+    case 'infoRequest':
     case 'status':
       return r.open && (r.isAssignee || r.isAdmin);
 
@@ -151,6 +153,7 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
 export function permissionsFor(rec: RecordShape, actor: Actor) {
   const actions: Action[] = [
     'claim', 'forward', 'status', 'resolve', 'reject', 'close', 'reopen', 'comment', 'attach', 'evaluate', 'learn',
+    'infoRequest',
   ];
   const out: Partial<Record<Action, boolean>> = {};
   for (const a of actions) out[a] = can(a, rec, actor);

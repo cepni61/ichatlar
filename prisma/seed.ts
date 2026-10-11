@@ -325,6 +325,19 @@ function buildRecords(userIds: Map<string, string>) {
       closedAt: closed ? resolvedAt : null,
       slaDueAt: new Date(createdAt.getTime() + limitH * HOUR),
       events: { create: events },
+      // Ek bilgi bekleyen demo kayıtları yanıtlanabilsin.
+      ...(status === RecordStatus.EK_BILGI && assignee
+        ? {
+            infoRequests: {
+              create: [{
+                requestedById: by(assignee.key),
+                requestedAt: firstResponseAt ?? createdAt,
+                question: 'Talebinizi netleştirmek için biraz daha ayrıntı verebilir misiniz?',
+                statusBefore: isOneri ? RecordStatus.DEGERLENDIRILIYOR : RecordStatus.CALISILIYOR,
+              }],
+            },
+          }
+        : {}),
     };
   });
 }
