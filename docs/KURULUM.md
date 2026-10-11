@@ -214,6 +214,19 @@ Start-Service IcHatlar
 Veritabanı ve `var` aynı yedekten alınmalı; biri olmadan diğeri eksik geri
 yüklenir.
 
+### Rapor kullanıcısı (isteğe bağlı)
+
+Kayıt önleme ve ek bilgi raporları dışarıdaki bir araçla okunur (`docs\RAPOR.md`).
+Araç uygulamanın kendi veritabanı hesabıyla değil, salt okunur kullanıcıyla bağlanır:
+
+```powershell
+.\deploy\windows\rapor-kullanicisi.ps1
+```
+
+PostgreSQL yönetici parolasını sorar; `ichatlar_rapor` kullanıcısını oluşturur ve
+parolasını **bir kez** gösterir. Kullanıcı yalnızca `rapor` şemasındaki görünümleri
+okur, uygulama tablolarına erişemez ve yazamaz. Yeniden çalıştırmak parolayı yeniler.
+
 ## 8. Güncelleme
 
 Geliştirme bilgisayarında yeni paketi hazırlayın (§3), sunucuya kopyalayın:
@@ -241,6 +254,7 @@ yedekten geri yükleyin (§7).
 - [ ] Uygulama portu (3000) dışarıdan kapalı; yalnızca IIS erişiyor
 - [ ] Yedek klasörü başka diskte; bir kez geri yükleme denendi
 - [ ] KVKK prosedüründeki açık işler (aydınlatma metni, saklama/imha) gözden geçirildi
+- [ ] Rapor aracı kullanılacaksa `rapor-kullanicisi.ps1` çalıştırıldı, parola rapor aracına girildi
 
 ## Ek A — Microsoft Entra ID ile giriş (AD yerine)
 

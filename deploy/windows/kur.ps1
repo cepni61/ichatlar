@@ -352,3 +352,4 @@ Write-Host "  Hizmet    : $Hizmet  (Get-Service $Hizmet)"
 Write-Host "  Günlük    : $Kok\logs\ichatlar.log"
 Write-Host "  Yedek     : $YedekDizini  (her gün $YedekSaati)"
 Write-Host '  Sırada    : DNS kaydı, AD grupları (kurulus.json), bir kişiyle giriş denemesi — docs\KURULUM.md §8'
+Write-Host '  Rapor     : rapor aracı bağlanacaksa salt okunur kullanıcı için .\deploy\windows\rapor-kullanicisi.ps1 (docs\RAPOR.md)'

@@ -10,6 +10,7 @@ veritabanı). Kuruluşa özgü her şey `.env` ve `config/kurulus.json` içinded
 kodda değil.
 
 - **Canlı kurulum (Windows sunucu, IIS, Active Directory):** [docs/KURULUM.md](docs/KURULUM.md)
+- **Rapor verisi (kayıt önleme, ek bilgi, kayıt adımları):** [docs/RAPOR.md](docs/RAPOR.md)
 - **Giriş:** Active Directory (LDAP) ya da Microsoft Entra ID; geliştirmede kişi seçici.
 - Tasarım referansı olan prototipler (`ichatlar4.html` vb.) üst klasörde; bu
   uygulama onlardan türedi ama artık onların kopyası değil.
@@ -148,6 +149,7 @@ istekte sunucuda yeniden verilir.
 | Üzerime al | Kayıt açıkken, ekipten biri (ekip rolü), sahip yoksa |
 | Yönlendir (ekibe / ekip içinde kişiye) | Kayıt açıkken ekipten biri ya da sistem yöneticisi. Kişiye devir yalnızca kaydın ekibindeki ekip rolündekine |
 | Durum güncelle / Çözüldü / Reddet / Değerlendir (öneri) | Kayıt açıkken **sahibi** (ya da sistem yöneticisi) |
+| Ek bilgi iste (soru zorunlu) | Kayıt açıkken **sahibi** (ya da sistem yöneticisi). Açanın sonraki güncellemesi yanıttır; kayıt önceki durumuna döner. Yanıt beklenmeden çözülür ya da yönlendirilirse istek kapanır |
 | Benzer kayıtlarda öner ("Önerilerde", ML hafızası) | Çözülmüş bilgi kaydında sahibi ya da sistem yöneticisi; kısıtlı kayıtta yok |
 | Kaydı kapat / Yeniden aç (gerekçe zorunlu) | Durum "Çözüldü" iken **açan kişi** |
 | Yorum / ek | Açan, sahip, ilgili ekip, sistem yöneticisi |
@@ -199,6 +201,9 @@ açılan kaydın "Önerilerde" işareti düşer.
   SLA uyumu `src/domain/sla-compliance.ts`. Hedef süreler `SlaRule`'da, `kurulus.json`'dan gelir.
 - `AuditLog`: kim, ne zaman, neyi değiştirdi. `Notification`: zil.
 - `Suggestion` tablosu artık yazılmıyor (aynı veri ML veritabanında); şemada duruyor.
+- **Kayıt önleme günlüğü:** `HelpSession` (tekil yardım oturumu: 30 dk hareketsizlik ya da kayıt açılması kapatır) → `HelpQuery` (ML taraması / Kaynak Bul araması / asistan sorusu; yazarken yenilenen tarama ve arama tek satırda güncellenir) → `HelpResult` (gösterilen sonuç, tıklama, "işime yaradı"). Kayıt açılınca oturuma bağlanır; anonim kayıtta oturumun kişisi, kısıtlıda sorgu metinleri silinir.
+- `RecordEvent` önceki/sonraki durumu ve hedef ekip/kişiyi tipli kolonlarda taşır; `meta` jsonb. `InfoRequest` ek bilgi isteği ve yanıtı.
+- Okuma için ayrı `rapor` şeması (görünümler, Türkçe etiketler, kısıtlı/anonim gizli) ve salt okunur `ichatlar_rapor` kullanıcısı: [docs/RAPOR.md](docs/RAPOR.md).
 
 ## ML: ekip önerisi
 
@@ -239,6 +244,7 @@ göremiyorsa yalnızca kodu görür.
 | Çözüldü / Reddedildi / Ek bilgi istendi / Öneri değerlendirildi | Kaydı açan |
 | Yeniden açıldı | Sahip |
 | Yeni güncelleme | Ekip yazdıysa açana, açan yazdıysa sahibe |
+| Ek bilgi geldi (açan, istenen bilgiyi yazdı) | Sahip |
 | Kişiye yönlendirildi / devredildi | Atanan kişi |
 | Uygulama geri bildirimi | Sistem yöneticileri |
 | Yetki verildi / alındı / süresi doldu | Yetkinin sahibi |
@@ -284,9 +290,11 @@ dokunuyorsa entegrasyon testi yazın.
 | `GET /api/records/:code` | Detay + akış + izinler |
 | `POST /api/records` | Yeni kayıt (bilgi / öneri) |
 | `POST /api/records/:code/{claim,forward,status,resolve,evaluate,learn,reject,reopen,close,comments}` | Aksiyonlar |
+| `POST /api/records/:code/info-request` | Ek bilgi iste (soru zorunlu) |
 | `POST /api/records/:code/attachments` · `GET`/`DELETE /api/attachments/:id` | Ekler |
-| `POST /api/similar` | Benzer çözülmüş kayıtlar + ekip önerisi |
-| `GET /api/search/resources` | Kaynak Bul: Bilgi Bankası, çözülmüş kayıtlar, Cortex |
+| `POST /api/similar` | Benzer çözülmüş kayıtlar + ekip önerisi; yardım oturumu (`helpSessionId`) günlüğe yazılır |
+| `GET /api/search/resources` | Kaynak Bul: Bilgi Bankası, çözülmüş kayıtlar, Cortex; yardım oturumu günlüğe yazılır |
+| `POST /api/help/results/:id` | Yardım sonucuna tıklama / işime yaradı / geri al |
 | `GET`/`POST /api/kb` · `PUT`/`DELETE /api/kb/:id` | Bilgi Bankası |
 | `GET /api/reports/summary` · `GET /api/reports/export.csv` | Raporlar (yönetici, sistem yöneticisi, rapor görüntüleyici, departman sorumlusu) |
 | `GET /api/ml/stats` · `POST /api/ml/train` | ML durumu (yönetici) / zorla eğit (sistem yöneticisi) |
@@ -302,7 +310,8 @@ dokunuyorsa entegrasyon testi yazın.
 departman/ekip görünürlüğü, kısıtlı ve anonim kayıt gizliliği, durum
 geçişleri, bildirimler, ekler, CSV, LDAP girişi (sahte dizinle), Entra kullanıcı
 eşleme, yetkiler (beş tür, süre, devretme, geçmiş), ML taslak temizliği, köken
-ve dönüş adresi denetimleri.
+ve dönüş adresi denetimleri, kayıt önleme günlüğü (oturum, birleştirme, bağlama),
+ek bilgi akışı, rapor görünümlerinde kısıtlı/anonim gizleme.
 
 **Elle doğrulanan:** arayüz tarayıcıda beş temada ve telefon genişliğinde;
 canlı paket bu bilgisayarda üretim ayarlarıyla açıldı (göçler, kurulum, giriş
