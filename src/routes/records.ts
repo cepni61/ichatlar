@@ -20,7 +20,7 @@ import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
 import { containsFilter, toJsonText } from '../lib/dialect.js';
 import { BENEFIT_KEYS, composeDescription } from '../domain/suggestion.js';
-import { logHelpQuery } from '../lib/help-log.js';
+import { linkHelpSession, logHelpQuery } from '../lib/help-log.js';
 import { HelpChannel, HelpKind, HelpSource } from '../domain/help.js';
 
 const withDetail = detailInclude;
@@ -107,6 +107,8 @@ const createBody = z.object({
   mlInferenceIds: z.array(z.string().max(64)).max(200).default([]),
   /** Kullanıcı "Bu ekibi seç" ile ML'in ekip önerisini uyguladı mı. */
   deptSuggestionApplied: z.boolean().default(false),
+  /** Yardım oturumu (kayıt önleme günlüğü): kayıt bu oturuma bağlanır. */
+  helpSessionId: z.string().max(64).nullish(),
 }).superRefine((b, ctx) => {
   const need = (ok: boolean, path: string, message: string) => {
     if (!ok) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
@@ -352,6 +354,8 @@ export default async function recordRoutes(app: FastifyInstance) {
                 type: 'CREATE',
                 byId: actor.id,
                 at: now,
+                toStatus: RecordStatus.YENI,
+                toTeamId: body.department,
                 text: isOneri
                   ? `Öneri oluşturuldu ve değerlendirilmek üzere ${primaryName} ekibine iletildi.`
                   : `Kayıt oluşturuldu ve ${primaryName} ekibine iletildi.`,
@@ -362,6 +366,7 @@ export default async function recordRoutes(app: FastifyInstance) {
                       type: 'ASSIGN' as const,
                       byId: actor.id,
                       at: now,
+                      toTeamId: body.department2!,
                       text: `Kayıt ayrıca ${secondName} ekibiyle paylaşıldı.`,
                     },
                   ]
@@ -387,6 +392,13 @@ export default async function recordRoutes(app: FastifyInstance) {
     });
 
     app.log.info({ code: created.code, by: actor.id }, 'kayıt oluşturuldu');
+    await linkHelpSession(req.log, {
+      userId: actor.id,
+      sessionId: body.helpSessionId ?? null,
+      recordId: created.id,
+      anonymous: body.anonymous,
+      restricted: body.restricted,
+    });
 
     // İşlem bittikten SONRA ve ayrı veritabanına: yazılamazsa kayıt yine açılmış olur.
     // Kısıtlı kayıt ML hafızasına girmez: taslağın bütün taramaları silinir.

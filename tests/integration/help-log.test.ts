@@ -191,3 +191,65 @@ describe('yardım günlüğü: sonuç etkileşimi', () => {
     expect(bad.statusCode).toBe(400);
   });
 });
+
+describe('kayıt açılışında yardım oturumu', () => {
+  const create = (headers: Headers, extra: object = {}) =>
+    app.inject({
+      method: 'POST', url: '/api/records', headers,
+      payload: { type: 'bilgi', title: 'VPN bağlantısı kopuyor', description: 'Evden çalışırken VPN bağlantısı sık sık kopuyor.', ...extra },
+    });
+  const recordOf = async (res: { json(): { record: { code: string } } }) =>
+    prisma.record.findUniqueOrThrow({ where: { code: res.json().record.code } });
+
+  it('taramanın oturumu kayda bağlanır', async () => {
+    const { bt, headers } = await setup();
+    const s = (await scan(headers)).json();
+    const res = await create(headers, { department: bt.id, helpSessionId: s.helpSessionId });
+    expect(res.statusCode).toBe(201);
+    const rec = await recordOf(res);
+    expect((await prisma.helpSession.findUniqueOrThrow({ where: { id: s.helpSessionId } })).recordId).toBe(rec.id);
+  });
+
+  it('taramasız kayıt sorgusuz bir oturuma bağlanır', async () => {
+    const { bt, u, headers } = await setup();
+    const rec = await recordOf(await create(headers, { department: bt.id }));
+    const s = await prisma.helpSession.findUniqueOrThrow({ where: { recordId: rec.id }, include: { queries: true } });
+    expect(s).toMatchObject({ userId: u.id, channel: 'YENI_KAYIT' });
+    expect(s.queries).toHaveLength(0);
+  });
+
+  it('anonim kayıtta oturumun kişisi, kısıtlıda sorgu metinleri silinir', async () => {
+    const { bt, headers } = await setup();
+    const a = (await scan(headers)).json();
+    await create(headers, { department: bt.id, helpSessionId: a.helpSessionId, anonymous: true });
+    expect((await prisma.helpSession.findUniqueOrThrow({ where: { id: a.helpSessionId } })).userId).toBeNull();
+
+    const b = (await scan(headers)).json();
+    await create(headers, { department: bt.id, helpSessionId: b.helpSessionId, restricted: true });
+    const q = await prisma.helpQuery.findFirstOrThrow({ where: { sessionId: b.helpSessionId } });
+    expect(q.title).toBeNull();
+    expect(q.text).toBeNull();
+  });
+
+  it('aynı oturumla eşzamanlı iki kayıt da açılır; oturum yalnızca birine bağlanır', async () => {
+    const { bt, headers } = await setup();
+    const s = (await scan(headers)).json();
+    const [r1, r2] = await Promise.all([
+      create(headers, { department: bt.id, helpSessionId: s.helpSessionId }),
+      create(headers, { department: bt.id, helpSessionId: s.helpSessionId, title: 'VPN bağlantısı yine kopuyor' }),
+    ]);
+    expect([r1.statusCode, r2.statusCode]).toEqual([201, 201]);
+    const linked = await prisma.helpSession.findMany({ where: { recordId: { not: null } } });
+    expect(linked).toHaveLength(2);
+    expect(linked.filter((x) => x.id === s.helpSessionId)).toHaveLength(1);
+  });
+
+  it('açılış olayı hedef durum ve ekibi, ikinci ekip paylaşımı hedef ekibi taşır', async () => {
+    const { bt, headers } = await setup();
+    const fin = await createDept('Finans');
+    const rec = await recordOf(await create(headers, { department: bt.id, department2: fin.id }));
+    const ev = await prisma.recordEvent.findMany({ where: { recordId: rec.id } });
+    expect(ev.find((e) => e.type === 'CREATE')).toMatchObject({ toStatus: 'YENI', toTeamId: bt.id });
+    expect(ev.find((e) => e.type === 'ASSIGN')).toMatchObject({ toTeamId: fin.id });
+  });
+});
