@@ -24,6 +24,7 @@ import kbRoutes from './routes/kb.js';
 import feedbackRoutes from './routes/feedback.js';
 import searchRoutes from './routes/search.js';
 import grantRoutes from './routes/grants.js';
+import helpRoutes from './routes/help.js';
 import { MAX_FILES } from './domain/attachments.js';
 import gateRoutes, { gateHook } from './routes/gate.js';
 
@@ -164,6 +165,7 @@ export async function buildApp(opts: { logger?: FastifyServerOptions['logger'] }
   await app.register(kbRoutes);
   await app.register(feedbackRoutes);
   await app.register(searchRoutes);
+  await app.register(helpRoutes);
   await app.register(grantRoutes);
 
   /**

@@ -160,3 +160,34 @@ describe('yardım günlüğü: Kaynak Bul', () => {
     expect(await prisma.helpQuery.count()).toBe(0);
   });
 });
+
+describe('yardım günlüğü: sonuç etkileşimi', () => {
+  it('bağlantı tıklaması bir kez; işime yaradı ve geri alma yazılır', async () => {
+    const { headers } = await setup();
+    const out = (await scan(headers)).json();
+    const rid = out.matches[0].resultId as string;
+    const hit = (action: string) =>
+      app.inject({ method: 'POST', url: `/api/help/results/${rid}`, headers, payload: { action } });
+    const row = () => prisma.helpResult.findUniqueOrThrow({ where: { id: rid } });
+
+    expect((await hit('open')).statusCode).toBe(204);
+    const opened = (await row()).openedAt;
+    expect(opened).toBeTruthy();
+    await hit('open');
+    expect((await row()).openedAt).toEqual(opened);
+
+    expect((await hit('helpful')).statusCode).toBe(204);
+    expect((await row()).helpfulAt).toBeTruthy();
+    expect((await hit('unhelpful')).statusCode).toBe(204);
+    expect((await row()).helpfulAt).toBeNull();
+  });
+
+  it('başkasının sonucu 404, geçersiz eylem 400', async () => {
+    const { headers, otherHeaders } = await setup();
+    const rid = (await scan(headers)).json().matches[0].resultId as string;
+    const res = await app.inject({ method: 'POST', url: `/api/help/results/${rid}`, headers: otherHeaders, payload: { action: 'helpful' } });
+    expect(res.statusCode).toBe(404);
+    const bad = await app.inject({ method: 'POST', url: `/api/help/results/${rid}`, headers, payload: { action: 'sil' } });
+    expect(bad.statusCode).toBe(400);
+  });
+});
