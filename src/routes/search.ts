@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { prisma } from '../db.js';
-import { requireUser } from '../auth/guard.js';
+import { actorOf, requireUser } from '../auth/guard.js';
+import { HelpChannel, HelpKind, HelpSource } from '../domain/help.js';
+import { logHelpQuery, type HelpHit } from '../lib/help-log.js';
 import { KB_KINDS } from '../domain/kb.js';
 import { findSimilar, fold, tokenize } from '../domain/similarity.js';
 import { badRequest } from '../lib/errors.js';
@@ -13,7 +15,11 @@ import { cortexSearch } from '../lib/cortex.js';
  * Cortex. Sorgu boşsa örnek sonuçlar döner. Kişi araması kullanıcı isteğiyle
  * kaldırıldı (2026-10-10).
  */
-const query = z.object({ q: z.string().trim().max(120).default('') });
+const query = z.object({
+  q: z.string().trim().max(120).default(''),
+  /** Yardım oturumu (kayıt önleme günlüğü). */
+  helpSessionId: z.string().max(64).optional(),
+});
 
 export default async function searchRoutes(app: FastifyInstance) {
   app.addHook('preHandler', requireUser);
@@ -49,7 +55,7 @@ export default async function searchRoutes(app: FastifyInstance) {
 
     const qTokens = new Set(tokenize(q));
     const fq = fold(q);
-    const kbHits = kb
+    const kbTop = kb
       .map((a) => {
         const head = tokenize(`${a.title} ${a.keywords ?? ''}`);
         const body = tokenize(a.answer);
@@ -62,7 +68,8 @@ export default async function searchRoutes(app: FastifyInstance) {
       .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 6)
-      .map((x) => kbView(x.a));
+      .map((x) => x.a);
+    const kbHits = kbTop.map(kbView);
 
     const [similar, cortex] = await Promise.all([
       // Bilgi Bankası yukarıda ayrıca aranıyor; ilk 3'ü onlar kapıp kayıtları silmesin.
@@ -71,22 +78,21 @@ export default async function searchRoutes(app: FastifyInstance) {
     ]);
     // Aynı soru farklı kişilerden gelmiş olabilir: başlık + çözüm aynıysa tek sonuç.
     const seen = new Set(kbHits.map((k) => fold(k.title)));
-    const recordHits = similar
-      .filter((m) => {
-        const key = fold(m.title) + '|' + fold(m.resolution);
-        if (seen.has(key) || seen.has(fold(m.title))) return false;
-        seen.add(key);
-        return true;
-      })
-      .map((m) => ({
-        source: 'kayit' as const,
-        kind: 'KAYIT',
-        kindLabel: 'Çözülmüş kayıt',
-        title: m.title,
-        text: m.resolution,
-        url: null,
-        department: m.departmentName,
-      }));
+    const recordTop = similar.filter((m) => {
+      const key = fold(m.title) + '|' + fold(m.resolution);
+      if (seen.has(key) || seen.has(fold(m.title))) return false;
+      seen.add(key);
+      return true;
+    });
+    const recordHits = recordTop.map((m) => ({
+      source: 'kayit' as const,
+      kind: 'KAYIT',
+      kindLabel: 'Çözülmüş kayıt',
+      title: m.title,
+      text: m.resolution,
+      url: null,
+      department: m.departmentName,
+    }));
     const cortexHits = cortex.items.map((c) => ({
       source: 'cortex' as const,
       kind: 'CORTEX',
@@ -97,6 +103,26 @@ export default async function searchRoutes(app: FastifyInstance) {
       department: null,
     }));
 
-    return { items: [...kbHits, ...cortexHits, ...recordHits], sample: false, sources: { cortex: cortex.status } };
+    const items = [...kbHits, ...cortexHits, ...recordHits];
+    // Günlük, ekrandaki sırayla aynı: önce Bilgi Bankası, sonra Cortex, sonra kayıtlar.
+    const hits: HelpHit[] = [
+      ...kbTop.map((a) => ({ source: HelpSource.BILGI_BANKASI, code: `BB-${a.seq}` })),
+      ...cortex.items.map((c) => ({ source: HelpSource.CORTEX, url: c.url, title: c.title })),
+      ...recordTop.map((m) => ({ source: HelpSource.KAYIT, code: m.code, similarity: m.percent })),
+    ];
+    const help = await logHelpQuery(req.log, {
+      userId: actorOf(req).id,
+      sessionId: p.data.helpSessionId ?? null,
+      channel: HelpChannel.KAYNAK_BUL,
+      kind: HelpKind.ARAMA,
+      text: q,
+      hits,
+    });
+    return {
+      items: items.map((x, i) => ({ ...x, resultId: help?.resultIds[i] ?? null })),
+      helpSessionId: help?.sessionId ?? null,
+      sample: false,
+      sources: { cortex: cortex.status },
+    };
   });
 }

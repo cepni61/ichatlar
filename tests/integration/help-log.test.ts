@@ -108,3 +108,55 @@ describe('yardım günlüğü: ML taraması', () => {
     expect((await prisma.helpSession.findUniqueOrThrow({ where: { id: a.helpSessionId } })).channel).toBe('ASISTAN');
   });
 });
+
+describe('yardım günlüğü: Kaynak Bul', () => {
+  async function searchSetup() {
+    const base = await setup();
+    await prisma.kbArticle.create({
+      data: {
+        departmentId: base.bt.id, kind: 'BILGI', title: 'VPN kurulumu', keywords: 'vpn uzaktan erişim',
+        answer: 'VPN istemcisini Yazılım Merkezi üzerinden kurun.',
+      },
+    });
+    const search = (q: string, sid?: string) =>
+      app.inject({
+        method: 'GET', headers: base.headers,
+        url: '/api/search/resources?' + new URLSearchParams({ q, ...(sid ? { helpSessionId: sid } : {}) }),
+      });
+    return { ...base, search };
+  }
+
+  it('arama sorgusu ve sonuçları kaynaklarıyla yazılır', async () => {
+    const { search } = await searchSetup();
+    const out = (await search('vpn')).json();
+    expect(out.helpSessionId).toBeTruthy();
+    expect(out.items.length).toBeGreaterThan(0);
+    expect(out.items.every((x: { resultId: string | null }) => x.resultId)).toBe(true);
+    const q = await prisma.helpQuery.findFirstOrThrow({
+      where: { sessionId: out.helpSessionId }, include: { results: { orderBy: { rank: 'asc' } } },
+    });
+    expect(q).toMatchObject({ kind: 'ARAMA', text: 'vpn', title: null, resultCount: out.items.length });
+    const kb = q.results.find((r) => r.source === 'BILGI_BANKASI');
+    expect(kb?.kbArticleId).toBeTruthy();
+    expect((await prisma.helpSession.findUniqueOrThrow({ where: { id: out.helpSessionId } })).channel).toBe('KAYNAK_BUL');
+  });
+
+  it('yazarken uzayan arama tek sorgu, yeni konu yeni sorgu', async () => {
+    const { search } = await searchSetup();
+    const a = (await search('vpn')).json();
+    await search('vpn kur', a.helpSessionId);
+    const qs = await prisma.helpQuery.findMany({ where: { sessionId: a.helpSessionId } });
+    expect(qs).toHaveLength(1);
+    expect(qs[0]!.text).toBe('vpn kur');
+    await search('izin', a.helpSessionId);
+    expect(await prisma.helpQuery.count({ where: { sessionId: a.helpSessionId } })).toBe(2);
+  });
+
+  it('boş arama günlüğe yazılmaz', async () => {
+    const { search } = await searchSetup();
+    const out = (await search('')).json();
+    expect(out.sample).toBe(true);
+    expect(out.helpSessionId ?? null).toBeNull();
+    expect(await prisma.helpQuery.count()).toBe(0);
+  });
+});
