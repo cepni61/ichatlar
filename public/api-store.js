@@ -547,8 +547,8 @@
   };
 
   window.actStatus = function (r) {
-    // Öneri kendi akışında: Değerlendiriliyor ya da Ek Bilgi.
-    const ids = r.type === 'oneri' ? ['degerlendiriliyor', 'ek_bilgi'] : ['inceleniyor', 'calisiliyor', 'ek_bilgi'];
+    // Ek bilgi ayrı düğmeyle istenir (soru zorunlu).
+    const ids = r.type === 'oneri' ? ['degerlendiriliyor'] : ['inceleniyor', 'calisiliyor'];
     const opts = STATUSES.filter((s) => ids.includes(s.id));
     openModal(
       'Durum Güncelle',
@@ -568,6 +568,27 @@
             const note = ($('#stNote').value || '').trim();
             if (note) payload.note = note;
             return run(r.code, 'status', payload, 'Durum güncellendi').then(closeModal, () => {});
+          },
+        },
+      ],
+    );
+  };
+
+  window.actInfoRequest = function (r) {
+    openModal(
+      'Ek Bilgi İste',
+      '<div class="field"><label for="infoQ">Kaydı açan kişiye sorunuz</label>' +
+        '<textarea id="infoQ" maxlength="1000" placeholder="Neyi öğrenmeniz gerekiyor? Bu metin kaydı açan kişiye görünür."></textarea>' +
+        '<p class="hint" style="margin-top:8px">Kayıt “Ek Bilgi Bekleniyor” olur. Yanıt gelince kayıt kaldığı duruma döner ve size bildirim gelir.</p></div>',
+      [
+        { label: 'İptal', cls: 'btn-ghost' },
+        {
+          label: 'Soruyu Gönder',
+          cls: 'btn-primary',
+          run() {
+            const q = ($('#infoQ').value || '').trim();
+            if (q.length < 5) return toast('Sorunuzu en az 5 karakterle yazın', 'err');
+            return run(r.code, 'info-request', { question: q }, 'Ek bilgi istendi').then(closeModal, () => {});
           },
         },
       ],
@@ -733,7 +754,7 @@
     const ids = takeDrafts('comment');
     if (!t && !ids.length) return toast('Bir güncelleme yazın ya da dosya ekleyin', 'err');
     try {
-      await run(r.code, 'comments', { text: t, attachmentIds: ids }, 'Güncelleme eklendi');
+      await run(r.code, 'comments', { text: t, attachmentIds: ids }, el && el.dataset.answer ? 'Yanıt gönderildi' : 'Güncelleme eklendi');
     } catch (_) {
       return; // metin kutuda ve taslakta kalır
     }

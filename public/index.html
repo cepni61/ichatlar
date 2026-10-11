@@ -3296,6 +3296,7 @@ function renderDetail(){
   if (p.claim)   acts.push('<button class="btn btn-primary" data-act="claim">Üzerime Al</button>');
   if (p.forward) acts.push('<button class="btn btn-ghost" data-act="forward">Kaydı Yönlendir</button>');
   if (p.status)  acts.push('<button class="btn btn-soft" data-act="status">Durum Güncelle</button>');
+  if (p.infoRequest) acts.push('<button class="btn btn-soft" data-act="info">Ek Bilgi İste</button>');
   if (p.resolve) acts.push('<button class="btn btn-success" data-act="resolve">'+(isOneri ? 'Sonuçlandır' : 'Çözüldü olarak işaretle')+'</button>');
   if (p.evaluate) acts.push('<button class="btn btn-success" data-act="evaluate">Değerlendirmeyi Bitir</button>');
   if (p.reject)  acts.push('<button class="btn btn-danger" data-act="reject">Reddet</button>');
@@ -3315,10 +3316,21 @@ function renderDetail(){
     ? '<div class="await-me">'+icon('clock')+'<div><b>Öneriniz değerlendiriliyor.</b><br>'
       + esc(r.assignee ? userName(r.assignee) : deptName(r.department)) + ' önerinizi inceliyor; sonuç size bildirilecek.</div></div>'
     : '';
-  const ekBilgi = r.status === 'ek_bilgi' && isCreator
-    ? '<div class="await-me">'+icon('info')+'<div><b>Ekip sizden ek bilgi bekliyor.</b><br>'
-      + 'Aşağıdaki “Güncelleme Ekle” alanından yanıt yazın; kaydın sahibine bildirim gider.</div></div>'
-    : '';
+  /* Ek bilgi: açan kişi soruyu kaydın üstünde görür ve aşağıdan yanıtlar;
+     ekip tarafı neyin beklendiğini görür. */
+  const info = r.infoRequest;
+  const answering = isCreator && r.status === 'ek_bilgi' && !!info;
+  const ekBilgi = r.status === 'ek_bilgi' && info
+    ? '<div class="await-me">'+icon('info')+'<div>'
+      + (isCreator
+        ? '<b>Ekip sizden ek bilgi istiyor:</b><br>' + esc(info.question)
+          + '<br>Aşağıdaki “Yanıtla” alanına yazın; gönderince kayıt ekibe döner.'
+        : '<b>Kaydı açan kişiden ek bilgi bekleniyor:</b><br>' + esc(info.question))
+      + '</div></div>'
+    : r.status === 'ek_bilgi' && isCreator
+      ? '<div class="await-me">'+icon('info')+'<div><b>Ekip sizden ek bilgi bekliyor.</b><br>'
+        + 'Aşağıdaki “Güncelleme Ekle” alanından yanıt yazın; kaydın sahibine bildirim gider.</div></div>'
+      : '';
 
   /* Süre: yalnızca geçen süre. Çözüm hedefi, kalan süre ve ilerleme çubuğu
      gösterilmez — kullanıcılara saat vaadi verilmez (kullanıcı isteği, 2026-10-09). */
@@ -3382,10 +3394,10 @@ function renderDetail(){
         ).join(''))
       + '</div>'
       + ((p.comment != null ? p.comment : (isCreator || inTeam))
-          ? '<div class="field" style="margin:18px 0 10px"><label for="cmtInput">Yorum / Güncelleme</label>'
-            + '<textarea id="cmtInput" placeholder="Durum güncellemesi veya yanıt yazın..."></textarea></div>'
+          ? '<div class="field" style="margin:18px 0 10px"><label for="cmtInput">'+(answering ? 'Yanıtla' : 'Yorum / Güncelleme')+'</label>'
+            + '<textarea id="cmtInput"'+(answering ? ' data-answer="1" placeholder="İstenen bilgiyi yazın..."' : ' placeholder="Durum güncellemesi veya yanıt yazın..."')+'></textarea></div>'
             + (typeof attachPicker === 'function' ? attachPicker('comment') : '')
-            + '<button class="btn btn-soft" data-act="comment">Güncelleme Ekle</button>'
+            + '<button class="btn '+(answering ? 'btn-primary' : 'btn-soft')+'" data-act="comment">'+(answering ? 'Yanıtı Gönder' : 'Güncelleme Ekle')+'</button>'
           : '')
     + '</div>'
   + '</div>'
@@ -4273,6 +4285,7 @@ function init(){
       if (act === 'comment') return actBusy(a, actComment(r));
       if (act === 'forward') return actForward(r);
       if (act === 'status')  return actStatus(r);
+      if (act === 'info' && typeof actInfoRequest === 'function') return actInfoRequest(r);
       if (act === 'resolve') return actResolve(r);
       if (act === 'reject')  return actReject(r);
       if (act === 'close')   return actClose(r);
