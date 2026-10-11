@@ -22,7 +22,7 @@ kodda değil.
    (bağımlılıklar, gömülü PostgreSQL, ~300 demo kayıt). Tarayıcı kendiliğinden açılır.
 
 Giriş sayfası "Kim olarak gireceksiniz?" diye demo kişileri listeler (parola
-yok). Başka rolle denemek için sol alttaki hesap satırındaki "Kişi değiştir" düğmesi
+yok). Başka rolle denemek için sol alttaki hesap kartındaki "Kişi değiştir" düğmesi
 giriş sayfasına döner.
 Her test edenin verisi kendi bilgisayarındadır (`%LOCALAPPDATA%\ichatlar`).
 
@@ -65,7 +65,7 @@ tarayıcı
   public/index.html   ekranlar, CSS, temalar, asistan (tek dosya)
   public/api-store.js veri katmanı: sunucudan yükleme, yenileme, kayıt aksiyonları
   public/modules.js   API'ye bağlı ekranlar: Kaynak Bul, Bilgi Bankası, Yetkiler, geri bildirim
-  public/theme.js     tema seçimi (üst banttaki Tema düğmesi)
+  public/theme.js     tema seçimi (kenar çubuğundaki Tema kartı)
         │  fetch, çerezli oturum (sunucuda tutulur)
         ▼
 Fastify  src/routes/*   doğrulama (zod) + yetki + serileştirme
@@ -174,9 +174,9 @@ açılan kaydın "Önerilerde" işareti düşer.
 ## Arayüz
 
 - **Kenar çubuğu** uygulama düzeninde: üstte logo + kuruluş adı, dolu "Yeni
-  Kayıt" düğmesi, gruplu menü (Kayıtlarım, Kurum), dipte hesap satırı: kişi ve
-  tek düğme (canlıda "Çıkış yap", testte "Kişi değiştir"). Tema ve geri bildirim
-  üst bantta, zilin yanında.
+  Kayıt" düğmesi, gruplu menü (Kayıtlarım, Kurum); dipte alt alta Tema, Geri
+  bildirim ve hesap kartları. Hesap kartında tek düğme var (canlıda "Çıkış yap",
+  testte "Kişi değiştir").
 - **Beş tema:** Aydınlık, Koyu, Yumuşak koyu, Zümrüt, Santral. Tema
   `html[data-theme]` bloklarıyla token'ları yeniden tanımlar; kenar çubuğu ve
   üst bant içerikten bağımsız `--chrome-*` / `--head-*` token'larıyla temalanır

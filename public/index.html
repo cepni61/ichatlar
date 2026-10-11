@@ -676,22 +676,18 @@
   /* btn-soft zemini petrol, hover'ı --b-200 (kemik) — renk değişmesin */
   html[data-theme="santral"] .btn-soft:hover{background:#d2e1e4}
 
-  /* Üst bant simge düğmeleri (tema, geri bildirim): zil düğmesiyle aynı
-     btn-ghost, her temada üst banda göre boyanır. */
-  .icon-btn{width:40px;height:40px;padding:0;justify-content:center;flex:none}
-  .actions .icon-btn{flex:0 0 auto}
-  .icon-btn .ic{width:18px;height:18px}
-
-  /* Tema penceresi: Tema düğmesinin altında açılır; beş renk örneği yan
-     yana, seçili olanın çevresinde halka (theme.js). İçerik token'ları. */
+  /* Tema penceresi: kenar çubuğundaki Tema kartının üstünde açılır; beş renk
+     örneği yan yana, seçili olanın çevresinde halka (theme.js). İçerik
+     token'ları: her temada okunur bir panel. */
   .theme-anchor{position:relative}
   .theme-pop{
-    position:absolute;right:0;top:calc(100% + 8px);z-index:45;
+    position:absolute;left:0;right:0;bottom:calc(100% + 8px);z-index:45;
     background:var(--panel);color:var(--text);
     border:1px solid var(--line-2);border-radius:14px;box-shadow:var(--sh-3);
-    padding:11px 12px 12px;transform-origin:100% 0;animation:popIn .14s var(--ease);
+    padding:11px 12px 12px;transform-origin:50% 100%;animation:popIn .14s var(--ease);
   }
-  @keyframes popIn{from{opacity:0;transform:translateY(-4px) scale(.98)}}
+  .theme-pop :focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  @keyframes popIn{from{opacity:0;transform:translateY(4px) scale(.98)}}
   @media (prefers-reduced-motion: reduce){ .theme-pop{animation:none} }
   .theme-pop .switch-lbl{font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600;white-space:nowrap}
   .theme-row{display:flex;gap:6px}
@@ -754,8 +750,8 @@
   /* ---------- Kenar çubuğu ----------
      Uygulama düzeni (kullanıcı isteği, 2026-10-10: "web sitesi gibi değil,
      uygulama havası"): üstte çalışma alanı (logo + kuruluş), birincil eylem
-     Yeni Kayıt, amaca göre gruplanmış menü, dipte hesap satırı (kişi +
-     çıkış). Tema ve geri bildirim üst bantta; alt bilgi ve telif satırı yok.
+     Yeni Kayıt, amaca göre gruplanmış menü, dipte Tema, Geri bildirim ve
+     hesap kartları (kişi + çıkış); alt bilgi ve telif satırı yok.
      Renkler temaların chrome token'larından: her tema kendi kimliğini korur. */
   .sidebar{
     background:var(--chrome-bg);
@@ -832,12 +828,25 @@
   .card[hidden]{display:none}
   .nav button.active .badge{background:var(--chrome-badge-on-bg);color:var(--chrome-badge-on-fg)}
 
-  /* Hesap satırı: menü değil, sabit kimlik + tek eylem (çıkış; test
-     ortamında kişi değiştir). Tema ve geri bildirim üst bantta. */
-  .account{
-    display:flex;align-items:center;gap:10px;padding:8px 6px 8px 8px;
+  /* Kenar çubuğu dibi: Tema, Geri bildirim ve hesap aynı kart biçiminde,
+     alt alta (kullanıcı isteği, 2026-10-11). Hesap kartı menü değil: sabit
+     kimlik + tek eylem (çıkış; test ortamında kişi değiştir). */
+  .side-foot{display:flex;flex-direction:column;gap:6px}
+  .side-card,.account{
+    width:100%;display:flex;align-items:center;gap:10px;padding:8px 6px 8px 8px;
     border:1px solid var(--chrome-card-line);background:var(--chrome-card);border-radius:14px;
   }
+  .side-card{
+    color:var(--chrome-text-hi);font:inherit;text-align:left;cursor:pointer;
+    transition:background .14s var(--ease);
+  }
+  .side-card:hover,.side-card[aria-expanded="true"]{background:var(--chrome-hover)}
+  .side-ico{
+    width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;
+    background:var(--chrome-hover);color:var(--chrome-text-hi);
+  }
+  .side-ico .ic{width:18px;height:18px}
+  .side-chev{width:16px;height:16px;flex:none;margin-right:8px;color:var(--chrome-role)}
   .account .avatar.sm{width:34px;height:34px;border-radius:10px;font-size:11.5px}
   .acct-who{flex:1;min-width:0;display:flex;flex-direction:column}
   .acct-who .name,.acct-who .role{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -859,6 +868,17 @@
     .nav-section{margin-top:10px}
     .nav button{padding:5px 10px}
     .nav button.active::before{top:6px;bottom:6px}
+  }
+  /* Daha kısa (ör. 1366×768'de tarayıcı çubuklarıyla ~657px): dipteki kartlar
+     tek satıra iner, menü satırları sıkışır; sistem yöneticisinin en uzun
+     menüsü de kaydırmadan sığar. */
+  @media (max-height:709px) and (min-width:901px){
+    .side-foot{gap:4px}
+    .side-card,.account{padding:5px 6px}
+    .side-card .role{display:none}
+    .side-ico,.account .avatar.sm{width:28px;height:28px}
+    .nav button{padding:4px 10px}
+    .nav-rule{margin:8px 6px 6px}
   }
 
   /* ---------- Yetkiler ---------- */
@@ -2008,14 +2028,29 @@
         <span class="lbl">Yetkiler</span></button>
     </nav>
 
-    <!-- Hesap: dipte sabit satır. Sağdaki düğme çıkış yapar; test ortamında
-         "Kişi değiştir" olur ve giriş sayfasındaki kişi listesine döner (api-store.js). -->
+    <!-- Dip: Tema ve Geri bildirim kartları, altında hesap kartı. Hesaptaki
+         düğme çıkış yapar; test ortamında "Kişi değiştir" olur ve giriş
+         sayfasındaki kişi listesine döner (api-store.js). -->
+    <div class="side-foot">
+    <div class="theme-anchor">
+      <div class="theme-pop" id="themePop" data-theme-slot hidden></div>
+      <button type="button" class="side-card" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="themePop">
+        <span class="side-ico"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none"/></svg></span>
+        <span class="acct-who"><span class="name">Tema</span><span class="role" id="themeName">—</span></span>
+        <svg class="side-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+      </button>
+    </div>
+    <button type="button" class="side-card" id="fbBtn">
+      <span class="side-ico"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg></span>
+      <span class="acct-who"><span class="name">Geri bildirim</span><span class="role">Öneri ya da sorun bildirin</span></span>
+    </button>
     <div class="account">
       <span class="avatar sm grad" id="pAvatar">ÖU</span>
       <span class="acct-who" id="pWho"><span class="name" id="pName">—</span><span class="role" id="pRole">—</span></span>
       <button type="button" class="acct-act" id="acctAct" title="Çıkış yap" aria-label="Çıkış yap">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>
       </button>
+    </div>
     </div>
   </aside>
 
@@ -2031,15 +2066,6 @@
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="7.5"/><path d="m21 21-4.3-4.3"/></svg>
           <input id="globalSearch" type="search" aria-label="Kayıtlarda ara" placeholder="Kayıtlarda ara: numara, başlık, ekip" />
         </div>
-        <div class="theme-anchor">
-          <button type="button" class="btn btn-ghost icon-btn" id="themeBtn" title="Tema" aria-label="Tema" aria-haspopup="true" aria-expanded="false" aria-controls="themePop">
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none"/></svg>
-          </button>
-          <div class="theme-pop" id="themePop" data-theme-slot hidden></div>
-        </div>
-        <button type="button" class="btn btn-ghost icon-btn" id="fbBtn" title="Geri bildirim gönder" aria-label="Geri bildirim gönder">
-          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg>
-        </button>
         <button class="btn btn-ghost" id="bellBtn" aria-label="Bildirimler">
           <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5A6 6 0 0 0 6 8.5c0 6.5-2.5 8.5-2.5 8.5h17S18 15 18 8.5"/><path d="M13.7 20.5a2 2 0 0 1-3.4 0"/></svg>
           <span id="bellCount">0</span></button>
@@ -4184,7 +4210,7 @@ window.addEventListener('error', e => {
     d.id = 'fatalErr'; d.className = 'card';
     d.style.cssText = 'padding:20px;margin-bottom:16px;border-left:4px solid var(--danger)';
     d.innerHTML = '<b style="color:var(--danger-ink)">Beklenmeyen bir hata oluştu.</b>'
-      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse üst banttaki geri bildirim düğmesiyle bildirin.</p>'
+      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse sol alttaki “Geri bildirim” kartından bildirin.</p>'
       + '<details class="hint" style="margin-top:6px"><summary>Teknik ayrıntı</summary>' + esc(e.message || 'Bilinmeyen hata') + '</details>';
     main.prepend(d);
   }
@@ -4262,7 +4288,7 @@ function init(){
     if (r && typeof actLearn === 'function') actLearn(r, t.checked);
   });
 
-  /* Uygulama geri bildirimi (üst bant) */
+  /* Uygulama geri bildirimi (kenar çubuğu dibi) */
   $('#fbBtn').addEventListener('click', () => { if (typeof openFeedback === 'function') openFeedback(); });
 
   /* Tür kartları: gerçek radio — fare, Tab ve ok tuşlarıyla seçilir */

@@ -5,10 +5,10 @@
    yeniden tanımlıyor, bileşen CSS'i hiç değişmiyor. Bu dosya yalnızca
    seçiciyi çizer ve tercihi saklar.
 
-   Seçici üst banttaki Tema düğmesinin penceresinde ([data-theme-slot]): beş
-   renk örneği yan yana, seçili olanın çevresinde halka. Pencere zaten açılır
-   kapanır; içinde ikinci bir açılır liste olmasın diye seçenekler doğrudan
-   görünür. Pencerenin açılıp kapanması index.html'de (setThemePop).
+   Seçici kenar çubuğundaki Tema kartının penceresinde ([data-theme-slot]):
+   beş renk örneği yan yana, seçili olanın çevresinde halka; kartta seçili
+   temanın adı (#themeName). Pencerenin açılıp kapanması index.html'de
+   (setThemePop).
 
    Tercih localStorage'da tutuluyor, sunucuda değil: bu bir görüntü tercihi,
    kişinin kayıtlarıyla ilgisi yok ve cihaz başına farklı olması makul.
@@ -65,6 +65,8 @@
     if (!els) return;
     var now = current();
     els.curName.textContent = meta(now).label;
+    var card = document.getElementById('themeName');
+    if (card) card.textContent = meta(now).label;
     els.opts.forEach(function (b) {
       b.setAttribute('aria-checked', String(b.dataset.theme === now));
     });
