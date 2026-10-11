@@ -20,6 +20,8 @@ import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
 import { containsFilter, toJsonText } from '../lib/dialect.js';
 import { BENEFIT_KEYS, composeDescription } from '../domain/suggestion.js';
+import { logHelpQuery } from '../lib/help-log.js';
+import { HelpChannel, HelpKind, HelpSource } from '../domain/help.js';
 
 const withDetail = detailInclude;
 
@@ -199,6 +201,11 @@ export default async function recordRoutes(app: FastifyInstance) {
         type: z.enum(['bilgi', 'oneri']).nullish(),
         /** "Yalnızca ilgili ekip görsün" işaretliyse metin ML veritabanına yazılmaz. */
         restricted: z.boolean().default(false),
+        /** Yardım oturumu (kayıt önleme günlüğü); boşsa ya da geçersizse yenisi açılır. */
+        helpSessionId: z.string().max(64).nullish(),
+        channel: z.enum([HelpChannel.YENI_KAYIT, HelpChannel.ASISTAN]).default(HelpChannel.YENI_KAYIT),
+        /** Asistan tek sonuç gösterir; günlüğe yalnızca gösterilen yazılsın. */
+        limit: z.number().int().min(1).max(3).default(3),
       })
       .safeParse(req.body);
     if (!body.success) throw badRequest('Geçersiz istek.');
@@ -212,7 +219,7 @@ export default async function recordRoutes(app: FastifyInstance) {
         department: body.data.department ?? null,
         type: body.data.type ?? null,
       },
-      3,
+      body.data.limit,
     );
     // Ekip önerisi: formda ekip seçilmiş olsa bile hesaplanır — seçim ile
     // modelin önerisi farklıysa kullanıcıya gösterilir.
@@ -220,13 +227,14 @@ export default async function recordRoutes(app: FastifyInstance) {
 
     // ML veritabanına: çalıştırma + her ekip önerisi + her eşleşme ayrı satır.
     // Kısıtlı kayıt taslağı yazılmaz: ML hafızasına girmemeli.
+    const durationMs = performance.now() - t0;
     const inferenceId = body.data.restricted ? null : await logInference(req.log, {
       userId: actor.id,
       title: body.data.title,
       description: body.data.description,
       type: body.data.type ?? null,
       selectedDepartmentId: body.data.department ?? null,
-      durationMs: performance.now() - t0,
+      durationMs,
       suggestion,
       matches: matches.map((m) => ({
         code: m.code,
@@ -237,8 +245,33 @@ export default async function recordRoutes(app: FastifyInstance) {
       })),
     });
 
+    const asistan = body.data.channel === HelpChannel.ASISTAN;
+    const top = suggestion?.candidates[0];
+    const help = await logHelpQuery(req.log, {
+      userId: actor.id,
+      sessionId: body.data.helpSessionId ?? null,
+      channel: body.data.channel,
+      kind: asistan ? HelpKind.ASISTAN : HelpKind.ML_TARAMA,
+      // Kısıtlı taslağın metni günlüğe de yazılmaz (ML veritabanındaki kuralla aynı).
+      title: body.data.restricted || asistan ? null : body.data.title,
+      text: body.data.restricted ? null : asistan ? body.data.title : body.data.description,
+      recordType: !asistan && body.data.type ? TYPE_FROM_SLUG[body.data.type]! : null,
+      selectedTeamId: body.data.department ?? null,
+      predictedTeamId: top?.departmentId ?? null,
+      confidence: top ? top.probability : null,
+      lowConfidence: suggestion ? suggestion.lowConfidence : null,
+      durationMs,
+      mlInferenceId: inferenceId,
+      hits: matches.map((m) => ({
+        source: m.source === 'kb' ? HelpSource.BILGI_BANKASI : HelpSource.KAYIT,
+        code: m.code,
+        similarity: m.percent,
+      })),
+    });
+
     return {
-      matches,
+      matches: matches.map((m, i) => ({ ...m, resultId: help?.resultIds[i] ?? null })),
+      helpSessionId: help?.sessionId ?? null,
       inferenceId,
       department: suggestion && suggestion.candidates.length
         ? {
