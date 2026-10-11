@@ -187,7 +187,7 @@ export default async function grantRoutes(app: FastifyInstance) {
   const openOf = (userId: string) =>
     prisma.record.findMany({
       where: { assigneeId: userId, status: { in: OPEN_STATUSES } },
-      select: { id: true, code: true, departmentId: true, department2Id: true, department: { select: { name: true } } },
+      select: { id: true, code: true, status: true, departmentId: true, department2Id: true, department: { select: { name: true } } },
     });
 
   app.get('/api/admin/handover/:userId', async (req) => {
@@ -231,6 +231,7 @@ export default async function grantRoutes(app: FastifyInstance) {
               recordId: r.id, type: EventType.FORWARD, byId: actor.id,
               text: `Kayıt ${from.name} kişisinden ${to.name} kişisine devredildi (sistem yöneticisi).`,
               meta: { handover: true, from: from.id, to: to.id },
+              toUserId: to.id,
             },
           });
           await tx.notification.createMany({
@@ -245,6 +246,8 @@ export default async function grantRoutes(app: FastifyInstance) {
               recordId: r.id, type: EventType.FORWARD, byId: actor.id,
               text: `${from.name} kaydı bıraktığı için kayıt ${r.department.name} ekibinin havuzuna döndü (sistem yöneticisi).`,
               meta: { handover: true, from: from.id },
+              fromStatus: r.status === RecordStatus.YENI ? null : r.status,
+              toStatus: r.status === RecordStatus.YENI ? null : RecordStatus.YENI,
             },
           });
           pooled++;

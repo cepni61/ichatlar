@@ -30,4 +30,35 @@ describe('kayıt adımları', () => {
     const ev = await prisma.recordEvent.findFirstOrThrow({ where: { recordId: r.id, type: 'STATUS' } });
     expect(ev.meta).toEqual({ from: 'UZERIME_ALINDI', to: 'CALISILIYOR' });
   });
+
+  it('üstlenme, durum ve yönlendirme adımları tipli kolonlara yazılır', async () => {
+    const { r, t2, m, n, mH, nH } = await setup();
+    expect((await act(mH, r.code, 'claim')).statusCode).toBe(200);
+    expect((await act(mH, r.code, 'status', { status: 'calisiliyor' })).statusCode).toBe(200);
+    expect((await act(mH, r.code, 'forward', { assigneeId: n.id })).statusCode).toBe(200);
+    expect((await act(nH, r.code, 'forward', { departmentId: t2.id })).statusCode).toBe(200);
+    const ev = await events(r.id);
+    expect(ev.map((e) => [e.type, e.fromStatus, e.toStatus, e.toTeamId, e.toUserId])).toEqual([
+      ['ASSIGN', 'YENI', 'UZERIME_ALINDI', null, m.id],
+      ['STATUS', 'UZERIME_ALINDI', 'CALISILIYOR', null, null],
+      ['FORWARD', null, null, null, n.id],
+      ['FORWARD', 'CALISILIYOR', 'YENI', t2.id, null],
+    ]);
+  });
+
+  it('yöneticinin devretmesi hedef kişiyi, havuza dönüş durum geçişini yazar', async () => {
+    const { r, m, n, mH } = await setup();
+    const admin = await createUser({ name: 'Yönetici', role: Role.ADMIN });
+    const aH = await loginAs(app, admin.id);
+    await act(mH, r.code, 'claim');
+    const handover = (toUserId: string | null) =>
+      app.inject({ method: 'POST', url: '/api/admin/handover', headers: aH, payload: { fromUserId: m.id, toUserId, deactivate: false } });
+
+    expect((await handover(n.id)).statusCode).toBe(200);
+    expect((await events(r.id)).at(-1)).toMatchObject({ type: 'FORWARD', toUserId: n.id, fromStatus: null });
+
+    const back = await app.inject({ method: 'POST', url: '/api/admin/handover', headers: aH, payload: { fromUserId: n.id, toUserId: null, deactivate: false } });
+    expect(back.statusCode).toBe(200);
+    expect((await events(r.id)).at(-1)).toMatchObject({ type: 'FORWARD', fromStatus: 'UZERIME_ALINDI', toStatus: 'YENI', toUserId: null });
+  });
 });

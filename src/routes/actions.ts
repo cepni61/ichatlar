@@ -19,6 +19,17 @@ import { notifyUsers } from '../lib/notify.js';
 /** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
 const attachmentIds = z.array(z.string().min(1).max(64)).max(MAX_FILES).default([]);
 
+/** Olay satırı; hedef alanları rapor içindir (rapor.kayit_adimi). */
+type PlanEvent = {
+  type: EventType;
+  text: string;
+  meta?: Prisma.InputJsonValue;
+  /** Açılış ve yönlendirmede hedef ekip. */
+  toTeamId?: string;
+  /** Üstlenme ve kişiye devirde hedef kişi. */
+  toUserId?: string;
+};
+
 /**
  * Her aksiyon aynı iskeleti izler:
  *   1. kaydı kilitle,        2. yetkiyi doğrula,
@@ -51,7 +62,7 @@ async function mutate(
       restricted: boolean;
     }) => {
       data: Prisma.RecordUpdateInput;
-      event: { type: EventType; text: string; meta?: unknown };
+      event: PlanEvent;
       nextStatus?: RecordStatus;
       /** Aynı işlemde yazılacak bildirim. İşlemi yapan kişi kendine bildirim almaz. */
       notify?: { userIds: (string | null)[]; type: NotificationType; text: string };
@@ -97,6 +108,7 @@ async function mutate(
         `"${STATUS_LABELS[rec.status]}" durumundan "${STATUS_LABELS[planned.nextStatus]}" durumuna geçilemez.`,
       );
     }
+    const statusChanged = planned.nextStatus !== undefined && planned.nextStatus !== rec.status;
 
     // updatedAt açıkça yazılır: yorum gibi alan değiştirmeyen aksiyonlar da
     // kaydı "son güncellenen" yapmalı.
@@ -109,7 +121,10 @@ async function mutate(
         type: planned.event.type,
         text: planned.event.text,
         byId: opts.actorId,
-        ...(planned.event.meta !== undefined ? { meta: planned.event.meta as Prisma.InputJsonValue } : {}),
+        ...(statusChanged ? { fromStatus: rec.status, toStatus: planned.nextStatus } : {}),
+        toTeamId: planned.event.toTeamId ?? null,
+        toUserId: planned.event.toUserId ?? null,
+        ...(planned.event.meta !== undefined ? { meta: planned.event.meta } : {}),
       },
       select: { id: true },
     });
@@ -179,6 +194,7 @@ export default async function actionRoutes(app: FastifyInstance) {
           },
           event: {
             type: EventType.ASSIGN,
+            toUserId: a.id,
             text: oneri
               ? `Öneri ${req.user!.name} tarafından değerlendirmeye alındı.`
               : `Kayıt ${req.user!.name} tarafından üzerine alındı.`,
@@ -285,7 +301,7 @@ export default async function actionRoutes(app: FastifyInstance) {
         return {
         nextStatus: next,
         data: { ...data, ...(assigneeId ? { status: next } : {}), ...stampFirstResponse(r) },
-        event: { type: EventType.FORWARD, text, meta: { departmentId, assigneeId } },
+        event: { type: EventType.FORWARD, text, meta: { departmentId, assigneeId }, toTeamId: departmentId, toUserId: assigneeId },
         ...(assigneeId
           ? { notify: { userIds: [assigneeId], type: NotificationType.ASSIGNED, text: `${codeParam(req)} size atandı.` } }
           : {}),
