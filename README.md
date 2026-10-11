@@ -174,9 +174,9 @@ açılan kaydın "Önerilerde" işareti düşer.
 ## Arayüz
 
 - **Kenar çubuğu** uygulama düzeninde: üstte logo + kuruluş adı, dolu "Yeni
-  Kayıt" düğmesi, gruplu menü (Kayıtlarım, Kurum); dipte alt alta Tema, Geri
-  bildirim ve hesap kartları. Hesap kartında tek düğme var (canlıda "Çıkış yap",
-  testte "Kişi değiştir").
+  Kayıt" düğmesi, gruplu menü (Kayıtlarım, Kurum); dipte alt alta Tema ve hesap
+  kartları, en altta "Uygulama için geri bildirim" bağlantısı. Hesap kartında tek
+  düğme var (canlıda "Çıkış yap", testte "Kişi değiştir").
 - **Beş tema:** Aydınlık, Koyu, Yumuşak koyu, Zümrüt, Santral. Tema
   `html[data-theme]` bloklarıyla token'ları yeniden tanımlar; kenar çubuğu ve
   üst bant içerikten bağımsız `--chrome-*` / `--head-*` token'larıyla temalanır

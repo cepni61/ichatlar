@@ -750,8 +750,8 @@
   /* ---------- Kenar çubuğu ----------
      Uygulama düzeni (kullanıcı isteği, 2026-10-10: "web sitesi gibi değil,
      uygulama havası"): üstte çalışma alanı (logo + kuruluş), birincil eylem
-     Yeni Kayıt, amaca göre gruplanmış menü, dipte Tema, Geri bildirim ve
-     hesap kartları (kişi + çıkış); alt bilgi ve telif satırı yok.
+     Yeni Kayıt, amaca göre gruplanmış menü, dipte Tema ve hesap kartları
+     (kişi + çıkış), en altta geri bildirim bağlantısı; telif satırı yok.
      Renkler temaların chrome token'larından: her tema kendi kimliğini korur. */
   .sidebar{
     background:var(--chrome-bg);
@@ -828,9 +828,10 @@
   .card[hidden]{display:none}
   .nav button.active .badge{background:var(--chrome-badge-on-bg);color:var(--chrome-badge-on-fg)}
 
-  /* Kenar çubuğu dibi: Tema, Geri bildirim ve hesap aynı kart biçiminde,
-     alt alta (kullanıcı isteği, 2026-10-11). Hesap kartı menü değil: sabit
-     kimlik + tek eylem (çıkış; test ortamında kişi değiştir). */
+  /* Kenar çubuğu dibi: Tema ve hesap aynı kart biçiminde alt alta, en altta
+     yalnızca yazı olarak geri bildirim bağlantısı (kullanıcı isteği,
+     2026-10-11). Hesap kartı menü değil: sabit kimlik + tek eylem (çıkış;
+     test ortamında kişi değiştir). */
   .side-foot{display:flex;flex-direction:column;gap:6px}
   .side-card,.account{
     width:100%;display:flex;align-items:center;gap:10px;padding:8px 6px 8px 8px;
@@ -847,6 +848,14 @@
   }
   .side-ico .ic{width:18px;height:18px}
   .side-chev{width:16px;height:16px;flex:none;margin-right:8px;color:var(--chrome-role)}
+  /* Geri bildirim: ilk sürümdeki gibi ince çizginin altında küçük bağlantı */
+  .fb-foot{border-top:1px solid var(--chrome-line);margin-top:4px;padding:8px 8px 0;line-height:1.5}
+  .fb-link{
+    display:inline;border:0;background:none;padding:0;margin:0;cursor:pointer;
+    font:inherit;font-size:12px;font-weight:600;color:var(--chrome-text);text-decoration:underline;
+    text-underline-offset:2px;text-decoration-color:color-mix(in srgb, currentColor 40%, transparent);
+  }
+  .fb-link:hover,.fb-link:focus-visible{color:var(--chrome-text-hi)}
   .account .avatar.sm{width:34px;height:34px;border-radius:10px;font-size:11.5px}
   .acct-who{flex:1;min-width:0;display:flex;flex-direction:column}
   .acct-who .name,.acct-who .role{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2028,7 +2037,7 @@
         <span class="lbl">Yetkiler</span></button>
     </nav>
 
-    <!-- Dip: Tema ve Geri bildirim kartları, altında hesap kartı. Hesaptaki
+    <!-- Dip: Tema kartı, hesap kartı ve altında geri bildirim bağlantısı. Hesaptaki
          düğme çıkış yapar; test ortamında "Kişi değiştir" olur ve giriş
          sayfasındaki kişi listesine döner (api-store.js). -->
     <div class="side-foot">
@@ -2040,10 +2049,6 @@
         <svg class="side-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
       </button>
     </div>
-    <button type="button" class="side-card" id="fbBtn">
-      <span class="side-ico"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14h4"/></svg></span>
-      <span class="acct-who"><span class="name">Geri bildirim</span><span class="role">Öneri ya da sorun bildirin</span></span>
-    </button>
     <div class="account">
       <span class="avatar sm grad" id="pAvatar">ÖU</span>
       <span class="acct-who" id="pWho"><span class="name" id="pName">—</span><span class="role" id="pRole">—</span></span>
@@ -2051,6 +2056,7 @@
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/></svg>
       </button>
     </div>
+    <div class="fb-foot"><button type="button" class="fb-link" id="fbBtn">Uygulama için geri bildirim</button></div>
     </div>
   </aside>
 
@@ -4210,7 +4216,7 @@ window.addEventListener('error', e => {
     d.id = 'fatalErr'; d.className = 'card';
     d.style.cssText = 'padding:20px;margin-bottom:16px;border-left:4px solid var(--danger)';
     d.innerHTML = '<b style="color:var(--danger-ink)">Beklenmeyen bir hata oluştu.</b>'
-      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse sol alttaki “Geri bildirim” kartından bildirin.</p>'
+      + '<p class="hint" style="margin-top:6px">Sayfayı yenileyin. Sorun sürerse sol alttaki “Uygulama için geri bildirim” bağlantısından bildirin.</p>'
       + '<details class="hint" style="margin-top:6px"><summary>Teknik ayrıntı</summary>' + esc(e.message || 'Bilinmeyen hata') + '</details>';
     main.prepend(d);
   }
