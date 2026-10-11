@@ -20,8 +20,9 @@
   const shortUrl = (u) => {
     try { const x = new URL(u); return x.host + (x.pathname !== '/' ? x.pathname : ''); } catch (_) { return u; }
   };
-  const linkHtml = (u) =>
-    '<a class="ext-link" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer">' + esc(shortUrl(u)) + '</a>';
+  const linkHtml = (u, rid) =>
+    '<a class="ext-link" ' + (rid ? 'data-rid="' + esc(rid) + '" ' : '') + 'href="' + esc(u) +
+    '" target="_blank" rel="noopener noreferrer">' + esc(shortUrl(u)) + '</a>';
   const LOADING = '<p class="hint">Yükleniyor…</p>';
 
   /* ============================================================== Arama */
@@ -34,6 +35,11 @@
     searchBound = true;
     const rq = $('#resQ');
     rq.addEventListener('input', debounce(() => loadRes(rq.value.trim()), 250));
+    // Sonuç bağlantısına tıklama kayıt önleme günlüğüne yazılır.
+    $('#resRes').addEventListener('click', (e) => {
+      const a = e.target.closest('a[data-rid]');
+      if (a && window.IhHelp) IhHelp.mark(a.dataset.rid, 'open');
+    });
     loadRes('');
   };
 
@@ -43,7 +49,9 @@
     const my = ++resSeq;
     $('#resRes').innerHTML = LOADING;
     try {
-      const out = await api('GET', '/api/search/resources?q=' + encodeURIComponent(q));
+      const sid = q && window.IhHelp ? IhHelp.session.get() : null;
+      const out = await api('GET', '/api/search/resources?' + new URLSearchParams(sid ? { q, helpSessionId: sid } : { q }));
+      if (out.helpSessionId && window.IhHelp) IhHelp.session.set(out.helpSessionId);
       if (my !== resSeq) return;
       const head = out.sample ? 'Örnek sonuçlar' : out.items.length + ' sonuç';
       $('#resRes').innerHTML = '<div class="res-head">' + head + '</div>'
@@ -53,7 +61,7 @@
                   : x.source === 'kayit' ? 'Çözülmüş kayıt' + (x.department ? ' · ' + x.department : '')
                   : 'Kurumsal kaynak';
                 const lead = x.url
-                  ? '<p style="margin:0"><b style="display:inline">' + esc(x.title) + '</b> için ' + linkHtml(x.url)
+                  ? '<p style="margin:0"><b style="display:inline">' + esc(x.title) + '</b> için ' + linkHtml(x.url, x.resultId)
                     + ' linkine tıklayıp erişebilirsiniz.</p>'
                   : '<b>' + esc(x.title) + '</b>';
                 return '<div class="resource"><span class="pill ' + (KIND_TONE[x.kind] || 'gray') + '">' + esc(x.kindLabel) + '</span>'

@@ -136,6 +136,22 @@
     req,
   };
 
+  /* Yardım oturumu (kayıt önleme günlüğü): kimliği sunucu üretir, sekme
+     boyunca taşınır. Kayıt açılınca ya da "işime yaradı" ile form kapanınca
+     bırakılır. Tarayıcı deposu kullanılamazsa günlük yalnızca oturumsuz kalır. */
+  window.IhHelp = {
+    session: {
+      get() { try { return sessionStorage.getItem('ih_help') || null; } catch (_) { return null; } },
+      set(id) {
+        try { if (id) sessionStorage.setItem('ih_help', id); else sessionStorage.removeItem('ih_help'); } catch (_) { /* yok sayılabilir */ }
+      },
+    },
+    /** Sonuçla etkileşim; yazılamasa da arayüz etkilenmez. */
+    mark(resultId, action) {
+      if (resultId) req('POST', '/api/help/results/' + encodeURIComponent(resultId), { action }).catch(() => {});
+    },
+  };
+
   /* ------------------------------------------------------ açılış katmanı */
 
   const veil = document.createElement('div');
@@ -766,10 +782,12 @@
           type: f ? f.type || null : null,
           // İşaretliyse sunucu taramayı ML veritabanına hiç yazmaz.
           restricted: !!($('#fRestricted') && $('#fRestricted').checked),
+          helpSessionId: IhHelp.session.get(),
         });
         // Yanıt gelene dek form sıfırlandıysa (kayıt açıldı, "işime yaradı")
         // eski sonuç boş forma çizilmesin.
         if (f !== form) return;
+        if (out.helpSessionId) IhHelp.session.set(out.helpSessionId);
         // Prototipin beklediği şekle çevir: { record, percent, keywords }
         similarCache = out.matches.map((m) => ({
           record: {
@@ -786,6 +804,7 @@
           },
           percent: m.percent,
           keywords: m.terms,
+          resultId: m.resultId || null,
         }));
         deptCache = out.department || null;
         // Kayıt açılırsa sonucu ML veritabanındaki bu çalıştırmaya bağlamak için.
@@ -863,6 +882,7 @@
         department: d1,
         anonymous: !!form.anon,
         restricted: !!($('#fRestricted') && $('#fRestricted').checked),
+        helpSessionId: IhHelp.session.get(),
       };
     } else {
       const desc = ($('#fDesc').value || '').trim();
@@ -879,6 +899,7 @@
         priority: $('#fPrio').value || 'normal',
         anonymous: !!form.anon,
         restricted: !!($('#fRestricted') && $('#fRestricted').checked),
+        helpSessionId: IhHelp.session.get(),
         mlInferenceId: form.mlInferenceId || null,
         mlInferenceIds: form.mlInferenceIds || [],
         deptSuggestionApplied: !!form.deptApplied,
@@ -892,6 +913,7 @@
     btn.textContent = isOneri ? 'Gönderiliyor…' : 'Oluşturuluyor…';
     try {
       let rec = (await Api.create(payload)).record;
+      IhHelp.session.set(null);   // kayıt açıldı: sonraki yardım yeni oturum
       let fileErr = null;
       if (files.length) {
         try {

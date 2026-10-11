@@ -3699,27 +3699,33 @@ function matchCard(m){
     + (m.record.source === 'kb' ? '<span class="src-badge kb">Bilgi Bankası yanıtı</span> '
         : m.record.verified ? '<span class="src-badge">'+icon('check')+' Onaylı çözüm</span> ' : '')
     + '<div class="ml-sol"><b>Önerilen çözüm:</b> '+esc(m.record.resolution)
-    + (m.record.url ? ' <a class="ext-link" href="'+esc(m.record.url)+'" target="_blank" rel="noopener noreferrer">Bağlantıya git</a>' : '')
+    + (m.record.url ? ' <a class="ext-link" data-rid="'+esc(m.resultId||'')+'" href="'+esc(m.record.url)+'" target="_blank" rel="noopener noreferrer">Bağlantıya git</a>' : '')
     + '</div>'
     + '<div class="ml-meta"><span>'+esc(m.record.code)+'</span><span>'+esc(deptName(m.record.department))+'</span>'
     + '<span>'+esc(fmtRel(m.record.resolvedAt || m.record.updatedAt))+'</span>'
     + (m.keywords && m.keywords.length ? '<span>Ortak kelimeler:</span>' + m.keywords.map(k => '<span class="kw">'+esc(k)+'</span>').join('') : '')
     + '</div>'
-    + '<button class="mini-btn ml-solved" type="button" data-solved="'+esc(m.record.code)+'">'+icon('check')+' Bu çözüm işime yaradı</button>'
+    + '<button class="mini-btn ml-solved" type="button" data-solved="'+esc(m.record.code)+'" data-rid="'+esc(m.resultId||'')+'">'+icon('check')+' Bu çözüm işime yaradı</button>'
     + '</div>';
 }
 
 /* Önerilen çözüm sorunu çözdüyse kayıt açılmaz ve form temizlenir. Yazılanlar
    tek tıklamayla kaybolmasın diye bildirimde "Geri al" vardır. */
-function solvedByMatch(){
+function solvedByMatch(rid){
   const snap = {
     type: form.type, title: $('#fTitle').value, desc: $('#fDesc').value,
     d1: $('#fDept1').value, d2: $('#fDept2').value, prio: $('#fPrio').value,
     restricted: $('#fRestricted').checked,
     files: (form.files || []).slice(),
   };
+  /* Beyan günlüğe yazılır ve oturum kapanır; "Geri al" ikisini de geri alır. */
+  const help = window.IhHelp, sid = help ? help.session.get() : null;
+  if (help) { help.mark(rid, 'helpful'); help.session.set(null); }
   resetForm();
-  toast('Kayıt açılmadı — önerilen çözüm işinize yaradı.', 'ok', { label:'Geri al', run(){ restoreForm(snap); } });
+  toast('Kayıt açılmadı — önerilen çözüm işinize yaradı.', 'ok', { label:'Geri al', run(){
+    if (help) { help.mark(rid, 'unhelpful'); help.session.set(sid); }
+    restoreForm(snap);
+  } });
 }
 
 function restoreForm(s){
@@ -3755,7 +3761,8 @@ function runMl(opts){
   } else {
     $('#mlStatus').innerHTML = '<b>'+found.length+' benzer çözüm bulundu.</b> Sorununuz bunlardan biriyle çözülüyorsa kayıt açmanıza gerek kalmayabilir.';
     $('#mlResults').innerHTML = found.map(matchCard).join('');
-    $$('#mlResults [data-solved]').forEach(b => { b.onclick = solvedByMatch; });
+    $$('#mlResults [data-solved]').forEach(b => { b.onclick = () => solvedByMatch(b.dataset.rid); });
+    $$('#mlResults a.ext-link[data-rid]').forEach(a => a.addEventListener('click', () => window.IhHelp && IhHelp.mark(a.dataset.rid, 'open')));
   }
 
   autoApplyDept();
@@ -5105,7 +5112,11 @@ const Chat = {
     if (!window.IhApi) return this.answer('bilinmiyor');
     const t = this.typingOn();
     let out = null;
-    try { out = await IhApi.similar({ title: text, description: '' }); } catch (_) { out = null; }
+    try {
+      out = await IhApi.similar({ title: text, description: '', channel: 'ASISTAN', limit: 1,
+        helpSessionId: window.IhHelp ? IhHelp.session.get() : null });
+    } catch (_) { out = null; }
+    if (out && out.helpSessionId && window.IhHelp) IhHelp.session.set(out.helpSessionId);
     if (t) t.remove();
     if (!out) return this.bot('Şu an benzer kayıtları tarayamadım. Yeni kayıt açarak ekibe iletebilirsiniz.', 0);
 
