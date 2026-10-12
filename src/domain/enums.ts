@@ -64,6 +64,12 @@ export const EventType = {
   REOPEN: 'REOPEN',
   /** Yenilenen kayıt işareti kondu / kaldırıldı (ML hafızası). */
   LEARN: 'LEARN',
+  /** Ek bilgi istendi (soru olay metninde, InfoRequest satırında). */
+  INFO_REQUEST: 'INFO_REQUEST',
+  /** Kaydı açan ek bilgiyi yanıtladı. */
+  INFO_RESPONSE: 'INFO_RESPONSE',
+  /** Ek bilgi isteği yanıt beklenmeden kapandı. */
+  INFO_CANCEL: 'INFO_CANCEL',
 } as const;
 export type EventType = (typeof EventType)[keyof typeof EventType];
 
@@ -76,6 +82,8 @@ export const NotificationType = {
   REJECTED: 'REJECTED',
   /** Ekip, açan kişiden ek bilgi bekliyor. */
   INFO_REQUESTED: 'INFO_REQUESTED',
+  /** Kaydı açan istenen ek bilgiyi yazdı (sahip). */
+  INFO_PROVIDED: 'INFO_PROVIDED',
   /** Açan kişi çözümü yetersiz bulup kaydı yeniden açtı (sahip). */
   REOPENED: 'REOPENED',
   /** Kayda yeni güncelleme yazıldı (karşı taraf). */
@@ -88,36 +96,20 @@ export const NotificationType = {
   EVALUATED: 'EVALUATED',
   /** Uygulama geri bildirimi geldi (sistem yöneticileri). Kayda bağlı değil. */
   FEEDBACK: 'FEEDBACK',
+  /** Yetki verildi, alındı ya da süresi doldu (Yetkiler ekranı). Kayda bağlı değil. */
+  ACCESS: 'ACCESS',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 
 /* ------------------------------------------------------------------ doğrulama */
 
-const validator =
-  <T extends string>(values: readonly T[], label: string) =>
-  (value: unknown): T => {
-    if (typeof value === 'string' && (values as readonly string[]).includes(value)) {
-      return value as T;
-    }
-    throw new Error(`Geçersiz ${label}: ${String(value)}`);
-  };
-
-export const RECORD_TYPES = Object.values(RecordType);
-export const PRIORITIES = Object.values(Priority);
-export const RECORD_STATUSES = Object.values(RecordStatus);
-export const ROLES = Object.values(Role);
-export const EVENT_TYPES = Object.values(EventType);
-
-export const parseRecordType = validator(RECORD_TYPES, 'kayıt türü');
-export const parsePriority = validator(PRIORITIES, 'öncelik');
-export const parseRecordStatus = validator(RECORD_STATUSES, 'durum');
-export const parseRole = validator(ROLES, 'rol');
+const ROLES: readonly string[] = Object.values(Role);
 
 /**
- * Veritabanından okunan String değerleri tip güvenli hâle getirir. Elle
- * yapılmış bir SQL düzenlemesi bozuk değer bıraktıysa burada yakalanır.
+ * Veritabanından okunan rolü tip güvenli hâle getirir. Elle yapılmış bir SQL
+ * düzenlemesi bozuk değer bıraktıysa burada yakalanır.
  */
-export const asRecordStatus = (v: string) => parseRecordStatus(v);
-export const asPriority = (v: string) => parsePriority(v);
-export const asRecordType = (v: string) => parseRecordType(v);
-export const asRole = (v: string) => parseRole(v);
+export function asRole(value: string): Role {
+  if (ROLES.includes(value)) return value as Role;
+  throw new Error(`Geçersiz rol: ${value}`);
+}

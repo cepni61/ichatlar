@@ -1,12 +1,15 @@
-import type { Attachment, Record as DbRecord, RecordEvent } from '@prisma/client';
+import type { Attachment, InfoRequest, Record as DbRecord, RecordEvent } from '@prisma/client';
 import {
   OPEN_STATUSES,
   PRIORITY_TO_SLUG,
   STATUS_TO_SLUG,
   TYPE_TO_SLUG,
 } from '../domain/constants.js';
-import { maySeeCreator, permissionsFor, type Actor } from '../domain/permissions.js';
+import { departmentsOf, maySeeCreator, permissionsFor, type Actor } from '../domain/permissions.js';
+import { actorInTree, loadOrgTree, rootOf, withRoots, type OrgTree } from '../domain/org.js';
+import { prisma } from '../db.js';
 import { slaStatus } from '../domain/sla.js';
+import { Role } from '../domain/enums.js';
 import { parseDetails } from '../domain/suggestion.js';
 
 const openSlugs: string[] = OPEN_STATUSES.map((s) => STATUS_TO_SLUG[s] ?? s);
@@ -16,6 +19,7 @@ type AttachmentView = Pick<Attachment, 'id' | 'name' | 'size' | 'mime'>;
 export type FullRecord = DbRecord & {
   events?: (Pick<RecordEvent, 'type' | 'text' | 'at' | 'byId'> & { attachments?: AttachmentView[] })[];
   attachments?: AttachmentView[];
+  infoRequests?: Pick<InfoRequest, 'question' | 'requestedAt' | 'requestedById'>[];
 };
 
 const attachmentSelect = { select: { id: true, name: true, size: true, mime: true } } as const;
@@ -32,6 +36,11 @@ export const detailInclude = {
     select: { type: true, text: true, at: true, byId: true, attachments: attachmentSelect },
   },
   attachments: { where: { eventId: { not: null } }, ...attachmentSelect },
+  infoRequests: {
+    where: { answeredAt: null, cancelledAt: null },
+    select: { question: true, requestedAt: true, requestedById: true },
+    take: 1,
+  },
 };
 
 const viewAttachment = (a: AttachmentView) => ({ id: a.id, name: a.name, size: a.size, mime: a.mime });
@@ -43,8 +52,12 @@ const viewAttachment = (a: AttachmentView) => ({ id: a.id, name: a.name, size: a
  * Anonim kayıtta createdById tarayıcıya hiç gönderilmez. Gizlemeyi arayüze
  * bırakmak yeterli değildi: ağ sekmesini açan biri kimliği görebilirdi.
  */
-export async function serializeRecord(rec: FullRecord, actor: Actor) {
-  const showCreator = maySeeCreator(rec, actor);
+export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: OrgTree) {
+  // Yetkiler departman genelinde görme kuralına bakar: ekiplerin departmanı gerekir.
+  const tree = orgTree ?? (await loadOrgTree(prisma));
+  const shaped = withRoots(rec, tree);
+  const a = actorInTree(actor, tree);
+  const showCreator = maySeeCreator(shaped, a);
   const sla = await slaStatus(
     { priority: rec.priority, createdAt: rec.createdAt, slaDueAt: rec.slaDueAt, status: STATUS_TO_SLUG[rec.status] ?? rec.status },
     openSlugs,
@@ -58,12 +71,26 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     priority: PRIORITY_TO_SLUG[rec.priority],
     status: STATUS_TO_SLUG[rec.status],
 
+    /** Ekip kimlikleri (kayıt ekibe düşer); departmanları ayrıca. */
     department: rec.departmentId,
     department2: rec.department2Id,
+    departmentRoot: rootOf(tree, rec.departmentId),
+    department2Root: rootOf(tree, rec.department2Id),
 
     createdBy: showCreator ? rec.createdById : null,
     assignee: rec.assigneeId,
     anonymous: rec.anonymous,
+    /** Yalnızca ilgili ekip görsün: paylaşılan kanallarda (öneriler, arama) çıkmaz. */
+    restricted: rec.restricted,
+    /**
+     * Tüm Kayıtlar'da görünür mü: kişinin departmanındaki bir ekibe düşmüş
+     * (sistem yöneticisi için her departman) ve kısıtlı değil. Sunucudaki
+     * scope=all ile aynı kural (routes/records.ts).
+     */
+    inAllRecords:
+      !rec.restricted &&
+      (a.role === Role.ADMIN ||
+        departmentsOf(a).some((d) => d === shaped.departmentRootId || d === shaped.department2RootId)),
 
     resolution: rec.resolution,
     /** Öneri kaydının yapısal alanları; bilgi kaydında null. */
@@ -79,6 +106,8 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     closedAt: rec.closedAt?.toISOString() ?? null,
 
     slaDueAt: rec.slaDueAt.toISOString(),
+    /** Çözüldü'de açan yanıt vermezse kendiliğinden kapanma anı. */
+    autoCloseAt: rec.autoCloseAt?.toISOString() ?? null,
     sla: { level: sla.level, pct: sla.pct, remainingMs: sla.remainingMs, limitHours: sla.limitHours },
 
     history: (rec.events ?? []).map((e) => ({
@@ -91,11 +120,21 @@ export async function serializeRecord(rec: FullRecord, actor: Actor) {
     })),
 
     attachments: (rec.attachments ?? []).map(viewAttachment),
+    /** Yanıt bekleyen ek bilgi isteği; liste yanıtında yok (yalnızca detay). */
+    infoRequest: rec.infoRequests?.[0]
+      ? {
+          question: rec.infoRequests[0].question,
+          requestedAt: rec.infoRequests[0].requestedAt.toISOString(),
+          requestedBy: rec.infoRequests[0].requestedById,
+        }
+      : null,
 
-    permissions: permissionsFor(rec, actor),
+    permissions: permissionsFor(shaped, a),
   };
 }
 
+/** Liste: geçmişte yalnızca son olay var, ekler yok (bkz. routes/records.ts). */
 export async function serializeList(recs: FullRecord[], actor: Actor) {
-  return Promise.all(recs.map((r) => serializeRecord(r, actor)));
+  const tree = await loadOrgTree(prisma);
+  return Promise.all(recs.map(async (r) => ({ ...(await serializeRecord(r, actor, tree)), historyPartial: true })));
 }

@@ -7,11 +7,25 @@ import { isOpen, ONERI_OUTCOMES, ONERI_WORK_STATUSES, WORK_STATUSES } from './co
  * çağrısında sunucu aynı fonksiyonlarla yeniden doğrular.
  */
 
+/** Ekibin işini yapan roller. USER ekipte görünse de ekip kaydı ona düşmez. */
+export const isTeamRole = (role: string) => role === Role.TEAM_MEMBER || role === Role.MANAGER || role === Role.ADMIN;
+
 export interface Actor {
   id: string;
   role: string;
+  /** Kişinin ekibi (bkz. domain/org.ts). */
   departmentId: string | null;
+  /** Ekibin departmanı. Verilmezse departman genelinde görme kuralı uygulanmaz. */
+  departmentRootId?: string | null;
+  /** Departman sorumlusu olduğu departmanlar: kendi departmanı gibi okur. */
+  headOf?: string[];
+  /** Aynı direktörlükteki öteki departmanlar (actorInTree doldurur): kendi departmanı gibi okur. */
+  peerRoots?: string[];
 }
+
+/** Kişinin "Tüm Kayıtlar"da gördüğü departmanlar: kendi departmanı, aynı direktörlüktekiler ve sorumlu olduklar. */
+export const departmentsOf = (a: Actor) =>
+  [...new Set([a.departmentRootId, ...(a.peerRoots ?? []), ...(a.headOf ?? [])].filter((x): x is string => Boolean(x)))];
 
 /** Veritabanından okunan kayıt. Kolonlar String olduğu için tipler geniş;
   * karşılaştırmalar enums.ts sabitleriyle yapıldığı için güvenli kalır. */
@@ -24,6 +38,11 @@ export interface RecordShape {
   createdById: string;
   assigneeId: string | null;
   anonymous: boolean;
+  /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez, yönlendirilemez. */
+  restricted?: boolean;
+  /** Ekiplerin departmanları (withRoots ile doldurulur). */
+  departmentRootId?: string | null;
+  department2RootId?: string | null;
 }
 
 export type Action =
@@ -38,15 +57,16 @@ export type Action =
   | 'comment'
   | 'attach'
   | 'evaluate'
-  | 'learn';
+  | 'learn'
+  | 'infoRequest';
 
 export interface Relation {
   isCreator: boolean;
   isAssignee: boolean;
   inTeam: boolean;
   isAdmin: boolean;
-  /** Yönetici, kendi departmanının tüm kayıtlarını görür. */
-  isDeptManager: boolean;
+  /** Kişinin departmanındaki bir ekibe düşmüş kayıt (Tüm Kayıtlar kapsamı). */
+  inDepartment: boolean;
   open: boolean;
 }
 
@@ -54,17 +74,16 @@ export function relate(rec: RecordShape, actor: Actor): Relation {
   const inTeam =
     actor.departmentId != null &&
     (actor.departmentId === rec.departmentId || actor.departmentId === rec.department2Id) &&
-    (actor.role === Role.TEAM_MEMBER || actor.role === Role.MANAGER || actor.role === Role.ADMIN);
+    isTeamRole(actor.role);
 
   return {
     isCreator: rec.createdById === actor.id,
     isAssignee: rec.assigneeId != null && rec.assigneeId === actor.id,
     inTeam,
-    isAdmin: actor.role === Role.ADMIN,
-    isDeptManager:
-      actor.role === Role.MANAGER &&
-      actor.departmentId != null &&
-      (actor.departmentId === rec.departmentId || actor.departmentId === rec.department2Id),
+    // "Yalnızca ilgili ekip görsün" kayıtta sistem yöneticisinin ayrıcalığı yok:
+    // ekibinde değilse görmez, işlem de yapamaz (kullanıcı isteği, 2026-10-09).
+    isAdmin: actor.role === Role.ADMIN && !rec.restricted,
+    inDepartment: departmentsOf(actor).some((d) => d === rec.departmentRootId || d === rec.department2RootId),
     open: isOpen(rec.status),
   };
 }
@@ -73,17 +92,25 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
   const r = relate(rec, actor);
 
   switch (action) {
+    // Departmandaki diğer ekiplerin kayıtları Tüm Kayıtlar'da görünür ve
+    // okunabilir; "yalnızca ilgili ekip" işaretli olanlar hariç.
     case 'view':
-      return r.isCreator || r.isAssignee || r.inTeam || r.isAdmin || r.isDeptManager;
+      return (
+        r.isCreator || r.isAssignee || r.inTeam || r.isAdmin ||
+        (r.inDepartment && !rec.restricted)
+      );
 
     // Kayıt kişiye değil ekibe düşer; ekipten biri sahiplenir.
     case 'claim':
       return r.open && r.inTeam && rec.assigneeId == null;
 
+    // Kısıtlı kayıt başka EKİBE yönlendirilemez (ilgili ekip dışına çıkardı);
+    // bu kontrol yönlendirme ucunda. Ekip içinde kişiye devir serbest.
     case 'forward':
       return r.open && (r.inTeam || r.isAdmin);
 
-    // Ara durumları ve çözümü yalnızca kaydı üzerine alan kişi değiştirir.
+    // Ara durumları, çözümü ve ek bilgi isteğini yalnızca kaydı üzerine alan kişi yapar.
+    case 'infoRequest':
     case 'status':
       return r.open && (r.isAssignee || r.isAdmin);
 
@@ -95,9 +122,11 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
       return r.open && (r.isAssignee || r.isAdmin) && rec.type === RecordType.ONERI;
 
     // "Yenilenen kayıt" (ML hafızası): çözümü yazan kişi ya da sistem yöneticisi.
+    // Kısıtlı kayıt öneri havuzuna giremez: çözümü başka ekiplere önerilirdi.
     case 'learn':
       return (
         rec.type !== RecordType.ONERI &&
+        !rec.restricted &&
         (rec.status === RecordStatus.COZULDU || rec.status === RecordStatus.KAPATILDI) &&
         (r.isAssignee || r.isAdmin)
       );
@@ -111,9 +140,11 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
     case 'reopen':
       return rec.status === RecordStatus.COZULDU && (r.isCreator || r.isAdmin);
 
+    // Departman genelinde görme yalnızca okumadır: yorum ve dosya ilgili
+    // ekipte, kaydı açanda ve üzerine alanda kalır.
     case 'comment':
     case 'attach':
-      return can('view', rec, actor);
+      return r.isCreator || r.isAssignee || r.inTeam || r.isAdmin;
 
     default:
       return false;
@@ -124,6 +155,7 @@ export function can(action: Action, rec: RecordShape, actor: Actor): boolean {
 export function permissionsFor(rec: RecordShape, actor: Actor) {
   const actions: Action[] = [
     'claim', 'forward', 'status', 'resolve', 'reject', 'close', 'reopen', 'comment', 'attach', 'evaluate', 'learn',
+    'infoRequest',
   ];
   const out: Partial<Record<Action, boolean>> = {};
   for (const a of actions) out[a] = can(a, rec, actor);

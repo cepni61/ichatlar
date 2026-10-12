@@ -31,9 +31,15 @@ export function requireRole(...roles: Role[]) {
   };
 }
 
+/** Raporlar: yönetici, sistem yöneticisi, rapor görüntüleyici, departman sorumlusu. */
+export async function requireReports(req: FastifyRequest) {
+  if (!req.user) throw unauthorized();
+  if (!req.user.reports) throw forbidden();
+}
+
 /** Alan katmanının beklediği sade aktör nesnesi. */
 export function actorOf(req: FastifyRequest): Actor {
   const u = req.user;
   if (!u) throw unauthorized();
-  return { id: u.id, role: u.role, departmentId: u.departmentId };
+  return { id: u.id, role: u.role, departmentId: u.departmentId, headOf: u.headOf };
 }

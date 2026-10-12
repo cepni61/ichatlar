@@ -35,11 +35,20 @@
       headers: body && !isForm ? { 'content-type': 'application/json' } : undefined,
       body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
     });
+    checkBuild(res);
 
     if (res.status === 401) {
-      // Oturum düştü — girişe gönder, kullanıcı boş ekranla kalmasın.
-      location.href = '/auth/login?returnTo=' + encodeURIComponent(location.pathname);
-      throw new Error('oturum yok');
+      // Açılışta oturum yoksa doğrudan girişe. Uygulama açıkken düşerse
+      // sayfadan atılmaz: kişi yarım kalan yazısını kaybetmesin diye bant
+      // gösterilir, girişe ne zaman gideceğine kendisi karar verir.
+      if (document.getElementById('ih-boot')) {
+        location.href = loginUrl();
+        throw new Error('oturum yok');
+      }
+      sessionExpired();
+      const err = new Error('Oturumunuz sona erdi. Yeniden giriş yapın.');
+      err.status = 401;
+      throw err;
     }
 
     const text = await res.text();
@@ -67,6 +76,46 @@
     return data;
   }
 
+  /** Girişten sonra aynı ekrana dönülsün (adres çubuğundaki #/... dahil). */
+  const loginUrl = () => '/auth/login?returnTo=' + encodeURIComponent(location.pathname + location.hash);
+
+  /** Sayfanın üstünde kalıcı bant: kişi ne zaman tıklayacağına kendisi karar verir. */
+  function topBar(cls, html, label, onClick) {
+    const bar = document.createElement('div');
+    bar.className = 'session-bar ' + cls;
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<span>' + html + '</span><button type="button" class="btn btn-primary">' + label + '</button>';
+    bar.querySelector('button').addEventListener('click', onClick);
+    document.body.appendChild(bar);
+  }
+
+  let expired = false;
+  function sessionExpired() {
+    if (expired) return;
+    expired = true;
+    topBar('expired', '<b>Oturumunuz sona erdi.</b> Yazdıklarınız bu sayfada duruyor; ' +
+      'gerekirse kopyalayın, sonra yeniden giriş yapın.', 'Yeniden giriş yap', () => { location.href = loginUrl(); });
+  }
+
+  /*
+   * Arayüz sürümü (sunucu her yanıtta x-ih-build gönderir). Sunucu yeni
+   * arayüzle yeniden başladığında açık sekme eski kodla çalışmaya devam
+   * ediyordu: kişi düzeltilmiş ekranı göremiyordu. Sürüm değişince bant çıkar.
+   */
+  let build = null;
+  let outdated = false;
+  function checkBuild(res) {
+    const b = res && res.headers && res.headers.get('x-ih-build');
+    if (!b) return;
+    if (!build) { build = b; return; }
+    if (b === build || outdated) return;
+    outdated = true;
+    topBar('update', '<b>Uygulamanın yeni sürümü hazır.</b> Yazdıklarınızı gönderdiyseniz sayfayı yenileyin.',
+      'Sayfayı yenile', () => location.reload());
+  }
+  // index.html'deki bildirim sorgusu (fetch ile) da aynı denetimden geçer.
+  window.IhNet = { checkBuild, sessionExpired };
+
   const Api = {
     bootstrap: () => req('GET', '/api/bootstrap'),
     records: (params) => req('GET', '/api/records?' + new URLSearchParams(params || {})),
@@ -85,6 +134,32 @@
       req('POST', '/api/records/' + encodeURIComponent(code) + '/' + action, payload || {}),
     /** Yeni modüller (modules.js) için genel istek. */
     req,
+  };
+
+  /* Yardım oturumu (kayıt önleme günlüğü): kimliği sunucu üretir, sekme
+     boyunca taşınır. Kayıt açılınca ya da "işime yaradı" ile form kapanınca
+     bırakılır. Tarayıcı deposu kullanılamazsa günlük yalnızca oturumsuz kalır. */
+  window.IhHelp = {
+    session: {
+      get() { try { return sessionStorage.getItem('ih_help') || null; } catch (_) { return null; } },
+      set(id) {
+        try { if (id) sessionStorage.setItem('ih_help', id); else sessionStorage.removeItem('ih_help'); } catch (_) { /* yok sayılabilir */ }
+      },
+    },
+    /** Oturumsuz ilk istek yanıtlanmadan gelen ikincisi beklesin: ikisi ayrı oturum açardı. */
+    pending: null,
+    async sessionFor() {
+      if (!this.session.get() && this.pending) await this.pending.catch(() => {});
+      return this.session.get();
+    },
+    track(p) {
+      if (!this.session.get()) this.pending = p;
+      return p;
+    },
+    /** Sonuçla etkileşim; yazılamasa da arayüz etkilenmez. */
+    mark(resultId, action) {
+      if (resultId) req('POST', '/api/help/results/' + encodeURIComponent(resultId), { action }).catch(() => {});
+    },
   };
 
   /* ------------------------------------------------------ açılış katmanı */
@@ -142,38 +217,24 @@
 
   Store.data = { currentUserId: BOOT_USER.id, records: [], seq: 0 };
 
-  // Prototipin "geçici mod" uyarısı artık gereksiz: veri sunucuda.
-  try { safeStore.persistent = true; } catch (e) { /* yok sayılabilir */ }
-
+  // Sunucudan dönen her kayıt sırası: yenileme sürerken yapılan işlemin
+  // sonucu, yenilemenin daha önce başlamış (eski) yanıtıyla ezilmesin.
+  let touchSeq = 0;
+  const touched = new Map();
   function upsertLocal(rec) {
+    touched.set(rec.code, ++touchSeq);
     const i = Store.data.records.findIndex((r) => r.code === rec.code);
     if (i >= 0) Store.data.records[i] = rec;
     else Store.data.records.unshift(rec);
     return rec;
   }
 
-  Store.load = function () { /* veri sunucudan gelir; senkron yükleme yok */ };
-  Store.save = function () { /* yazma işlemleri API üzerinden yapılır */ };
-  Store.reset = function () {
-    toast('Demo verisi sıfırlama yalnızca geliştirme ortamında yapılır.', 'err');
-  };
-
   Store.me = function () {
     return USERS.find((u) => u.id === Store.data.currentUserId) || null;
   };
 
-  Store.setMe = function () {
-    // Gerçek sistemde kullanıcı değiştirilemez; kimlik Entra oturumundan gelir.
-    toast('Kullanıcı değiştirme kapalı — oturum kurumsal hesabınıza bağlı.', 'err');
-  };
-
   Store.find = function (code) {
     return Store.data.records.find((r) => r.code === code);
-  };
-
-  Store.nextCode = function () {
-    // Numara sunucuda atomik olarak üretilir; istemci tahmin etmez.
-    return '(sunucu atayacak)';
   };
 
   /* --------------------------------------------------------- yenileme */
@@ -183,17 +244,36 @@
   // sayıya ulaşana kadar sayfa sayfa çekilir.
   const PAGE_SIZE = 200;
 
-  async function refreshRecords() {
-    const first = await Api.records({ scope: 'all', pageSize: PAGE_SIZE, page: 1 });
+  // scope=visible: her görünümün (Açtıklarım, Ekibime Gelenler, Üzerimdekiler,
+  // Tüm Kayıtlar) kayıtları tek listede; Tüm Kayıtlar kayıttaki inAllRecords
+  // bayrağıyla süzer (departman kapsamı, kısıtlı kayıt yok — 2026-10-09).
+  // Aynı anda iki yenileme olmaz: ikinci çağıran ilkini bekler.
+  let inflight = null;
+  function refreshRecords() {
+    if (!inflight) inflight = loadRecords().finally(() => { inflight = null; });
+    return inflight;
+  }
+
+  async function loadRecords() {
+    const seq0 = touchSeq;
+    const first = await Api.records({ scope: 'visible', pageSize: PAGE_SIZE, page: 1 });
     const all = first.records.slice();
     for (let page = 2; all.length < first.total; page++) {
-      const next = await Api.records({ scope: 'all', pageSize: PAGE_SIZE, page });
+      const next = await Api.records({ scope: 'visible', pageSize: PAGE_SIZE, page });
       if (!next.records.length) break; // arada kayıt silindiyse sonsuz döngüye girme
       all.push(...next.records);
     }
     // Sayfalar arasında bir kayıt güncellenirse sıralaması kayar ve iki sayfada
     // birden gelebilir; kayıt numarasına göre tekilleştir.
-    const unique = [...new Map(all.map((r) => [r.code, r])).values()];
+    const byCode = new Map(all.map((r) => [r.code, r]));
+    for (const local of Store.data.records) {
+      const got = byCode.get(local.code);
+      // Yükleme başladıktan sonra yerelde güncellenen (ya da açılan) kayıt daha yeni.
+      if ((touched.get(local.code) || 0) > seq0) byCode.set(local.code, local);
+      // Liste yalnızca son olayı taşır; değişmemiş kaydın detaydan gelen tam geçmişi kalsın.
+      else if (got && got.historyPartial && !local.historyPartial && got.updatedAt === local.updatedAt) byCode.set(local.code, local);
+    }
+    const unique = [...byCode.values()];
     Store.data.records.length = 0;
     unique.forEach((r) => Store.data.records.push(r));
     return { ...first, records: unique };
@@ -232,7 +312,7 @@
 
   let lastRefresh = Date.now();
   async function refreshVisible() {
-    if (document.hidden || Date.now() - lastRefresh < 15000) return;
+    if (expired || document.hidden || Date.now() - lastRefresh < 15000) return;
     if (!$('#modalRoot').hidden) return;
     lastRefresh = Date.now();
     try {
@@ -240,7 +320,7 @@
       if (CURRENT === 'new-ticket') return;
       // Kayıt listesine bağlı olmayan ekranlar tazelenmez: yeniden çizim
       // yarım kalmış seçimleri (ör. yetki verilecek kişi) silerdi.
-      if (CURRENT === 'kb' || CURRENT === 'faq' || CURRENT === 'search') return;
+      if (CURRENT === 'kb' || CURRENT === 'search') return;
       await refreshRecords();
       if (typeof renderView === 'function') renderView(CURRENT);
       if (typeof renderChrome === 'function') renderChrome();
@@ -268,7 +348,11 @@
     if (typeof renderChrome === 'function') renderChrome();
   }
 
-  /** Aksiyon sarmalayıcı — hata mesajını sunucudan gelen metinle gösterir. */
+  /**
+   * Aksiyon sarmalayıcı — hata mesajını sunucudan gelen metinle gösterir.
+   * Hata çoğu zaman kaydın bu arada değiştiği anlamına gelir (ör. başkası
+   * üzerine aldı): kayıt tazelenir ki ekranda geçersiz düğmeler kalmasın.
+   */
   async function run(code, action, payload, okMessage) {
     try {
       const out = await Api.act(code, action, payload);
@@ -277,6 +361,7 @@
       return out.record;
     } catch (err) {
       toast(err.message, 'err');
+      if (err.status !== 401) refreshDetail(code);
       throw err;
     }
   }
@@ -398,14 +483,26 @@
 
     const list = document.querySelector('[data-attach-list="' + slot + '"]');
     if (list) list.insertAdjacentHTML('beforeend', '<span class="attach-chip busy">Yükleniyor…</span>');
-    try {
-      const out = await Api.upload(DETAIL_CODE, ok);
-      drafts(slot).push(...out.attachments);
-    } catch (err) {
-      toast(err.message, 'err');
-    }
-    repaint(slot);
+    const key = draftKey(slot);
+    const job = (async () => {
+      try {
+        const out = await Api.upload(DETAIL_CODE, ok);
+        (Drafts[key] = Drafts[key] || []).push(...out.attachments);
+      } catch (err) {
+        toast(err.message, 'err');
+      }
+      repaint(slot);
+    })();
+    Pending[key] = Promise.all([Pending[key], job]);
+    await job;
   });
+
+  /*
+   * Yükleme sürerken gönderilen güncelleme dosyasız gidiyor, dosya bir
+   * sonraki güncellemeye yapışıyordu. Gönderim önce süren yüklemeleri bekler.
+   */
+  const Pending = {};
+  const uploadsSettled = (slot) => Pending[draftKey(slot)] || Promise.resolve();
 
   const takeDrafts = (slot) => drafts(slot).map((a) => a.id);
   const clearDrafts = (slot) => { Drafts[draftKey(slot)] = []; repaint(slot); };
@@ -413,20 +510,29 @@
   /* ----------------------------------------------- aksiyonlar (override) */
 
   window.actClaim = function (r) {
-    run(r.code, 'claim', {}, 'Kayıt üzerinize alındı');
+    return run(r.code, 'claim', {}, 'Kayıt üzerinize alındı').catch(() => {});
   };
 
   window.actForward = function (r) {
     const me = Store.me();
-    const mates = USERS.filter((u) => u.dept === me.dept && u.id !== me.id);
+    // Kaydın ekip(ler)indeki, kaydı üzerine alabilen kişiler (sunucu da yalnızca
+    // bunları kabul eder). Yönlendiren başka ekipten (ör. sistem yöneticisi) olabilir.
+    const teams = [r.department, r.department2].filter(Boolean);
+    const mates = USERS.filter((u) => teams.includes(u.dept) && u.teamRole && u.id !== me.id);
+    // "Yalnızca ilgili ekip görsün" kaydı başka ekibe gönderilemez (sunucu da
+    // reddeder); ekip içinde devir serbest (kullanıcı isteği, 2026-10-09).
+    const teamPart = r.restricted
+      ? '<p class="hint" style="margin:0 0 14px">' + icon('lock', 'ic-sm') +
+        ' Bu kayıt yalnızca ilgili ekibe açık; başka bir ekibe yönlendirilemez. Ekip içinde devredebilirsiniz.</p>' +
+        '<input type="hidden" id="fwdDept" value="" />'
+      : '<div class="field"><label for="fwdDept">Başka bir ekibe gönder</label><select id="fwdDept"><option value="">— seçin —</option>' +
+        teamOptions(null, r.department) +
+        '</select></div>';
     openModal(
       'Kayıt Yönlendirme',
-      '<div class="field"><label for="fwdDept">Başka bir ekibe gönder</label><select id="fwdDept"><option value="">— seçin —</option>' +
-        DEPARTMENTS.filter((d) => d.id !== r.department)
-          .map((d) => '<option value="' + d.id + '">' + esc(d.name) + '</option>')
-          .join('') +
-        '</select></div>' +
-        '<div class="field"><label for="fwdMate">— ya da — Ekip arkadaşına devret</label><select id="fwdMate"><option value="">— seçin —</option>' +
+      teamPart +
+        '<div class="field"><label for="fwdMate">' + (r.restricted ? 'Ekip arkadaşına devret' : '— ya da — Ekip arkadaşına devret') +
+        '</label><select id="fwdMate"><option value="">— seçin —</option>' +
         mates.map((u) => '<option value="' + u.id + '">' + esc(u.name) + '</option>').join('') +
         '</select></div>' +
         '<div class="field"><label for="fwdNote">Yönlendirme notu</label><textarea id="fwdNote" placeholder="Yönlendirme sebebini yazın..."></textarea></div>',
@@ -443,7 +549,7 @@
             if (d && u) return toast('Ekip ya da kişi seçin — ikisi birlikte olmaz', 'err');
             const payload = d ? { departmentId: d } : { assigneeId: u };
             if (note) payload.note = note;
-            run(r.code, 'forward', payload, 'Kayıt yönlendirildi').then(closeModal, () => {});
+            return run(r.code, 'forward', payload, 'Kayıt yönlendirildi').then(closeModal, () => {});
           },
         },
       ],
@@ -451,8 +557,8 @@
   };
 
   window.actStatus = function (r) {
-    // Öneri kendi akışında: Değerlendiriliyor ya da Ek Bilgi.
-    const ids = r.type === 'oneri' ? ['degerlendiriliyor', 'ek_bilgi'] : ['inceleniyor', 'calisiliyor', 'ek_bilgi'];
+    // Ek bilgi ayrı düğmeyle istenir (soru zorunlu).
+    const ids = r.type === 'oneri' ? ['degerlendiriliyor'] : ['inceleniyor', 'calisiliyor'];
     const opts = STATUSES.filter((s) => ids.includes(s.id));
     openModal(
       'Durum Güncelle',
@@ -471,7 +577,28 @@
             const payload = { status: $('#stSel').value };
             const note = ($('#stNote').value || '').trim();
             if (note) payload.note = note;
-            run(r.code, 'status', payload, 'Durum güncellendi').then(closeModal, () => {});
+            return run(r.code, 'status', payload, 'Durum güncellendi').then(closeModal, () => {});
+          },
+        },
+      ],
+    );
+  };
+
+  window.actInfoRequest = function (r) {
+    openModal(
+      'Ek Bilgi İste',
+      '<div class="field"><label for="infoQ">Kaydı açan kişiye sorunuz</label>' +
+        '<textarea id="infoQ" maxlength="1000" placeholder="Neyi öğrenmeniz gerekiyor? Bu metin kaydı açan kişiye görünür."></textarea>' +
+        '<p class="hint" style="margin-top:8px">Kayıt “Ek Bilgi Bekleniyor” olur. Yanıt gelince kayıt kaldığı duruma döner ve size bildirim gelir.</p></div>',
+      [
+        { label: 'İptal', cls: 'btn-ghost' },
+        {
+          label: 'Soruyu Gönder',
+          cls: 'btn-primary',
+          run() {
+            const q = ($('#infoQ').value || '').trim();
+            if (q.length < 5) return toast('Sorunuzu en az 5 karakterle yazın', 'err');
+            return run(r.code, 'info-request', { question: q }, 'Ek bilgi istendi').then(closeModal, () => {});
           },
         },
       ],
@@ -481,7 +608,7 @@
   window.actResolve = function (r) {
     const oneri = r.type === 'oneri';
     openModal(
-      oneri ? 'Öneriyi Sonuçlandır' : 'Kaydı Çözüldü Yap',
+      oneri ? 'Öneriyi Sonuçlandır' : 'Çözüldü olarak işaretle',
       (oneri
         ? '<div class="field"><label for="resTxt">Değerlendirme sonucu</label>' +
           '<textarea id="resTxt" placeholder="Öneri hayata geçirilecek mi? Karar, gerekçesi ve varsa sonraki adımlar..."></textarea>' +
@@ -490,21 +617,23 @@
           '<textarea id="resTxt" placeholder="Sorunu/talebi nasıl çözdüğünüzü anlatın..."></textarea>' +
           '<p class="hint" style="margin-top:8px">Bu açıklama, gelecekteki benzer kayıtlarda Akıllı Çözüm Asistanı tarafından önerilecektir.</p></div>') +
         window.attachPicker('resolve') +
-        (oneri ? '' :
+        // Kısıtlı kayıt öneri havuzuna giremez (sunucu da yok sayar): kutu gösterilmez.
+        (oneri || r.restricted ? '' :
           '<label class="learn-toggle"><input type="checkbox" id="resLearn" />' +
-          '<div><b>Yenilenen kayıt olarak işaretle</b><span>Çözüm ML hafızasına eklenir: benzer taleplerde onaylı çözüm olarak önerilir, ' +
-          'ekip tahmini bu kayıttan daha güçlü öğrenir.</span></div></label>'),
+          '<div><b>Benzer kayıtlarda öner</b><span>Bu çözüm, benzer bir talep açılırken onaylı çözüm olarak gösterilir; ' +
+          'doğru ekibi önerme de bu kayıttan öğrenir.</span></div></label>'),
       [
         { label: 'İptal', cls: 'btn-ghost' },
         {
-          label: oneri ? 'Sonuçlandır' : 'Çözüldü Olarak İşaretle',
+          label: oneri ? 'Sonuçlandır' : 'Çözüldü olarak işaretle',
           cls: 'btn-success',
           run() {
             const t = ($('#resTxt').value || '').trim();
             if (t.length < 10) return toast((oneri ? 'Değerlendirme sonucu' : 'Çözüm açıklaması') + ' en az 10 karakter olmalı', 'err');
             const learnBox = $('#resLearn');
-            run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve'), learn: !!(learnBox && learnBox.checked) },
-              oneri ? 'Öneri sonuçlandırıldı' : 'Kayıt çözüldü olarak işaretlendi')
+            return uploadsSettled('resolve').then(() =>
+              run(r.code, 'resolve', { resolution: t, attachmentIds: takeDrafts('resolve'), learn: !!(learnBox && learnBox.checked) },
+                oneri ? 'Öneri sonuçlandırıldı' : 'Kayıt çözüldü olarak işaretlendi'))
               .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
@@ -541,8 +670,9 @@
             if (!sel) return toast('Bir sonuç seçin', 'err');
             if (t.length < 10) return toast('Değerlendirme notunu en az 10 karakter yazın', 'err');
             const label = sel.closest('.outcome').querySelector('b').textContent;
-            run(r.code, 'evaluate', { outcome: sel.value, note: t, attachmentIds: takeDrafts('resolve') },
-              'Değerlendirme tamamlandı: ' + label)
+            return uploadsSettled('resolve').then(() =>
+              run(r.code, 'evaluate', { outcome: sel.value, note: t, attachmentIds: takeDrafts('resolve') },
+                'Değerlendirme tamamlandı: ' + label))
               .then(() => { clearDrafts('resolve'); closeModal(); }, () => {});
           },
         },
@@ -553,7 +683,7 @@
   /** Detaydaki "Yenilenen kayıt" kutucuğu. */
   window.actLearn = function (r, on) {
     run(r.code, 'learn', { on: !!on },
-      on ? 'Yenilenen kayıt: çözüm ML hafızasına eklendi' : 'Yenilenen kayıt işareti kaldırıldı')
+      on ? 'Çözüm benzer kayıtlarda önerilecek' : 'Çözüm artık önerilmeyecek')
       .catch(() => { if (typeof renderDetail === 'function') renderDetail(); });
   };
 
@@ -577,7 +707,7 @@
           run() {
             const t = ($('#rejTxt').value || '').trim();
             if (t.length < 10) return toast((oneri ? 'Gerekçeyi' : 'Ret sebebini') + ' en az 10 karakter yazın', 'err');
-            run(r.code, 'reject', { reason: t }, oneri ? 'Öneri reddedildi' : 'Kayıt reddedildi').then(closeModal, () => {});
+            return run(r.code, 'reject', { reason: t }, oneri ? 'Öneri reddedildi' : 'Kayıt reddedildi').then(closeModal, () => {});
           },
         },
       ],
@@ -603,7 +733,7 @@
           run() {
             const t = ($('#reoTxt').value || '').trim();
             if (t.length < 10) return toast('Nedeni en az 10 karakterle yazın', 'err');
-            run(r.code, 'reopen', { reason: t }, oneri ? 'Öneri yeniden değerlendirmeye gönderildi' : 'Kayıt yeniden açıldı').then(closeModal, () => {});
+            return run(r.code, 'reopen', { reason: t }, oneri ? 'Öneri yeniden değerlendirmeye gönderildi' : 'Kayıt yeniden açıldı').then(closeModal, () => {});
           },
         },
       ],
@@ -621,22 +751,27 @@
         label: oneri ? 'Öneriyi Kapat' : 'Kaydı Kapat',
         cls: 'btn-primary',
         run() {
-          run(r.code, 'close', {}, oneri ? 'Öneri kapatıldı' : 'Kayıt kapatıldı').then(closeModal, () => {});
+          return run(r.code, 'close', {}, oneri ? 'Öneri kapatıldı' : 'Kayıt kapatıldı').then(closeModal, () => {});
         },
       },
     ]);
   };
 
-  window.actComment = function (r) {
+  window.actComment = async function (r) {
     const el = $('#cmtInput');
     const t = ((el && el.value) || '').trim();
+    await uploadsSettled('comment');
     const ids = takeDrafts('comment');
     if (!t && !ids.length) return toast('Bir güncelleme yazın ya da dosya ekleyin', 'err');
-    run(r.code, 'comments', { text: t, attachmentIds: ids }, 'Güncelleme eklendi').then(() => {
-      clearDrafts('comment');
-      const box = $('#cmtInput');
-      if (box) box.value = '';
-    }, () => {});
+    try {
+      await run(r.code, 'comments', { text: t, attachmentIds: ids }, el && el.dataset.answer ? 'Yanıt gönderildi' : 'Güncelleme eklendi');
+    } catch (_) {
+      return; // metin kutuda ve taslakta kalır
+    }
+    clearDrafts('comment');
+    if (typeof CommentDrafts !== 'undefined') delete CommentDrafts[r.code];
+    const box = $('#cmtInput');
+    if (box) box.value = '';
   };
 
   /* -------------------------------------------------- yeni kayıt + ML */
@@ -652,24 +787,46 @@
   };
 
   const origRunMl = window.runMl;
-  const scanThenRender = async function () {
-    if (typeof form !== 'undefined' && form && form.type !== 'bilgi') return origRunMl.apply(this, arguments);
+  /*
+   * Tarama yazarken kendiliğinden çalışır (index.html → scheduleScan) ve
+   * kaydı açmayı engellemez. Sunucu yanıt veremezse kişi yine kayıt açabilir;
+   * panelde "Tekrar dene" kalır, her otomatik denemede hata bildirimi çıkmaz.
+   */
+  const scanThenRender = async function (opts) {
+    const f = typeof form !== 'undefined' ? form : null;
+    if (f && f.type !== 'bilgi') return origRunMl.call(this, opts);
     const title = ($('#fTitle').value || '').trim();
     const desc = ($('#fDesc').value || '').trim();
 
     if (title.length >= 5 && desc.length >= 10) {
+      $('#mlStatus').innerHTML = '<div class="ml-loading"><div class="spin"></div>Benzer çözümler aranıyor…</div>';
       try {
-        // Departman ve tür skorlamada bonus veriyor (prototipteki mlScore ile
-        // aynı), bu yüzden formdaki seçimler birlikte gönderilir.
-        const out = await Api.similar({
+        // Departman ve tür sunucudaki skorlamada bonus veriyor (bkz.
+        // src/domain/similarity.ts), bu yüzden formdaki seçimler birlikte gönderilir.
+        const call = Api.similar({
           title,
           description: desc,
           department: ($('#fDept1') && $('#fDept1').value) || null,
           // `form` prototipte `let` ile tanımlı: klasik betikte global
           // SÖZCÜKSEL kapsamda durur, window üzerinde DEĞİL. `window.form`
           // yazmak undefined döndürüyordu ve tür bonusu (+5) hiç gitmiyordu.
-          type: typeof form !== 'undefined' && form ? form.type || null : null,
+          type: f ? f.type || null : null,
+          // İşaretliyse sunucu taramayı ML veritabanına hiç yazmaz.
+          restricted: !!($('#fRestricted') && $('#fRestricted').checked),
+          helpSessionId: await IhHelp.sessionFor(),
         });
+        IhHelp.track(call);
+        // Kayıt, süren tarama bitmeden gönderilmesin (createRecord bekler).
+        if (f) f.scanBusy = call.catch(() => {});
+        const out = await call;
+        // Yanıt gelene dek form sıfırlandıysa (kayıt açıldı, "işime yaradı")
+        // eski sonuç boş forma çizilmesin.
+        if (f !== form) return;
+        if (out.helpSessionId) {
+          IhHelp.session.set(out.helpSessionId);
+          // Taslak uzun aradan sonra yeni oturum açtıysa o da kayda toplanır.
+          if (f) (f.helpSessionIds = f.helpSessionIds || []).push(out.helpSessionId);
+        }
         // Prototipin beklediği şekle çevir: { record, percent, keywords }
         similarCache = out.matches.map((m) => ({
           record: {
@@ -686,42 +843,47 @@
           },
           percent: m.percent,
           keywords: m.terms,
+          resultId: m.resultId || null,
         }));
         deptCache = out.department || null;
         // Kayıt açılırsa sonucu ML veritabanındaki bu çalıştırmaya bağlamak için.
-        if (typeof form !== 'undefined' && form) {
-          form.mlInferenceId = out.inferenceId || null;
-          form.deptApplied = false;
-        }
+        f.mlInferenceId = out.inferenceId || null;
+        // Kayıt kısıtlı ya da anonim açılırsa önceki taramalar da temizlensin.
+        if (out.inferenceId) (f.mlInferenceIds = f.mlInferenceIds || []).push(out.inferenceId);
+        f.deptApplied = false;
       } catch (err) {
-        // Hata "benzer kayıt bulunamadı" gibi sunulmasın: kontrol tamamlanmış
-        // sayılmaz, form korunur, kullanıcı tekrar dener.
+        if (f !== form) return;
+        // Hata "benzer kayıt bulunamadı" gibi sunulmasın; ama kayıt açmak da
+        // engellenmesin. Yazılanlar olduğu gibi kalır.
         similarCache = null;
         deptCache = null;
-        if (typeof form !== 'undefined' && form) { form.mlDone = false; form.mlOk = false; }
-        $('#mlResults').innerHTML = ''; $('#mlConfirm').innerHTML = ''; $('#mlDept').innerHTML = '';
-        $('#mlStatus').innerHTML = '<b>Benzer kayıt taraması yapılamadı.</b> Bağlantınızı kontrol edip ' +
-          '<b>ML ile Kontrol Et</b>’e yeniden basın. Yazdıklarınız korunuyor.';
+        f.mlDone = false;
+        f.sig = null;
+        $('#mlResults').innerHTML = ''; $('#mlDept').innerHTML = '';
+        $('#mlStatus').innerHTML = '<b>Benzer çözümler şu an getirilemedi.</b> Kaydı yine de oluşturabilirsiniz. ' +
+          '<button type="button" class="mini-btn" id="mlRetry">Tekrar dene</button>';
+        $('#mlRetry').onclick = () => window.runMl();
         if (typeof syncCreateBtn === 'function') syncCreateBtn();
-        toast('Benzer kayıt taraması yapılamadı: ' + err.message, 'err');
         return;
       }
     }
     // Geri kalan her şeyi prototipin kendi akışı çizer.
-    return origRunMl.apply(this, arguments);
+    return origRunMl.call(this, opts);
   };
 
-  window.runMl = async function () {
-    if (form.mlBusy) return;
+  window.runMl = async function (opts) {
     const f = form;
-    const btn = $('#mlBtn');
+    // Tarama sürerken yeni bir istek gelirse kaybolmasın: bitince bir kez daha.
+    if (f.mlBusy) { f.scanAgain = true; return; }
     f.mlBusy = true;
-    if (btn) btn.disabled = true;
     try {
-      return await scanThenRender.apply(this, arguments);
+      return await scanThenRender.call(this, opts);
     } finally {
-      // Prototip sonucu 700 ms gecikmeyle çiziyor; kilit o bitince açılır.
-      setTimeout(() => { f.mlBusy = false; if (btn) btn.disabled = false; }, 750);
+      f.mlBusy = false;
+      if (f === form && f.scanAgain) {
+        f.scanAgain = false;
+        if (typeof scheduleScan === 'function') scheduleScan();
+      }
     }
   };
 
@@ -758,6 +920,7 @@
         benefitNote: o.benefitNote || undefined,
         department: d1,
         anonymous: !!form.anon,
+        restricted: !!($('#fRestricted') && $('#fRestricted').checked),
       };
     } else {
       const desc = ($('#fDesc').value || '').trim();
@@ -773,11 +936,9 @@
         department2: d2 || null,
         priority: $('#fPrio').value || 'normal',
         anonymous: !!form.anon,
-        shownSuggestions: (form.matches || []).map((m) => ({
-          code: m.record.code,
-          score: m.percent / 100,
-        })),
+        restricted: !!($('#fRestricted') && $('#fRestricted').checked),
         mlInferenceId: form.mlInferenceId || null,
+        mlInferenceIds: form.mlInferenceIds || [],
         deptSuggestionApplied: !!form.deptApplied,
       };
     }
@@ -787,8 +948,17 @@
     form.busy = true;
     syncCreateBtn();
     btn.textContent = isOneri ? 'Gönderiliyor…' : 'Oluşturuluyor…';
+    // Süren tarama bitmeden gönderilmesin: oturumu ve ML çalıştırması bu kayda
+    // bağlanmaz, anonim/kısıtlı gizlemesi de ona uygulanmazdı.
+    if (form.scanBusy) {
+      await form.scanBusy;
+      if (!isOneri) Object.assign(payload, { mlInferenceId: form.mlInferenceId || null, mlInferenceIds: form.mlInferenceIds || [] });
+    }
+    payload.helpSessionId = IhHelp.session.get();
+    payload.helpSessionIds = form.helpSessionIds || [];
     try {
       let rec = (await Api.create(payload)).record;
+      IhHelp.session.set(null);   // kayıt açıldı: sonraki yardım yeni oturum
       let fileErr = null;
       if (files.length) {
         try {
@@ -823,9 +993,10 @@
 
   window.exportCsv = function () {
     // Aktarım sunucuda yapılır: yetki kontrolü ve denetim izi orada.
-    // Raporlar ekranında ekip seçiliyse CSV de yalnızca o ekibin kayıtları.
+    // Raporlar ekranında departman/ekip seçiliyse CSV de yalnızca onların kayıtları.
     const dept = typeof repDept !== 'undefined' ? repDept : '';
-    window.location.href = '/api/reports/export.csv' + (dept ? '?department=' + encodeURIComponent(dept) : '');
+    const team = typeof repTeam !== 'undefined' ? repTeam : '';
+    window.location.href = '/api/reports/export.csv' + repQuery(dept, team);
   };
 
   /* ------------------------------------------------------------ açılış */
@@ -848,11 +1019,10 @@
       if (boot.uploads) Object.assign(Uploads, boot.uploads);
       if (Array.isArray(boot.benefits) && boot.benefits.length) fill(BENEFITS, boot.benefits);
 
-      // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğu alt bilgisi.
+      // Kuruluş adı (.env → ORG_NAME): sekme başlığı ve kenar çubuğunda logonun altı.
       if (boot.org && boot.org.name) {
-        document.title = 'İç Hatlar — ' + boot.org.name;
-        const foot = document.querySelector('.side-foot');
-        if (foot) foot.textContent = '© ' + new Date().getFullYear() + ' ' + boot.org.name;
+        APP_TITLE = 'İç Hatlar — ' + boot.org.name;
+        $('#orgName').textContent = boot.org.name;
       }
 
       // Rol: yönetim menüsü yalnızca yönetici ve sistem yöneticisine. Yetki
@@ -860,6 +1030,8 @@
       const isManager = boot.me.role === 'MANAGER' || boot.me.role === 'ADMIN';
       document.querySelectorAll('[data-role-min="manager"]').forEach((el) => { el.hidden = !isManager; });
       document.body.dataset.role = boot.me.role;
+      // Kurulum ve yapılandırma notları yalnızca sistem yöneticisine.
+      document.querySelectorAll('[data-admin-only]').forEach((el) => { el.hidden = boot.me.role !== 'ADMIN'; });
       window.IH_KB = boot.kb || { view: false, admin: false, edit: [] };
       document.querySelectorAll('[data-kb-gate]').forEach((el) => { el.hidden = !window.IH_KB.view; });
 
@@ -882,7 +1054,14 @@
       rewireAfterBoot(boot);
 
       if (typeof renderChrome === 'function') renderChrome();
-      if (typeof show === 'function') show('dashboard');
+      // Adres çubuğundaki ekran açılır (#/kayit/KAY-…, #/raporlar); yoksa ana
+      // sayfa: ekip üyesi ve yöneticiye Genel Bakış, çalışana Açtıklarım.
+      if (boot.me.role === 'USER') HOME_VIEW = 'my-tickets';
+      if (typeof show === 'function') {
+        const r = typeof parseRoute === 'function' ? parseRoute(location.hash) : null;
+        // Tanınmayan eski adres (ör. kaldırılan #/sik-sorulanlar) açılan ekranınkiyle değişir.
+        show(r ? r.id : HOME_VIEW, r && r.param, r || !location.hash ? { history:false } : { replace:true });
+      }
 
       // Açılış sırası kaynaklı hata bandını temizle: veri geldiğine göre
       // gerçek bir arıza değildi. Bundan sonraki hatalar görünür kalır.
@@ -906,47 +1085,30 @@
     const fa = $('#fAttach');
     if (fa) fa.innerHTML = window.attachPicker('create');
 
-    const deptOpts = (placeholder) =>
-      '<option value="">' + placeholder + '</option>' +
-      DEPARTMENTS.map((d) => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('');
-
-    const d1 = $('#fDept1');
-    const d2 = $('#fDept2');
+    // Departman → Ekip seçimleri index.html'deki ortak yardımcıyla (fillDeptSelects).
     const prio = $('#fPrio');
-    if (d1) d1.innerHTML = deptOpts('Seçiniz...');
-    if (d2) d2.innerHTML = deptOpts('Seçiniz (isteğe bağlı)');
+    if ($('#fRoot1') && typeof fillDeptSelects === 'function') fillDeptSelects();
     if (prio) {
       prio.innerHTML = PRIORITIES.map(
         (p) => '<option value="' + p.id + '"' + (p.id === 'normal' ? ' selected' : '') + '>' +
-          p.label + ' — SLA ' + p.sla + ' sa</option>',
+          p.label + '</option>',
       ).join('');
     }
 
-    // Test ortamında (geliştirme girişi) prototipteki kullanıcı seçici kalır;
-    // seçim yerel durumu değil, sunucudaki oturumu değiştirir.
-    const sw = $('#userSwitch');
-    if (sw && boot.devAuth) {
-      sw.innerHTML = USERS.map((u) =>
-        '<option value="' + u.id + '"' + (u.id === boot.me.id ? ' selected' : '') + '>' +
-          esc(u.name) + ' — ' + esc(deptName(u.dept)) + '</option>',
-      ).join('');
-      sw.onchange = (e) => {
-        location.href = '/auth/dev-login?userId=' + encodeURIComponent(e.target.value) + '&returnTo=/';
-      };
-    } else if (sw) {
-      // Gerçek girişte seçici anlamsız: yerine oturum sahibi ve çıkış.
-      const wrap = sw.parentElement;
-      sw.remove();
-      const out = document.createElement('button');
-      out.className = 'chrome-btn';
-      out.textContent = 'Çıkış yap';
-      out.onclick = async () => {
+    // Hesap satırındaki tek düğme: çıkış. Test ortamında (geliştirme girişi)
+    // aynı çıkış "Kişi değiştir" olur: /auth/login giriş sayfasındaki kişi
+    // listesine döner. Canlıda kişi seçiciden iz kalmaz.
+    const act = $('#acctAct');
+    if (act) {
+      if (boot.devAuth) {
+        act.title = 'Kişi değiştir';
+        act.setAttribute('aria-label', 'Kişi değiştir');
+        act.innerHTML = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/></svg>';
+      }
+      act.onclick = async () => {
         await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin' });
         location.href = '/auth/login';
       };
-      wrap.appendChild(out);
-      const lbl = wrap.querySelector('.switch-lbl');
-      if (lbl) lbl.textContent = boot.me.email;
     }
 
     // Demo verisini sıfırlama düğmesi üretimde olmamalı.

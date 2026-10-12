@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { actorOf, requireUser } from '../auth/guard.js';
 import { can } from '../domain/permissions.js';
+import { actorInTree, loadOrgTree, withRoots } from '../domain/org.js';
 import { badRequest } from '../lib/errors.js';
 
 const LIMIT = 30;
@@ -43,6 +44,8 @@ export default async function notificationRoutes(app: FastifyInstance) {
               createdById: true,
               assigneeId: true,
               anonymous: true,
+              // Okunmazsa kural "kısıtlı değil" sayar: yönetici başlığı görürdü.
+              restricted: true,
             },
           },
         },
@@ -52,8 +55,10 @@ export default async function notificationRoutes(app: FastifyInstance) {
 
     // Bildirim yazıldıktan sonra kayıt başka ekibe yönlendirilmiş olabilir.
     // Kişi artık kaydı göremiyorsa başlığı da görmemeli: yalnızca kod kalır.
+    const tree = await loadOrgTree(prisma);
+    const viewer = actorInTree(actor, tree);
     const items = rows.map((n) => {
-      const visible = n.record ? can('view', n.record, actor) : false;
+      const visible = n.record ? can('view', withRoots(n.record, tree), viewer) : false;
       return {
         id: n.id,
         type: n.type,

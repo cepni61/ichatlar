@@ -1,10 +1,12 @@
-import { EventType, NotificationType, RecordStatus } from '../domain/enums.js';
+import { EventType, NotificationType } from '../domain/enums.js';
 import type { FastifyBaseLogger } from 'fastify';
 import { prisma } from '../db.js';
 import { OPEN_STATUSES } from '../domain/constants.js';
 import { pruneSessions } from '../auth/session.js';
 import { notifySlaBreach } from '../lib/notify.js';
 import { pruneDraftAttachments } from '../routes/attachments.js';
+import { expireGrants } from '../routes/grants.js';
+import { autoCloseResolved } from './autoClose.js';
 
 /**
  * SLA gözcüsü. Hedefi aşmış açık kayıtları işaretler ve akışa bir olay düşer.
@@ -29,8 +31,10 @@ export async function checkSlaBreaches(log: FastifyBaseLogger) {
       id: true,
       code: true,
       departmentId: true,
+      department2Id: true,
       assigneeId: true,
       department: { select: { name: true } },
+      department2: { select: { name: true } },
     },
     take: 500,
   });
@@ -42,16 +46,19 @@ export async function checkSlaBreaches(log: FastifyBaseLogger) {
     // İşaret, akış olayı ve bildirimler tek işlemde: biri yazılıp diğeri
     // kalırsa ya bildirimsiz ihlal ya da ihlalsiz bildirim oluşurdu.
     notified += await prisma.$transaction(async (tx) => {
-      await tx.record.update({ where: { id: rec.id }, data: { slaBreachedAt: now } });
+      // Koşullu işaret: iki gözcü aynı anda çalışırsa olay ikinci kez düşmez.
+      const marked = await tx.record.updateMany({ where: { id: rec.id, slaBreachedAt: null }, data: { slaBreachedAt: now } });
+      if (marked.count === 0) return 0;
       const count = await notifySlaBreach(tx, rec);
+      const teams = rec.department2 ? `${rec.department.name} ve ${rec.department2.name} ekiplerinden` : `${rec.department.name} ekibinden`;
       await tx.recordEvent.create({
         data: {
           recordId: rec.id,
           type: EventType.SLA_BREACH,
           // byId boş: bu bir sistem olayı, kişi değil.
           text: count
-            ? `SLA hedefi aşıldı. ${rec.department.name} ekibinden ${count} kişiye bildirim gönderildi.`
-            : `SLA hedefi aşıldı. ${rec.department.name} ekibinde bildirilecek etkin kullanıcı bulunamadı.`,
+            ? `Hedef süre aşıldı. ${teams} ${count} kişiye bildirim gönderildi.`
+            : `Hedef süre aşıldı. ${rec.department.name} ekibinde bildirilecek etkin kullanıcı bulunamadı.`,
           at: now,
         },
       });
@@ -81,7 +88,7 @@ export async function backfillSlaNotifications(log: FastifyBaseLogger) {
       slaBreachedAt: { not: null },
       notifications: { none: { type: NotificationType.SLA_BREACH } },
     },
-    select: { id: true, code: true, departmentId: true, assigneeId: true },
+    select: { id: true, code: true, departmentId: true, department2Id: true, assigneeId: true },
     take: 500,
   });
   let notified = 0;
@@ -99,6 +106,9 @@ export function startJobs(log: FastifyBaseLogger) {
 
   const slaTimer = setInterval(() => {
     checkSlaBreaches(log).catch((err) => log.error({ err }, 'SLA gözcüsü hata verdi'));
+    // Süreli yetkiler (vekâlet): süresi dolan kaldırılır, etkin rol düzelir.
+    expireGrants(log).catch((err) => log.error({ err }, 'yetki süresi işi hata verdi'));
+    autoCloseResolved(log).catch((err) => log.error({ err }, 'kendiliğinden kapatma işi hata verdi'));
   }, FIVE_MIN);
 
   const pruneTimer = setInterval(() => {
@@ -114,16 +124,10 @@ export function startJobs(log: FastifyBaseLogger) {
   checkSlaBreaches(log)
     .then(() => backfillSlaNotifications(log))
     .catch((err) => log.error({ err }, 'SLA gözcüsü hata verdi'));
+  expireGrants(log).catch((err) => log.error({ err }, 'yetki süresi işi hata verdi'));
 
   return () => {
     clearInterval(slaTimer);
     clearInterval(pruneTimer);
   };
 }
-
-/** Kapanan kayıtta gözcünün tekrar tetiklenmemesi için yardımcı. */
-export const closedStatuses = [
-  RecordStatus.COZULDU,
-  RecordStatus.KAPATILDI,
-  RecordStatus.REDDEDILDI,
-];

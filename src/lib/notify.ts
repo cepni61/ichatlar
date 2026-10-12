@@ -40,11 +40,13 @@ export async function notifyUsers(
  */
 export async function slaBreachRecipients(
   tx: Tx,
-  rec: { departmentId: string; assigneeId: string | null },
+  rec: { departmentId: string; department2Id: string | null; assigneeId: string | null },
 ): Promise<string[]> {
   const roles = rec.assigneeId ? [Role.MANAGER] : [Role.TEAM_MEMBER, Role.MANAGER];
+  // İkinci ekip de kaydı görür ve üzerine alabilir; gecikmeyi o da bilmeli.
+  const teams = rec.department2Id ? [rec.departmentId, rec.department2Id] : [rec.departmentId];
   const team = await tx.user.findMany({
-    where: { departmentId: rec.departmentId, active: true, role: { in: roles } },
+    where: { departmentId: { in: teams }, active: true, role: { in: roles } },
     select: { id: true },
   });
   const ids = new Set(team.map((u) => u.id));
@@ -67,7 +69,7 @@ export async function slaBreachRecipients(
  */
 export async function notifySlaBreach(
   tx: Tx,
-  rec: { id: string; code: string; departmentId: string; assigneeId: string | null },
+  rec: { id: string; code: string; departmentId: string; department2Id: string | null; assigneeId: string | null },
 ): Promise<number> {
   const recipients = await slaBreachRecipients(tx, rec);
   if (recipients.length === 0) return 0;
@@ -79,7 +81,7 @@ export async function notifySlaBreach(
       userId,
       recordId: rec.id,
       type: NotificationType.SLA_BREACH,
-      text: `${rec.code} SLA hedefini aştı.`,
+      text: `${rec.code} hedef süreyi aştı.`,
     })),
     skipDuplicates: true,
   });

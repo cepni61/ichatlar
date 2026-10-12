@@ -1,7 +1,5 @@
-import { randomBytes, createHash } from 'node:crypto';
 import { Issuer, generators, type Client } from 'openid-client';
-import { Role } from '../domain/enums.js';
-import { prisma } from '../db.js';
+import type { DirectoryClaims, DirectoryPolicy } from './directory.js';
 import { env } from '../env.js';
 
 /**
@@ -29,7 +27,11 @@ export async function entraClient(): Promise<Client> {
           redirect_uris: [`${env.APP_URL}/auth/callback`],
           response_types: ['code'],
         }),
-    );
+    ).catch((e) => {
+      // Geçici ağ hatası kalıcı olmasın: sonraki giriş keşfi yeniden dener.
+      clientPromise = null;
+      throw e;
+    });
   }
   return clientPromise;
 }
@@ -68,17 +70,10 @@ export async function authorizationUrl(tx: AuthTransaction) {
   });
 }
 
-export interface EntraClaims {
-  oid: string;
-  email: string;
-  name: string;
-  groups: string[];
-}
-
 export async function exchangeCode(
   currentUrl: string,
   tx: AuthTransaction,
-): Promise<EntraClaims> {
+): Promise<DirectoryClaims> {
   const client = await entraClient();
 
   const params = client.callbackParams(currentUrl);
@@ -102,86 +97,26 @@ export async function exchangeCode(
 
   const groups = Array.isArray(claims.groups) ? (claims.groups as string[]) : [];
 
-  return { oid, email: email.toLocaleLowerCase('tr-TR'), name, groups };
+  return { oid, email: email.toLowerCase(), name, groups };
 }
 
-/**
- * Kullanıcı ilk girişte oluşturulur, sonraki girişlerde ad/e-posta tazelenir.
- * Kimliğin anahtarı oid — e-posta değişse bile aynı kullanıcı kalır.
- *
- * Rol ve departman:
- *  - ENTRA_USE_GROUPS açıksa grup kimlikleri Department.entraGroupId ile
- *    eşleştirilir, eşleşen kullanıcı o ekibin üyesi olur.
- *  - Kapalıysa kullanıcı departmansız ve USER rolüyle açılır; yönetici
- *    ekranından atanır. Yetkinin sessizce genişlemesi bundan iyidir.
- */
-export async function upsertUserFromClaims(claims: EntraClaims) {
-  let departmentId: string | null = null;
-  let role: Role = Role.USER;
-
-  if (env.ENTRA_USE_GROUPS && claims.groups.length) {
-    const dept = await prisma.department.findFirst({
-      where: { entraGroupId: { in: claims.groups }, active: true },
-      select: { id: true },
-    });
-    if (dept) {
-      departmentId = dept.id;
-      role = Role.TEAM_MEMBER;
-    }
-  }
-
-  if (env.ENTRA_ADMIN_GROUP_ID && claims.groups.includes(env.ENTRA_ADMIN_GROUP_ID)) {
-    role = Role.ADMIN;
-  }
-
-  const existing = await prisma.user.findUnique({
-    where: { entraOid: claims.oid },
-    select: { id: true, role: true, departmentId: true },
-  });
-
-  if (existing) {
-    // Elle verilmiş rolü ve departmanı ezmiyoruz: yönetici birine MANAGER
-    // dediyse her girişte TEAM_MEMBER'a düşmesi doğru olmaz.
-    return prisma.user.update({
-      where: { id: existing.id },
-      data: {
-        email: claims.email,
-        name: claims.name,
-        lastLoginAt: new Date(),
-        active: true,
-        ...(existing.departmentId == null && departmentId ? { departmentId } : {}),
-        ...(existing.role === Role.USER && role !== Role.USER ? { role } : {}),
-      },
-      select: { id: true },
-    });
-  }
-
-  return prisma.user.create({
-    data: {
-      entraOid: claims.oid,
-      email: claims.email,
-      name: claims.name,
-      role,
-      departmentId,
-      lastLoginAt: new Date(),
-    },
-    select: { id: true },
-  });
-}
+/** Entra grupları: ekip ENTRA_USE_GROUPS ile, yönetici ENTRA_ADMIN_GROUP_ID ile. */
+export const entraPolicy = (): DirectoryPolicy => ({
+  useGroups: env.ENTRA_USE_GROUPS,
+  adminGroup: env.ENTRA_ADMIN_GROUP_ID,
+  managerGroup: '',
+  authoritative: false,
+});
 
 /** Dönüş adresinin açık yönlendirme (open redirect) olmadığını doğrular. */
 export function safeReturnTo(value: unknown): string {
   // "/\evil.com" tarayıcıda "//evil.com" gibi yorumlanır; ters bölü de reddedilir.
-  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) {
+  // Tarayıcı sekme/satır sonunu adresten siler: "/\t/evil.com" → "//evil.com".
+  if (
+    typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') ||
+    value.includes('\\') || /[\x00-\x1f\x7f]/.test(value)
+  ) {
     return '/';
   }
   return value;
-}
-
-export function hashState(state: string) {
-  return createHash('sha256').update(state).digest('base64url');
-}
-
-export function randomId() {
-  return randomBytes(16).toString('base64url');
 }

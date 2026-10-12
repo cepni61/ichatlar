@@ -54,6 +54,26 @@ describe('SLA ihlal bildirimi', () => {
     expect(await recipientsOf(r.id)).toEqual([t.member1.id, t.manager.id].sort());
   });
 
+  it('ikinci ekip de bildirim alır', async () => {
+    const t = await team();
+    const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, department2Id: t.kalite.id, slaDueAt: past() });
+    await checkSlaBreaches(silentLog);
+    expect(await recipientsOf(r.id)).toContain(t.outsider.id);
+  });
+
+  it('gecikmiş kayıt başka ekibe yönlendirilince yeni ekip de bildirim alır', async () => {
+    const t = await team();
+    const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });
+    await checkSlaBreaches(silentLog);
+    const res = await app.inject({
+      method: 'POST', url: `/api/records/${r.code}/forward`, headers: await loginAs(app, t.member1.id),
+      payload: { departmentId: t.kalite.id },
+    });
+    expect(res.statusCode).toBe(200);
+    await checkSlaBreaches(silentLog);
+    expect(await recipientsOf(r.id)).toContain(t.outsider.id);
+  });
+
   it('ikinci çalıştırmada aynı kayda tekrar bildirim yazılmaz', async () => {
     const t = await team();
     const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });
@@ -85,6 +105,18 @@ describe('SLA ihlal bildirimi', () => {
     const ev = await prisma.recordEvent.findFirst({ where: { recordId: r.id, type: 'SLA_BREACH' } });
     expect(ev?.text).toContain('3 kişiye bildirim');
     expect(ev?.byId).toBeNull();
+  });
+
+  it('akış ve bildirim metni kısaltma kullanmaz ("SLA" değil "hedef süre")', async () => {
+    const t = await team();
+    const r = await createRecord({ createdById: t.opener.id, departmentId: t.ik.id, slaDueAt: past() });
+
+    await checkSlaBreaches(silentLog);
+
+    const ev = await prisma.recordEvent.findFirst({ where: { recordId: r.id, type: 'SLA_BREACH' } });
+    const n = await prisma.notification.findFirst({ where: { recordId: r.id } });
+    expect(ev?.text).toMatch(/^Hedef süre aşıldı\./);
+    expect(n?.text).toContain('hedef süreyi aştı');
   });
 
   it('bildirim tablosundan önce işaretlenmiş açık ihlaller tamamlanır', async () => {

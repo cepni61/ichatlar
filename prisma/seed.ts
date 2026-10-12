@@ -12,7 +12,8 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { PrismaClient } from '@prisma/client';
 import { Priority, RecordStatus, RecordType } from '../src/domain/enums.js';
-import { applyOrgConfig, orgConfigSchema } from '../src/setup/org-config.js';
+import { applyOrgConfig, mainTeamId, orgConfigSchema } from '../src/setup/org-config.js';
+import { activeGrant, effectiveRole, ROLE_KINDS } from '../src/domain/grants.js';
 import { CONTEXT, COUNTS, KB_ARTICLES, TITLES, TOPICS, USERS } from './demo-data.js';
 
 const prisma = new PrismaClient();
@@ -26,6 +27,9 @@ const CONFIG = orgConfigSchema.parse(
   JSON.parse(readFileSync(new URL('../config/kurulus.example.json', import.meta.url), 'utf8')),
 );
 const DEPARTMENTS = CONFIG.departments;
+/** Demo verisi departman koduyla yazılı; kayıt ve kişi departmanın asıl ekibine bağlanır. */
+const MAIN_TEAM = new Map(DEPARTMENTS.map((d) => [d.id, mainTeamId(d)]));
+const teamOf = (deptId: string | null) => (deptId ? (MAIN_TEAM.get(deptId) ?? deptId) : null);
 
 const slug = (name: string) =>
   name
@@ -73,6 +77,8 @@ async function resetDemo() {
 
   console.log('Demo verisi siliniyor…');
   await prisma.$transaction([
+    prisma.helpSession.deleteMany(),
+    prisma.infoRequest.deleteMany(),
     prisma.notification.deleteMany(),
     prisma.suggestion.deleteMany(),
     prisma.attachment.deleteMany(),
@@ -123,6 +129,12 @@ async function main() {
   console.log('Demo kullanıcılar…');
   const userIds = new Map<string, string>();
   for (const u of USERS) {
+    // Yetkiler ekranında verilmiş yetki her açılıştaki tohumlamada kaybolmasın.
+    const prev = await prisma.user.findUnique({
+      where: { entraOid: `seed:${u.key}` },
+      select: { grants: { where: { kind: { in: ROLE_KINDS }, AND: [activeGrant()] }, select: { kind: true } } },
+    });
+    const role = effectiveRole(u.role, (prev?.grants ?? []).map((g) => g.kind), teamOf(u.dept));
     const row = await prisma.user.upsert({
       // Entra yoksa oid yerine kararlı bir yer tutucu kullanılır; gerçek
       // girişte oid ile eşleşen ayrı kullanıcı açılır.
@@ -133,9 +145,10 @@ async function main() {
         name: u.name,
         title: TITLES[u.key] ?? null,
         role: u.role,
-        departmentId: u.dept,
+        baseRole: u.role,
+        departmentId: teamOf(u.dept),
       },
-      update: { name: u.name, title: TITLES[u.key] ?? null, role: u.role, departmentId: u.dept, active: true },
+      update: { name: u.name, title: TITLES[u.key] ?? null, role, baseRole: u.role, departmentId: teamOf(u.dept), active: true },
       select: { id: true },
     });
     userIds.set(u.key, row.id);
@@ -145,10 +158,10 @@ async function main() {
   console.log('Bilgi Bankası örnekleri…');
   for (const a of KB_ARTICLES) {
     const data = {
-      kind: a.kind, departmentId: a.dept, title: a.title, keywords: a.keywords,
+      kind: a.kind, departmentId: teamOf(a.dept)!, title: a.title, keywords: a.keywords,
       answer: a.answer, url: a.url, active: true, updatedById: userIds.get(a.by) ?? null,
     };
-    const found = await prisma.kbArticle.findFirst({ where: { title: a.title, departmentId: a.dept }, select: { id: true } });
+    const found = await prisma.kbArticle.findFirst({ where: { title: a.title, departmentId: teamOf(a.dept)! }, select: { id: true } });
     if (found) await prisma.kbArticle.update({ where: { id: found.id }, data });
     else await prisma.kbArticle.create({ data: { ...data, createdById: userIds.get(a.by) ?? null } });
   }
@@ -177,7 +190,7 @@ async function main() {
   }
   await prisma.counter.upsert({ where: { year }, create: { year, seq }, update: { seq } });
 
-  const byDept = DEPARTMENTS.map((d) => `${d.short} ${records.filter((r) => r.departmentId === d.id).length}`);
+  const byDept = DEPARTMENTS.map((d) => `${d.short} ${records.filter((r) => r.departmentId === teamOf(d.id)).length}`);
   console.log(`${seq} kayıt oluşturuldu: ${byDept.join(' · ')}`);
   console.log('\nGeliştirme girişi için:');
   console.log(`  http://localhost:3000/auth/dev-login?email=${slug('Ömer Uygun')}@ornek.com`);
@@ -297,8 +310,8 @@ function buildRecords(userIds: Map<string, string>) {
       description,
       priority,
       status,
-      departmentId: deptId,
-      department2Id: dept2?.id ?? null,
+      departmentId: teamOf(deptId)!,
+      department2Id: teamOf(dept2?.id ?? null),
       createdById: by(creator.key),
       assigneeId: assignee ? by(assignee.key) : null,
       // Yeni kayıt formunda anonim gönderim yok; demo verisinde de yok.
@@ -312,6 +325,19 @@ function buildRecords(userIds: Map<string, string>) {
       closedAt: closed ? resolvedAt : null,
       slaDueAt: new Date(createdAt.getTime() + limitH * HOUR),
       events: { create: events },
+      // Ek bilgi bekleyen demo kayıtları yanıtlanabilsin.
+      ...(status === RecordStatus.EK_BILGI && assignee
+        ? {
+            infoRequests: {
+              create: [{
+                requestedById: by(assignee.key),
+                requestedAt: firstResponseAt ?? createdAt,
+                question: 'Talebinizi netleştirmek için biraz daha ayrıntı verebilir misiniz?',
+                statusBefore: isOneri ? RecordStatus.DEGERLENDIRILIYOR : RecordStatus.CALISILIYOR,
+              }],
+            },
+          }
+        : {}),
     };
   });
 }

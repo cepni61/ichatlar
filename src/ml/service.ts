@@ -13,6 +13,7 @@ import {
   predict,
   train,
   type Doc,
+  type Evaluation,
   type Features,
   type Model,
   type Params,
@@ -69,13 +70,17 @@ let training: Promise<ActiveModel | null> | null = null;
 
 async function loadTrainingData(params: Params) {
   const [departments, records, kb] = await Promise.all([
+    // Sınıflar ekiplerdir: kayıt açılabilen birimler (etkin, etkin ekibi olmayan).
     prisma.department.findMany({
-      where: { active: true },
+      where: { active: true, children: { none: { active: true } } },
       select: { id: true, name: true },
-      orderBy: { order: 'asc' },
+      orderBy: [{ parentId: 'asc' }, { order: 'asc' }],
     }),
+    // "Yalnızca ilgili ekip görsün" işaretli kayıtlar ML hafızasına girmez:
+    // metinleri modelin terim ağırlıklarına ve eğitim örneklerine yazılırdı
+    // (kullanıcı isteği, 2026-10-09).
     prisma.record.findMany({
-      where: { status: { notIn: EXCLUDED_FROM_TRAINING } },
+      where: { status: { notIn: EXCLUDED_FROM_TRAINING }, restricted: false },
       select: {
         code: true,
         title: true,
@@ -100,9 +105,10 @@ async function loadTrainingData(params: Params) {
       code: r.code,
       departmentId: r.departmentId,
       features: scaled(featurize(r.title, r.description, params), r.renewed ? RENEWED_WEIGHT : 1),
-      corrected: r.events.some(
-        (e) => fromJsonText<{ departmentId?: string | null }>(e.meta)?.departmentId,
-      ),
+      corrected: r.events.some((e) => {
+        const m = e.meta as { departmentId?: unknown } | null;
+        return Boolean(m && typeof m === 'object' && m.departmentId);
+      }),
     }));
   for (const a of kb) {
     if (!activeIds.has(a.departmentId)) continue;
@@ -175,7 +181,7 @@ async function persist(
   model: Model,
   docs: Doc[],
   fingerprint: string,
-  ev: ReturnType<typeof evaluate>,
+  ev: Evaluation,
 ): Promise<string | null> {
   const ml = mlDb();
   if (!ml) return null;
@@ -269,7 +275,7 @@ export async function ensureModel(log: FastifyBaseLogger, opts: { force?: boolea
 
     // İlk geçiş: sıcaklığı ölçmek için; ikinci geçiş gerek yok, yalnızca parametre değişiyor.
     const model = train(docs, departments, params);
-    const ev = evaluate(model, docs);
+    const ev = await evaluate(model, docs);
     model.params.temperature = ev.temperature;
 
     let id: string | null = null;
@@ -305,11 +311,28 @@ export function relearn(log: FastifyBaseLogger) {
   ensureModel(log).catch((err) => log.warn({ err: (err as Error).message }, 'ML yeniden eğitimi başarısız'));
 }
 
+/** Kayda dönüşmeyen taramalar bu kadar gün saklanır; her tuşta bir satır yazılıyor. */
+const KEEP_UNUSED_DAYS = 90;
+
+async function pruneInferences(log: FastifyBaseLogger) {
+  const ml = mlDb();
+  if (!ml) return;
+  const before = new Date(Date.now() - KEEP_UNUSED_DAYS * 24 * 60 * 60 * 1000);
+  try {
+    const { count } = await ml.inference.deleteMany({ where: { createdAt: { lt: before }, outcome: { is: null } } });
+    if (count) log.info({ count }, 'ML: eski taramalar silindi');
+  } catch (err) {
+    log.warn({ err: (err as Error).message }, 'ML: eski taramalar silinemedi');
+  }
+}
+
 /** Zamanlanmış yeniden eğitim — veri değişmediyse maliyeti bir sorgu. */
 export function startMlJobs(log: FastifyBaseLogger) {
+  void pruneInferences(log);
   const timer = setInterval(
     () => {
       ensureModel(log).catch((err) => log.error({ err }, 'ML yeniden eğitimi hata verdi'));
+      void pruneInferences(log);
     },
     env.ML_RETRAIN_MINUTES * 60 * 1000,
   );
@@ -384,8 +407,9 @@ export async function logInference(
         predictedDepartmentId: top?.departmentId ?? null,
         confidence: top?.probability ?? null,
         lowConfidence: s?.lowConfidence ?? true,
+        // Yalnızca arayüzün gösterdiği ilk 3 ekip: hepsi her taramada ekip sayısı kadar satırdı.
         predictions: {
-          create: (s?.all ?? []).map((p, i) => ({
+          create: (s?.all ?? []).slice(0, 3).map((p, i) => ({
             rank: i + 1,
             departmentId: p.departmentId,
             departmentName: p.departmentName,
@@ -458,6 +482,29 @@ export async function recordOutcome(
   }
 }
 
+/**
+ * Kayıt açıldı; taslak yazılırken yapılan her tarama (metin ve öneriler)
+ * kişinin kendi çalıştırmalarıyla sınırlı olarak:
+ *  - kısıtlı kayıtta silinir: kayıt ML hafızasına hiç girmez;
+ *  - anonim kayıtta kişiden koparılır: taramalar açanı göstermez.
+ */
+export async function releaseDrafts(
+  log: FastifyBaseLogger,
+  userId: string,
+  inferenceIds: string[],
+  how: 'forget' | 'anonymize',
+) {
+  const ml = mlDb();
+  if (!ml || !inferenceIds.length) return;
+  const where = { id: { in: inferenceIds }, userId };
+  try {
+    if (how === 'forget') await ml.inference.deleteMany({ where });
+    else await ml.inference.updateMany({ where, data: { userId: null } });
+  } catch (err) {
+    log.warn({ err: (err as Error).message }, 'ML taslak taramaları temizlenemedi');
+  }
+}
+
 /** Kayıt başka ekibe yönlendirildi: modelin (ve kullanıcının) hatası kayda geçer. */
 export async function recordForward(log: FastifyBaseLogger, recordCode: string, departmentId: string) {
   const ml = mlDb();
@@ -492,9 +539,11 @@ export async function mlStats() {
 
   if (!ml) return { database: false, model, usage: null };
 
-  const [versions, inferences, outcomes] = await Promise.all([
+  const [versions, inferences, opened, outcomes] = await Promise.all([
     ml.modelVersion.count(),
     ml.inference.count(),
+    ml.outcome.count(),
+    // Oranlar için son 1000 kayıt yeterli.
     ml.outcome.findMany({
       orderBy: { createdAt: 'desc' },
       take: 1000,
@@ -520,9 +569,9 @@ export async function mlStats() {
     usage: {
       modelVersions: versions,
       checks: inferences,
-      recordsOpened: outcomes.length,
-      /** Öneriyi görüp kayıt açmaktan vazgeçenler (henüz tamamlanmamış formlar dahil). */
-      notOpened: inferences - outcomes.length,
+      recordsOpened: opened,
+      /** Kayda bağlanmayan taramalar: vazgeçilen ve tamamlanmamış formlar, aynı taslağın önceki taramaları. */
+      notOpened: inferences - opened,
       /** Doğru ekip = yönlendirildiyse yönlendirilen, değilse seçilen. */
       fieldAccuracyPct: pct(correct, withPrediction.length),
       suggestionAppliedPct: pct(outcomes.filter((o) => o.suggestionApplied).length, outcomes.length),

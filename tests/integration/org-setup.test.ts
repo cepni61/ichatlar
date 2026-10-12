@@ -1,13 +1,13 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { applyOrgConfig, orgConfigSchema, type OrgConfig } from '../../src/setup/org-config.js';
+import { applyOrgConfig, orgConfigSchema, type OrgConfigInput } from '../../src/setup/org-config.js';
 import { createRecord, createUser, prisma, resetDb } from './helpers.js';
 
-const base: OrgConfig = {
+const base: OrgConfigInput = {
   departments: [
     { id: 'ik', name: 'İnsan Kaynakları', short: 'İK' },
-    { id: 'bt', name: 'Bilgi Teknolojileri', short: 'BT', entraGroupId: 'g-bt' },
+    { id: 'bt', name: 'Bilgi Teknolojileri', short: 'BT', group: 'g-bt' },
   ],
   sla: { NORMAL: 40, YUKSEK: 20, KRITIK: 4, warnRatio: 0.8 },
 };
@@ -34,7 +34,7 @@ describe('kuruluş kurulumu (setup)', () => {
   it('ikinci çalıştırma değişiklik yoksa hiçbir şeyi güncellemez', async () => {
     await applyOrgConfig(prisma, base);
     const again = await applyOrgConfig(prisma, base);
-    expect(again).toEqual({ created: [], updated: [], notInConfig: [] });
+    expect(again).toEqual({ created: [], updated: [], notInConfig: [], moved: { records: 0, users: 0, kb: 0 } });
   });
 
   it('dosyadan çıkarılan departmanı silmez, raporlar; üzerindeki kayıt korunur', async () => {

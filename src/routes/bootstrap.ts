@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
-import { requireUser } from '../auth/guard.js';
+import { actorOf, requireUser } from '../auth/guard.js';
+import { isTeamRole } from '../domain/permissions.js';
 import { env } from '../env.js';
 import { ALLOWED, MAX_FILES } from '../domain/attachments.js';
 import { BENEFITS } from '../domain/suggestion.js';
@@ -23,6 +24,19 @@ import { kbAccess, KB_KINDS } from '../domain/kb.js';
  * sabitlerdi. Artık sunucudan gelirler; arayüz kodu bunları aynı isimli
  * dizilere doldurur, geri kalan tüm render mantığı değişmeden çalışır.
  */
+/**
+ * Departman, hemen ardından onun ekipleri. `order` departmanlar arasında ve
+ * her departmanın ekipleri arasında ayrı ayrı 1'den başlar; düz sıralama
+ * ekipleri departmanlarından koparıp karışık dizerdi.
+ */
+function treeOrder<T extends { id: string; parentId: string | null }>(units: T[]): T[] {
+  const roots = units.filter((u) => !u.parentId);
+  const known = new Set(roots.map((r) => r.id));
+  const out = roots.flatMap((r) => [r, ...units.filter((u) => u.parentId === r.id)]);
+  // Üstü etkin olmayan ekip (olmamalı) yine de listede kalsın.
+  return [...out, ...units.filter((u) => u.parentId && !known.has(u.parentId))];
+}
+
 export default async function bootstrapRoutes(app: FastifyInstance) {
   app.get('/api/bootstrap', { preHandler: requireUser }, async (req) => {
     const me = req.user!;
@@ -31,7 +45,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
       prisma.department.findMany({
         where: { active: true },
         orderBy: [{ order: 'asc' }, { name: 'asc' }],
-        select: { id: true, name: true, short: true },
+        select: { id: true, name: true, short: true, parentId: true },
       }),
       // Kullanıcı listesi kayıt sahibi/atama adlarını göstermek için gerekli.
       // E-posta paylaşılmaz — arayüzde kullanılmıyor.
@@ -41,7 +55,7 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
         select: { id: true, name: true, role: true, departmentId: true },
       }),
       slaRules(),
-      kbAccess({ id: me.id, role: me.role, departmentId: me.departmentId }),
+      kbAccess(actorOf(req)),  // departman sorumluluğu da (headOf)
     ]);
 
     return {
@@ -63,12 +77,18 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
         dept: me.departmentId,
         departmentName: me.departmentName,
       },
-      departments: departments.map((d) => ({ id: d.id, name: d.name, short: d.short })),
+      /**
+       * Departmanlar ve ekipleri tek listede: parent boşsa departman, doluysa o
+       * departmanın ekibi. Kayıt ve kişi ekibe bağlıdır (bkz. src/domain/org.ts).
+       */
+      departments: treeOrder(departments).map((d) => ({ id: d.id, name: d.name, short: d.short, parent: d.parentId })),
       users: users.map((u) => ({
         id: u.id,
         name: u.name,
         dept: u.departmentId,
         role: u.role === 'MANAGER' ? 'Yönetici' : u.role === 'ADMIN' ? 'Sistem Yöneticisi' : 'Ekip Üyesi',
+        /** Ekip kaydı üzerine alınabilir mi (USER da "Ekip Üyesi" yazıyor). */
+        teamRole: isTeamRole(u.role),
       })),
       types: Object.entries(TYPE_LABELS).map(([k, label]) => ({
         id: TYPE_TO_SLUG[k as keyof typeof TYPE_TO_SLUG],
@@ -80,6 +100,8 @@ export default async function bootstrapRoutes(app: FastifyInstance) {
           id: PRIORITY_TO_SLUG[key],
           label,
           sla: rules.get(key)!.hours,
+          /** "Süre yaklaşıyor" eşiği (hedefin oranı); arayüz rengi buradan hesaplar. */
+          warn: rules.get(key)!.warnRatio,
         };
       }),
       statuses: Object.entries(STATUS_LABELS).map(([k, label]) => {

@@ -7,16 +7,31 @@ import { actorOf, requireUser } from '../auth/guard.js';
 import {
   ONERI_OUTCOMES, ONERI_WORK_STATUSES, STATUS_FROM_SLUG, STATUS_LABELS, WORK_STATUSES,
 } from '../domain/constants.js';
-import { can, canTransition, type Action } from '../domain/permissions.js';
+import { can, canTransition, isTeamRole, type Action } from '../domain/permissions.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeRecord } from '../lib/serialize.js';
 import { MAX_FILES } from '../domain/attachments.js';
 import { lockRecordByCode, toJsonText } from '../lib/dialect.js';
 import { recordForward, relearn } from '../ml/service.js';
+import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { notifyUsers } from '../lib/notify.js';
+import { statusAfterInfo } from '../domain/info-request.js';
+import { autoCloseDeadline } from '../domain/work-hours.js';
+import { env } from '../env.js';
 
 /** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
 const attachmentIds = z.array(z.string().min(1).max(64)).max(MAX_FILES).default([]);
+
+/** Olay satırı; hedef alanları rapor içindir (rapor.kayit_adimi). */
+type PlanEvent = {
+  type: EventType;
+  text: string;
+  meta?: Prisma.InputJsonValue;
+  /** Açılış ve yönlendirmede hedef ekip. */
+  toTeamId?: string;
+  /** Üstlenme ve kişiye devirde hedef kişi. */
+  toUserId?: string;
+};
 
 /**
  * Her aksiyon aynı iskeleti izler:
@@ -46,14 +61,24 @@ async function mutate(
       assigneeId: string | null;
       firstResponseAt: Date | null;
       createdById: string;
+      /** "Yalnızca ilgili ekip görsün" — öneri havuzuna eklenemez. */
+      restricted: boolean;
+      /** Yanıt bekleyen ek bilgi isteği. */
+      openInfo: { id: string; statusBefore: string } | null;
+      /** Çözüldü'de açan yanıt vermezse kendiliğinden kapanma anı. */
+      autoCloseAt: Date | null;
     }) => {
       data: Prisma.RecordUpdateInput;
-      event: { type: EventType; text: string; meta?: unknown };
+      event: PlanEvent;
       nextStatus?: RecordStatus;
       /** Aynı işlemde yazılacak bildirim. İşlemi yapan kişi kendine bildirim almaz. */
       notify?: { userIds: (string | null)[]; type: NotificationType; text: string };
       /** Bu olaya bağlanacak taslak ekler (bu kayda, bu kişinin yüklediği, henüz gönderilmemiş). */
       attachmentIds?: string[];
+      /** Yeni ek bilgi isteği; istekten önceki durum kaydın şimdiki durumudur. */
+      infoQuestion?: string;
+      /** Bu güncelleme açık ek bilgi isteğinin yanıtı. */
+      infoAnswer?: { id: string; answer: string };
     };
   },
 ) {
@@ -76,7 +101,11 @@ async function mutate(
         createdById: true,
         assigneeId: true,
         anonymous: true,
+        // Yetki kuralı (ör. kısıtlı kayıt öneri havuzuna giremez) bu alana bakar.
+        restricted: true,
         firstResponseAt: true,
+        autoCloseAt: true,
+        infoRequests: { where: { answeredAt: null, cancelledAt: null }, select: { id: true, statusBefore: true }, take: 1 },
       },
     });
     if (!rec) throw notFound();
@@ -85,13 +114,15 @@ async function mutate(
       throw forbidden(`Bu kayıtta "${opts.action}" işlemi için yetkiniz yok.`);
     }
 
-    const planned = opts.plan(rec);
+    const openInfo = rec.infoRequests[0] ?? null;
+    const planned = opts.plan({ ...rec, openInfo });
 
     if (planned.nextStatus && !canTransition(rec.status, planned.nextStatus)) {
       throw conflict(
         `"${STATUS_LABELS[rec.status]}" durumundan "${STATUS_LABELS[planned.nextStatus]}" durumuna geçilemez.`,
       );
     }
+    const statusChanged = planned.nextStatus !== undefined && planned.nextStatus !== rec.status;
 
     // updatedAt açıkça yazılır: yorum gibi alan değiştirmeyen aksiyonlar da
     // kaydı "son güncellenen" yapmalı.
@@ -104,7 +135,10 @@ async function mutate(
         type: planned.event.type,
         text: planned.event.text,
         byId: opts.actorId,
-        ...(planned.event.meta ? { meta: toJsonText(planned.event.meta) } : {}),
+        ...(statusChanged ? { fromStatus: rec.status, toStatus: planned.nextStatus } : {}),
+        toTeamId: planned.event.toTeamId ?? null,
+        toUserId: planned.event.toUserId ?? null,
+        ...(planned.event.meta !== undefined ? { meta: planned.event.meta } : {}),
       },
       select: { id: true },
     });
@@ -118,6 +152,24 @@ async function mutate(
       if (count !== ids.length) {
         throw badRequest('Eklerden biri bulunamadı ya da zaten gönderilmiş. Sayfayı yenileyip tekrar deneyin.');
       }
+    }
+
+    const now = new Date();
+    if (planned.infoQuestion) {
+      await tx.infoRequest.create({
+        data: { recordId: rec.id, requestedById: opts.actorId, requestedAt: now, question: planned.infoQuestion, statusBefore: rec.status },
+      });
+    } else if (planned.infoAnswer) {
+      await tx.infoRequest.update({
+        where: { id: planned.infoAnswer.id },
+        data: { answeredAt: now, answeredById: opts.actorId, answer: planned.infoAnswer.answer, answerEventId: event.id },
+      });
+    } else if (openInfo && statusChanged) {
+      // Yanıt beklenmeden kayıt başka duruma geçti: istek açık kalmasın.
+      await tx.infoRequest.update({ where: { id: openInfo.id }, data: { cancelledAt: now } });
+      await tx.recordEvent.create({
+        data: { recordId: rec.id, type: EventType.INFO_CANCEL, text: 'Ek bilgi isteği yanıt beklenmeden kapandı.', byId: opts.actorId, at: now },
+      });
     }
 
     const updated = await tx.record.findUniqueOrThrow({ where: { id: rec.id }, include: detailInclude });
@@ -174,6 +226,7 @@ export default async function actionRoutes(app: FastifyInstance) {
           },
           event: {
             type: EventType.ASSIGN,
+            toUserId: a.id,
             text: oneri
               ? `Öneri ${req.user!.name} tarafından değerlendirmeye alındı.`
               : `Kayıt ${req.user!.name} tarafından üzerine alındı.`,
@@ -220,7 +273,8 @@ export default async function actionRoutes(app: FastifyInstance) {
         where: { id: departmentId, active: true },
         select: { name: true },
       });
-      if (!dept) throw badRequest('Ekip bulunamadı.');
+      // Kayıt ekibe gider: ekibi olan bir departman seçilemez, ekibi seçilmeli.
+      if (!dept || !isAssignableUnit(await loadOrgTree(prisma), departmentId)) throw badRequest('Ekip bulunamadı.');
 
       // Ekip değişince kayıt yeniden sahipsiz kalır — yeni ekipten biri alır.
       nextStatus = RecordStatus.YENI;
@@ -228,15 +282,19 @@ export default async function actionRoutes(app: FastifyInstance) {
         department: { connect: { id: departmentId } },
         assignee: { disconnect: true },
         status: RecordStatus.YENI,
+        // Gecikmiş kayıt yeni ekibe gidince gözcü ihlali yeniden işler: yeni
+        // ekip bildirim alır, akışa olay düşer.
+        slaBreachedAt: null,
       };
       text = `Kayıt ${dept.name} ekibine yönlendirildi.`;
     } else {
       const mate = await prisma.user.findFirst({
         where: { id: assigneeId!, active: true },
-        select: { name: true, departmentId: true },
+        select: { name: true, departmentId: true, role: true },
       });
       if (!mate) throw badRequest('Kişi bulunamadı.');
-      mateDept = mate.departmentId;
+      // Ekip rolü olmayan kişi ekibin kaydını göremez; üzerine düşerse görünür olurdu.
+      mateDept = isTeamRole(mate.role) ? mate.departmentId : null;
 
       // Devir bir sahip değişikliğidir, durum değişikliği değil: yeni kayıt
       // "Üzerime Alındı"ya geçer, üzerinde çalışılan kayıt durumunu korur.
@@ -258,6 +316,11 @@ export default async function actionRoutes(app: FastifyInstance) {
       action: 'forward',
       ip: req.ip,
       plan: (r) => {
+        // "Yalnızca ilgili ekip görsün" kaydı başka ekibe gidemez (kullanıcı
+        // isteği, 2026-10-09). Ekip içinde kişiye devir serbest.
+        if (departmentId && r.restricted) {
+          throw forbidden('Yalnızca ilgili ekibin gördüğü kayıt başka ekibe yönlendirilemez.');
+        }
         // Kişiye devir yalnızca kaydın ekibindeki birine: aksi hâlde kayıt,
         // görmemesi gereken birinin üzerine düşüp ona görünür olurdu.
         if (assigneeId && (!mateDept || (mateDept !== r.departmentId && mateDept !== r.department2Id))) {
@@ -270,7 +333,7 @@ export default async function actionRoutes(app: FastifyInstance) {
         return {
         nextStatus: next,
         data: { ...data, ...(assigneeId ? { status: next } : {}), ...stampFirstResponse(r) },
-        event: { type: EventType.FORWARD, text, meta: { departmentId, assigneeId } },
+        event: { type: EventType.FORWARD, text, meta: { departmentId, assigneeId }, toTeamId: departmentId, toUserId: assigneeId },
         ...(assigneeId
           ? { notify: { userIds: [assigneeId], type: NotificationType.ASSIGNED, text: `${codeParam(req)} size atandı.` } }
           : {}),
@@ -294,8 +357,9 @@ export default async function actionRoutes(app: FastifyInstance) {
     if (!parsed.success) throw badRequest('Geçersiz istek.');
 
     const next = STATUS_FROM_SLUG[parsed.data.status];
+    if (next === RecordStatus.EK_BILGI) throw badRequest('Ek bilgi “Ek Bilgi İste” ile istenir; soru zorunlu.');
     if (!next || !(WORK_STATUSES.includes(next) || ONERI_WORK_STATUSES.includes(next))) {
-      throw badRequest('Bu uçtan yalnızca ara durumlar (İnceleniyor, Çalışılıyor, Değerlendiriliyor, Ek Bilgi) ayarlanır.');
+      throw badRequest('Bu uçtan yalnızca ara durumlar (İnceleniyor, Çalışılıyor, Değerlendiriliyor) ayarlanır.');
     }
 
     const note = parsed.data.note;
@@ -310,8 +374,8 @@ export default async function actionRoutes(app: FastifyInstance) {
         const allowed = r.type === RecordType.ONERI ? ONERI_WORK_STATUSES : WORK_STATUSES;
         if (!allowed.includes(next)) {
           throw badRequest(r.type === RecordType.ONERI
-            ? 'Öneride ara durum olarak yalnızca Değerlendiriliyor ya da Ek Bilgi seçilebilir.'
-            : 'Bilgi talebinde ara durum olarak İnceleniyor, Çalışılıyor ya da Ek Bilgi seçilebilir.');
+            ? 'Öneride ara durum olarak yalnızca Değerlendiriliyor seçilebilir.'
+            : 'Bilgi talebinde ara durum olarak İnceleniyor ya da Çalışılıyor seçilebilir.');
         }
         return {
         nextStatus: next,
@@ -321,15 +385,40 @@ export default async function actionRoutes(app: FastifyInstance) {
           text: `Durum güncellendi: ${STATUS_LABELS[next]}${note ? ` — ${note}` : ''}`,
           meta: { from: r.status, to: next },
         },
-        ...(next === RecordStatus.EK_BILGI
-          ? {
-              notify: {
-                userIds: [r.createdById],
-                type: NotificationType.INFO_REQUESTED,
-                text: `${codeParam(req)} için sizden ek bilgi bekleniyor. Kayda güncelleme ekleyerek yanıtlayın.`,
-              },
-            }
-          : {}),
+        };
+      },
+    });
+    return { record: await serializeRecord(rec, a) };
+  });
+
+  /** Ek bilgi iste: soru zorunlu; yanıt, kaydı açanın güncellemesiyle gelir (yorum ucu). */
+  app.post('/api/records/:code/info-request', async (req) => {
+    const a = actorOf(req);
+    const parsed = z
+      .object({ question: z.string().trim().min(5, 'Sorunuzu en az 5 karakterle yazın.').max(1000) })
+      .safeParse(req.body);
+    if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
+    const question = parsed.data.question;
+
+    const rec = await mutate(app, {
+      code: codeParam(req),
+      actorId: a.id,
+      actorRole: a.role,
+      actorDept: a.departmentId,
+      action: 'infoRequest',
+      ip: req.ip,
+      plan: (r) => {
+        if (r.openInfo) throw conflict('Bu kayıtta yanıt bekleyen bir ek bilgi isteği zaten var.');
+        return {
+          nextStatus: RecordStatus.EK_BILGI,
+          data: { status: RecordStatus.EK_BILGI, ...stampFirstResponse(r) },
+          event: { type: EventType.INFO_REQUEST, text: `Ek bilgi istendi: ${question}` },
+          infoQuestion: question,
+          notify: {
+            userIds: [r.createdById],
+            type: NotificationType.INFO_REQUESTED,
+            text: `${codeParam(req)} için sizden ek bilgi bekleniyor. Kaydı açıp soruyu yanıtlayın.`,
+          },
         };
       },
     });
@@ -363,8 +452,10 @@ export default async function actionRoutes(app: FastifyInstance) {
           status: RecordStatus.COZULDU,
           resolution,
           resolvedAt: new Date(),
+          autoCloseAt: autoCloseDeadline(new Date(), env.AUTO_CLOSE_HOURS, env.workDay),
           ...stampFirstResponse(r),
-          ...(learn ? { renewed: true, renewedAt: new Date(), renewedById: a.id } : {}),
+          // Kısıtlı kayıt öneri havuzuna giremez: kutu işaretli gelse de yok sayılır.
+          ...(learn && !r.restricted ? { renewed: true, renewedAt: new Date(), renewedById: a.id } : {}),
         },
         event: { type: EventType.COMMENT, text: resolution },
         attachmentIds: parsed.data.attachmentIds,
@@ -373,7 +464,8 @@ export default async function actionRoutes(app: FastifyInstance) {
           type: NotificationType.RESOLVED,
           text: r.type === RecordType.ONERI
             ? `${codeParam(req)} önerinizin değerlendirmesi sonuçlandı. Sonucu inceleyip öneriyi kapatın ya da yeniden değerlendirilmesini isteyin.`
-            : `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.`,
+            : `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.${
+              env.AUTO_CLOSE_HOURS ? ` Yanıt vermezseniz kayıt ${env.AUTO_CLOSE_HOURS} mesai saati sonra kendiliğinden kapanır.` : ''}`,
         },
       }),
     });
@@ -524,8 +616,12 @@ export default async function actionRoutes(app: FastifyInstance) {
       plan: (r) => ({
         nextStatus: RecordStatus.CALISILIYOR,
         // İşe yaramayan çözüm "güncel çözüm" olarak görünmesin ve ML onu benzer
-        // kayıtlarda önermesin; metni süreç geçmişinde kalıyor.
-        data: { status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null },
+        // kayıtlarda önermesin; metni süreç geçmişinde kalıyor. "Doğrulanmış
+        // çözüm" işareti de düşer: yeni çözüm doğrulanmadan öne çıkmasın.
+        data: {
+          status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null,
+          renewed: false, renewedAt: null, renewedById: null, autoCloseAt: null,
+        },
         event: {
           type: EventType.REOPEN,
           text: `${r.type === RecordType.ONERI ? 'Öneri yeniden değerlendirmeye alındı' : 'Kayıt yeniden açıldı'}. Gerekçe: ${parsed.data.reason}`,
@@ -539,6 +635,7 @@ export default async function actionRoutes(app: FastifyInstance) {
         },
       }),
     });
+    relearn(req.log); // veri değişmediyse yalnızca bir sorgu
     return { record: await serializeRecord(rec, a) };
   });
 
@@ -554,7 +651,7 @@ export default async function actionRoutes(app: FastifyInstance) {
       ip: req.ip,
       plan: (r) => ({
         nextStatus: RecordStatus.KAPATILDI,
-        data: { status: RecordStatus.KAPATILDI, closedAt: new Date() },
+        data: { status: RecordStatus.KAPATILDI, closedAt: new Date(), autoCloseAt: null },
         event: {
           type: EventType.STATUS,
           text: r.type === RecordType.ONERI ? 'Öneri, sahibi tarafından kapatıldı.' : 'Kayıt, açan kişi tarafından kapatıldı.',
@@ -582,19 +679,42 @@ export default async function actionRoutes(app: FastifyInstance) {
       actorDept: a.departmentId,
       action: 'comment',
       ip: req.ip,
-      plan: (r) => ({
-        // Ekipten gelen ilk yorum da geri dönüş sayılır; kaydı açanın kendi
-        // yorumu sayılmamalı.
-        data: r.createdById === a.id ? {} : stampFirstResponse(r),
-        event: { type: EventType.COMMENT, text },
-        attachmentIds: parsed.data.attachmentIds,
-        // Açan yazdıysa sahibine (ek bilgi yanıtı), ekipten biri yazdıysa açana.
-        notify: {
-          userIds: r.createdById === a.id ? [r.assigneeId] : [r.createdById],
-          type: NotificationType.COMMENT,
-          text: `${codeParam(req)} kaydına yeni güncelleme eklendi.`,
-        },
-      }),
+      plan: (r) => {
+        // Açık ek bilgi isteği varken açanın güncellemesi yanıttır: istek kapanır,
+        // kayıt istekten önceki durumuna döner. Ekipten birinin yazdığı yanıt sayılmaz.
+        if (r.openInfo && r.createdById === a.id) {
+          const back = statusAfterInfo(r.type, r.openInfo.statusBefore);
+          return {
+            nextStatus: back,
+            data: { status: back },
+            event: { type: EventType.INFO_RESPONSE, text },
+            attachmentIds: parsed.data.attachmentIds,
+            infoAnswer: { id: r.openInfo.id, answer: text },
+            notify: {
+              userIds: [r.assigneeId],
+              type: NotificationType.INFO_PROVIDED,
+              text: `${codeParam(req)} için istenen ek bilgi geldi.`,
+            },
+          };
+        }
+        return {
+          // Ekipten gelen ilk yorum da geri dönüş sayılır; kaydı açanın kendi
+          // yorumu sayılmamalı. Çözülmüş kayıtta açanın yazması kendiliğinden
+          // kapanmayı erteler: yazdığı okunmadan kayıt kapanmasın.
+          data: r.createdById !== a.id ? stampFirstResponse(r)
+            : r.status === RecordStatus.COZULDU && r.autoCloseAt
+              ? { autoCloseAt: autoCloseDeadline(new Date(), env.AUTO_CLOSE_HOURS, env.workDay) }
+              : {},
+          event: { type: EventType.COMMENT, text },
+          attachmentIds: parsed.data.attachmentIds,
+          // Açan yazdıysa sahibine, ekipten biri yazdıysa açana.
+          notify: {
+            userIds: r.createdById === a.id ? [r.assigneeId] : [r.createdById],
+            type: NotificationType.COMMENT,
+            text: `${codeParam(req)} kaydına yeni güncelleme eklendi.`,
+          },
+        };
+      },
     });
     return { record: await serializeRecord(rec, a) };
   });

@@ -5,7 +5,7 @@ import { createDept, createRecord, createUser, loginAs, makeApp, prisma, resetDb
 
 /*
  * Yeni modüller: öneri değerlendirme durumları, yenilenen kayıt (ML hafızası),
- * uygulama geri bildirimi, Bilgi Bankası yetkileri, Sık Sorulanlar ve Arama.
+ * uygulama geri bildirimi, Bilgi Bankası yetkileri ve Arama.
  */
 
 let app: FastifyInstance;
@@ -61,7 +61,9 @@ describe('öneri değerlendirme akışı', () => {
     expect((await post(w.ikMember.id, `/api/records/${o.code}/resolve`, { resolution: 'Çözüldü diye işaretle.' })).statusCode).toBe(403);
     expect((await post(w.ikMember.id, `/api/records/${b.code}/evaluate`, { outcome: 'degerlendirildi', note: 'Değerlendirdim bunu.' })).statusCode).toBe(403);
     expect((await post(w.ikMember.id, `/api/records/${o.code}/status`, { status: 'calisiliyor' })).statusCode).toBe(400);
-    const ek = await post(w.ikMember.id, `/api/records/${o.code}/status`, { status: 'ek_bilgi' });
+    // Ek bilgi artık durum listesinden değil, soruyla istenir.
+    expect((await post(w.ikMember.id, `/api/records/${o.code}/status`, { status: 'ek_bilgi' })).statusCode).toBe(400);
+    const ek = await post(w.ikMember.id, `/api/records/${o.code}/info-request`, { question: 'Hangi birimde uygulanacak?' });
     expect(ek.json().record.status).toBe('ek_bilgi');
     expect((await post(w.ikMember.id, `/api/records/${o.code}/evaluate`, { outcome: 'uygun_bulunmadi', note: 'kısa' })).statusCode).toBe(400);
   });
@@ -135,10 +137,10 @@ describe('Bilgi Bankası', () => {
     expect((await post(w.ikManager.id, '/api/kb', article(w.ik.id))).statusCode).toBe(201);
     expect((await post(w.ikManager.id, '/api/kb', article(w.bt.id))).statusCode).toBe(403);
 
-    // Sistem yöneticisi BT üyesine BT için yetki verir.
+    // Sistem yöneticisi BT üyesine BT için yetki verir (Yetkiler ekranı).
     expect((await post(w.btMember.id, '/api/kb', article(w.bt.id))).statusCode).toBe(403);
     // Ekip seçilmez: yetki kişinin kendi ekibi (BT) için verilir.
-    expect((await post(w.admin.id, '/api/kb/editors', { userId: w.btMember.id })).statusCode).toBe(201);
+    expect((await post(w.admin.id, '/api/admin/grants', { userId: w.btMember.id, kind: 'KB_EDITOR' })).statusCode).toBe(201);
     expect((await post(w.btMember.id, '/api/kb', article(w.bt.id, { title: 'SAP erişimi' }))).statusCode).toBe(201);
     const boot = (await get(w.btMember.id, '/api/bootstrap')).json();
     expect(boot.kb).toMatchObject({ view: true, admin: false, edit: [w.bt.id] });
@@ -148,7 +150,7 @@ describe('Bilgi Bankası', () => {
     expect(bad.statusCode).toBe(400);
   });
 
-  it('madde benzer kayıt aramasına, Sık Sorulanlara ve Aramaya girer', async () => {
+  it('madde benzer kayıt aramasına ve Aramaya girer', async () => {
     const w = await world();
     await post(w.ikManager.id, '/api/kb', article(w.ik.id));
 
@@ -162,61 +164,23 @@ describe('Bilgi Bankası', () => {
     expect(sample.sample).toBe(true);
     expect(sample.items.length).toBe(1);
   });
-});
 
-describe('Sık Sorulanlar', () => {
-  it('aynı soru kümelenir, sayı ve çözüm döner; tek sefer sorulan listeye girmez', async () => {
+  it('Kaynak Bul: Bilgi Bankası maddeleri çözülmüş kayıtları dışarıda bırakmaz', async () => {
     const w = await world();
-    for (const t of ['VPN bağlantısı sürekli kopuyor', 'VPN bağlantısı kopuyor', 'Yazıcı çalışmıyor']) {
-      await createRecord({
-        createdById: w.opener.id, departmentId: w.bt.id, assigneeId: w.btMember.id,
-        status: RecordStatus.KAPATILDI, title: t, resolution: 'VPN istemcisi güncellendi, sorun giderildi.',
-      });
+    for (const title of ['Bordro pusulası', 'Bordro itirazı', 'Bordro dönemi']) {
+      await post(w.ikManager.id, '/api/kb', article(w.ik.id, { title, keywords: 'bordro' }));
     }
-    const faq = (await get(w.opener.id, '/api/faq')).json();
-    expect(faq.items).toHaveLength(1);
-    expect(faq.items[0]).toMatchObject({ count: 2, department: { name: 'Bilgi Teknolojileri' }, source: 'kayit' });
-  });
-
-  it('kümenin Bilgi Bankası karşılığı varsa yanıt ve madde kimliği ondan gelir', async () => {
-    const w = await world();
-    for (const t of ['VPN bağlantısı sürekli kopuyor', 'VPN bağlantısı kopuyor']) {
-      await createRecord({
-        createdById: w.opener.id, departmentId: w.bt.id, assigneeId: w.btMember.id,
-        status: RecordStatus.KAPATILDI, title: t, resolution: 'İstemci güncellendi.',
-      });
-    }
-    expect((await post(w.admin.id, '/api/kb', {
-      kind: 'BILGI', departmentId: w.bt.id, title: 'VPN bağlantısı kopuyor',
-      answer: 'VPN istemcisini güncelleyip profili yeniden indirin.',
-    })).statusCode).toBe(201);
-    const faq = (await get(w.opener.id, '/api/faq')).json();
-    expect(faq.items[0]).toMatchObject({ source: 'kb', answer: 'VPN istemcisini güncelleyip profili yeniden indirin.' });
-    expect(faq.items[0].kb).toMatchObject({ code: 'BB-' + faq.items[0].kb.code.slice(3), department: { id: w.bt.id } });
-    expect(faq.ready).toHaveLength(0);
-  });
-});
-
-describe('kişi araması', () => {
-  it('unvan ve benzer kaydı çözen kişiyle eşleşir; boş sorguda örnek kişiler', async () => {
-    const w = await world();
-    await prisma.user.update({ where: { id: w.ikMember.id }, data: { title: 'Bordro Uzmanı' } });
-    await createRecord({
-      createdById: w.opener.id, departmentId: w.ik.id, assigneeId: w.ikManager.id,
-      status: RecordStatus.KAPATILDI, title: 'Bordro kesintisi itirazı', resolution: 'Kesinti düzeltildi.',
+    const r = await createRecord({
+      createdById: w.opener.id, departmentId: w.ik.id, status: RecordStatus.COZULDU,
+      title: 'Bordro pusulasında fazla mesai eksik', resolution: 'Fark ekim bordrosuna eklendi.',
     });
+    const kinds = async () =>
+      ((await get(w.opener.id, `/api/search/resources?q=${encodeURIComponent('bordro pusulası')}`)).json().items as { source: string }[])
+        .map((i) => i.source);
+    expect(await kinds()).toContain('kayit');
 
-    const res = (await get(w.opener.id, `/api/search/people?q=${encodeURIComponent('bordro')}`)).json();
-    const names = res.items.map((p: { name: string }) => p.name);
-    expect(names).toContain('İK Üye');
-    expect(names).toContain('İK Müdür');
-    const uzman = res.items.find((p: { name: string }) => p.name === 'İK Üye');
-    expect(uzman).toMatchObject({ title: 'Bordro Uzmanı', department: { name: 'İnsan Kaynakları' } });
-    expect(uzman.reason).toContain('Unvan');
-    expect(res.items.find((p: { name: string }) => p.name === 'İK Müdür').reason).toContain('Benzer 1 kaydı çözdü');
-
-    const sample = (await get(w.opener.id, '/api/search/people')).json();
-    expect(sample.sample).toBe(true);
-    expect(sample.items.length).toBeGreaterThan(0);
+    // Bellekteki aday havuzu kayıt değişince yenilenir: kısıtlanan kayıt düşer.
+    await prisma.record.update({ where: { id: r.id }, data: { restricted: true } });
+    expect(await kinds()).not.toContain('kayit');
   });
 });

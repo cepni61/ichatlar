@@ -9,7 +9,8 @@
 //
 // Sabit kümeler (durum, rol, öncelik) PostgreSQL enum'u değil String kolon;
 // geçerlilik src/domain/enums.ts içinde denetlenir. Yeni bir durum eklemek
-// bu yüzden göç gerektirmez. JSON alanlar metin olarak saklanır.
+// bu yüzden göç gerektirmez. JSON alanlar metin olarak saklanır; RecordEvent.meta
+// jsonb (rapor sorguları için).
 
 generator client {
   provider = "prisma-client-js"
@@ -24,15 +25,27 @@ datasource db {
 // Kuruluş
 // ---------------------------------------------------------------------------
 
+/// Kuruluş birimi, iki seviye: departman (ünite) ve altındaki ekip (işletme
+/// bölümü). parentId boşsa departman, doluysa o departmanın ekibidir.
+/// Kayıtlar ve kişiler ekibe bağlanır (bkz. src/domain/org.ts). Ekibi
+/// olmayan departman kendisi ekip gibi kullanılır.
 model Department {
-  /// Prototipteki kısa kodlar korunur: ik, ki, idari, fin, sat, kalite
+  /// Kalıcı kısa kimlik (ör. ik, ik-is-sagligi) — kuruluş dosyasından gelir.
   id    String @id
   name  String
   short String
 
+  parentId String?
+  parent   Department?  @relation("unitTree", fields: [parentId], references: [id])
+  children Department[] @relation("unitTree")
+
   /// Entra ID grup nesne kimliği. Kullanıcı girişinde departman ve ekip
   /// üyeliği bu gruptan türetilir; boşsa atama elle yapılır.
   entraGroupId String? @unique
+
+  /// Direktörlük (yalnızca departmanda): aynı direktörlükteki departmanlar
+  /// birbirinin kayıtlarını Tüm Kayıtlar'da okur (src/domain/org.ts).
+  directorate String?
 
   active Boolean @default(true)
   order  Int     @default(0)
@@ -41,10 +54,15 @@ model Department {
   primaryRecords   Record[] @relation("primaryDepartment")
   secondaryRecords Record[] @relation("secondaryDepartment")
   kbArticles       KbArticle[]
-  kbEditors        KbEditor[]
+  grants           Grant[]
+  helpSelected     HelpQuery[]   @relation("helpSelectedTeam")
+  helpPredicted    HelpQuery[]   @relation("helpPredictedTeam")
+  eventsTo         RecordEvent[] @relation("eventToTeam")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([parentId])
 }
 
 model User {
@@ -56,8 +74,12 @@ model User {
   email    String  @unique
   name     String
 
-  /// src/domain/enums.ts → Role
+  /// src/domain/enums.ts → Role. ETKİN rol: baseRole ile Yetkiler ekranında
+  /// verilen rolün (Grant) yükseği (src/domain/grants.ts). Bütün yetki kodu bunu okur.
   role   String  @default("USER")
+  /// Kurumsal dizinden (AD/Entra grupları) ya da kurulumdan gelen rol. AD
+  /// girişinde her seferinde yeniden yazılır.
+  baseRole String @default("USER")
   active Boolean @default(true)
 
   /// Unvan (ör. "İK Uzmanı"). Kişi aramasında görünür; kurumsal dizinden
@@ -73,7 +95,7 @@ model User {
 
   createdRecords  Record[]      @relation("creator")
   assignedRecords Record[]      @relation("assignee")
-  events          RecordEvent[]
+  events          RecordEvent[] @relation("eventBy")
   attachments     Attachment[]
   sessions        Session[]
   auditLogs       AuditLog[]
@@ -81,8 +103,12 @@ model User {
   feedbacks       Feedback[]
   kbCreated       KbArticle[] @relation("kbCreator")
   kbUpdated       KbArticle[] @relation("kbUpdater")
-  kbGrants        KbEditor[]  @relation("kbEditor")
-  kbGranted       KbEditor[]  @relation("kbGrantor")
+  grants          Grant[]     @relation("grants")
+  grantsGiven     Grant[]     @relation("grantsGiven")
+  eventsTo        RecordEvent[] @relation("eventToUser")
+  helpSessions    HelpSession[]
+  infoRequested   InfoRequest[] @relation("infoRequester")
+  infoAnswered    InfoRequest[] @relation("infoAnswerer")
 
   @@index([departmentId, active])
 }
@@ -142,6 +168,12 @@ model Record {
   /// Anonim gönderim: createdById saklanır (denetim ve kötüye kullanım için)
   /// ama ekibe sunulmaz. Gizleme src/lib/serialize.ts içinde yapılır.
   anonymous Boolean @default(false)
+  /// "Yalnızca ilgili ekip görsün" (kayıt açarken işaretlenir). Kaydı yalnızca
+  /// açan kişi ve ilgili ekip(ler) (üyeleri, yöneticisi, sahibi) görür; sistem
+  /// yöneticisinin ayrıcalığı bu kayıtta yoktur. İçerik paylaşılan kanallara
+  /// da çıkmaz: benzer çözüm önerileri, arama, öneri havuzu, rapor konuları ve
+  /// ekip dışındakilerin CSV'si.
+  restricted Boolean @default(false)
 
   resolution String?
 
@@ -168,9 +200,17 @@ model Record {
   slaDueAt      DateTime
   slaBreachedAt DateTime?
 
+  /// Çözüldü'de açan kişi yanıt vermezse kaydın kendiliğinden kapanacağı an
+  /// (mesai saatiyle, src/domain/work-hours.ts). Bu kural gelmeden çözülmüş
+  /// kayıtlarda boş: onlara dokunulmaz.
+  autoCloseAt DateTime?
+
   events        RecordEvent[]
   attachments   Attachment[]
   notifications Notification[]
+  helpSession   HelpSession?
+  helpResults   HelpResult[]
+  infoRequests  InfoRequest[]
 
   /// Kayıt açılırken gösterilen benzer kayıt önerileri.
   suggestionsGiven    Suggestion[] @relation("suggestionSource")
@@ -182,6 +222,7 @@ model Record {
   @@index([assigneeId, status])
   @@index([createdById, status])
   @@index([createdAt])
+  @@index([status, autoCloseAt])
 }
 
 model RecordEvent {
@@ -197,14 +238,25 @@ model RecordEvent {
 
   /// Sistem olaylarında (SLA ihlali) boş olur.
   byId String?
-  by   User?   @relation(fields: [byId], references: [id], onDelete: SetNull)
+  by   User?   @relation("eventBy", fields: [byId], references: [id], onDelete: SetNull)
 
-  /// Yapısal ek bilgi, JSON metni olarak (lehçe bağımsızlığı için).
-  meta String?
+  /// Durum değiştiyse önceki ve sonraki durum (src/routes/actions.ts → mutate).
+  fromStatus String?
+  toStatus   String?
+  /// Açılış ve yönlendirmede hedef ekip; üstlenme ve kişiye devirde hedef kişi.
+  toTeamId String?
+  toTeam   Department? @relation("eventToTeam", fields: [toTeamId], references: [id], onDelete: SetNull)
+  toUserId String?
+  toUser   User?       @relation("eventToUser", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  /// Yapısal ek bilgi.
+  meta Json?
 
   attachments Attachment[]
+  infoAnswers InfoRequest[]
 
   @@index([recordId, at])
+  @@index([toStatus, at])
 }
 
 model Attachment {
@@ -373,6 +425,7 @@ model KbArticle {
   url      String?
 
   active Boolean @default(true)
+  helpResults HelpResult[]
 
   createdById String?
   createdBy   User?   @relation("kbCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -386,20 +439,160 @@ model KbArticle {
   @@index([kind, active])
 }
 
-/// Sistem yöneticisinin verdiği Bilgi Bankası düzenleme yetkisi (ekip bazında).
-model KbEditor {
+/// Sistem yöneticisinin Yetkiler ekranında verdiği yetki (src/domain/grants.ts).
+/// Kurumsal dizinden gelen rolün üstüne eklenir; AD girişi buna dokunmaz.
+model Grant {
   id String @id @default(cuid())
 
   userId String
-  user   User   @relation("kbEditor", fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation("grants", fields: [userId], references: [id], onDelete: Cascade)
 
-  departmentId String
-  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  /// MANAGER | ADMIN | DEPT_HEAD | REPORTS | KB_EDITOR
+  kind String
+
+  /// DEPT_HEAD: departman; KB_EDITOR: ekip; diğerlerinde boş.
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 
   grantedById String?
-  grantedBy   User?   @relation("kbGrantor", fields: [grantedById], references: [id], onDelete: SetNull)
+  grantedBy   User?   @relation("grantsGiven", fields: [grantedById], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
+  /// Boşsa süresiz. Geçince yetki işlemez; zamanlanmış iş satırı siler.
+  expiresAt DateTime?
 
-  @@unique([userId, departmentId])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ---------------------------------------------------------------------------
+// Kayıt önleme günlüğü (docs/RAPOR.md)
+// ---------------------------------------------------------------------------
+
+/// Tekil yardım oturumu: bir kişinin ardışık yardım adımları. 30 dk
+/// hareketsizlik ya da kayıt açılması oturumu kapatır (src/domain/help.ts).
+/// Kod kolonlarının CHECK kısıtları ve kısmi index'ler migration SQL'inde;
+/// `prisma migrate diff` onları bilmez, çıktısında silmeye çalışırsa o
+/// satırları göçten çıkarın.
+model HelpSession {
+  id String @id @default(cuid())
+
+  /// Anonim kayıtta boşaltılır: günlükten kaydı kimin açtığı çıkmasın.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// YENI_KAYIT | KAYNAK_BUL | ASISTAN
+  channel String
+
+  startedAt      DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+
+  /// Bu oturumdan açılan kayıt.
+  recordId String? @unique
+  record   Record? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+
+  queries HelpQuery[]
+
+  @@index([userId, startedAt])
+  @@index([startedAt])
+}
+
+/// Oturumdaki ML taraması, Kaynak Bul araması ya da asistan sorusu.
+model HelpQuery {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   HelpSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  at DateTime @default(now())
+
+  /// ML_TARAMA | ARAMA | ASISTAN
+  kind String
+
+  /// Kısıtlı kayıtta boş.
+  title String?
+  text  String?
+
+  /// BILGI | ONERI — yalnızca ML_TARAMA
+  recordType String?
+
+  selectedTeamId  String?
+  selectedTeam    Department? @relation("helpSelectedTeam", fields: [selectedTeamId], references: [id], onDelete: SetNull)
+  predictedTeamId String?
+  predictedTeam   Department? @relation("helpPredictedTeam", fields: [predictedTeamId], references: [id], onDelete: SetNull)
+  /// 0–1
+  confidence      Float?
+  lowConfidence   Boolean?
+
+  resultCount Int
+  durationMs  Int?
+
+  /// ML veritabanındaki (SQLite) Inference.id — ayrı veritabanı, FK değil.
+  mlInferenceId String?
+
+  results HelpResult[]
+
+  @@index([sessionId, at])
+  @@index([at])
+  @@index([predictedTeamId])
+}
+
+/// Sorguda gösterilen sonuç; tıklama ve "işime yaradı" beyanı burada.
+model HelpResult {
+  id String @id @default(cuid())
+
+  queryId String
+  query   HelpQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  /// 1'den başlar, ekrandaki sıra.
+  rank Int @db.SmallInt
+
+  /// KAYIT | BILGI_BANKASI | CORTEX
+  source String
+
+  recordId      String?
+  record        Record?    @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  kbArticleId   String?
+  kbArticle     KbArticle? @relation(fields: [kbArticleId], references: [id], onDelete: SetNull)
+  externalUrl   String?
+  externalTitle String?
+
+  /// Yüzde, 0–100 (ML eşleşmelerinde).
+  similarity Int? @db.SmallInt
+
+  openedAt  DateTime?
+  helpfulAt DateTime?
+
+  @@index([queryId])
+  @@index([recordId])
+  @@index([kbArticleId])
+}
+
+/// Ek bilgi isteği: kaydın sahibi açan kişiye soru sorar (src/routes/actions.ts).
+/// Kayıt başına en fazla bir açık istek (kısmi unique index, migration'da).
+model InfoRequest {
+  id String @id @default(cuid())
+
+  recordId String
+  record   Record @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  requestedById String?
+  requestedBy   User?    @relation("infoRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  requestedAt   DateTime @default(now())
+  question      String
+  /// İstekten önceki durum: yanıt gelince kayıt buna döner (src/domain/info-request.ts).
+  statusBefore  String
+
+  answeredById  String?
+  answeredBy    User?        @relation("infoAnswerer", fields: [answeredById], references: [id], onDelete: SetNull)
+  answeredAt    DateTime?
+  answer        String?
+  /// Yanıtın ekleri bu olaya bağlı.
+  answerEventId String?
+  answerEvent   RecordEvent? @relation(fields: [answerEventId], references: [id], onDelete: SetNull)
+
+  /// Yanıt beklenmeden devam edildi (durum değişti, çözüldü, yönlendirildi).
+  cancelledAt DateTime?
+
+  @@index([recordId, requestedAt])
 }

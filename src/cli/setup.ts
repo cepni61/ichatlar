@@ -36,11 +36,15 @@ if (!parsed.success) {
 try {
   const r = await applyOrgConfig(prisma, parsed.data);
   console.log(`Kurulum uygulandı (${file}).`);
-  console.log(`  Yeni departman:        ${r.created.join(', ') || '—'}`);
-  console.log(`  Güncellenen departman: ${r.updated.join(', ') || '—'}`);
+  console.log(`  Yeni birim (departman/ekip):        ${r.created.join(', ') || '—'}`);
+  console.log(`  Güncellenen birim (departman/ekip): ${r.updated.join(', ') || '—'}`);
   console.log(`  SLA (saat):            Normal ${parsed.data.sla.NORMAL} · Yüksek ${parsed.data.sla.YUKSEK} · Kritik ${parsed.data.sla.KRITIK}`);
+  const m = r.moved;
+  if (m.records || m.users || m.kb) {
+    console.log(`  Asıl ekibe taşınan:    ${m.records} kayıt · ${m.users} kişi · ${m.kb} Bilgi Bankası maddesi`);
+  }
   if (r.notInConfig.length) {
-    console.log(`  [UYARI] Dosyada olmayan etkin departmanlar (dokunulmadı): ${r.notInConfig.join(', ')}`);
+    console.log(`  [UYARI] Dosyada olmayan etkin birimler (dokunulmadı): ${r.notInConfig.join(', ')}`);
   }
 } catch (err) {
   console.error(`Kurulum uygulanamadı: ${(err as Error).message}`);

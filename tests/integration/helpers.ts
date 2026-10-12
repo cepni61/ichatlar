@@ -24,9 +24,11 @@ export const silentLog = {
  */
 export async function resetDb() {
   assertTestDatabase(process.env.DATABASE_URL);
+  await prisma.helpSession.deleteMany();
+  await prisma.infoRequest.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.feedback.deleteMany();
-  await prisma.kbEditor.deleteMany();
+  await prisma.grant.deleteMany();
   await prisma.kbArticle.deleteMany();
   await prisma.suggestion.deleteMany();
   await prisma.attachment.deleteMany();
@@ -42,9 +44,10 @@ export async function resetDb() {
 let seq = 0;
 const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(seq++).toString(36)}`;
 
-export async function createDept(name: string) {
+/** Departman; parentId verilirse o departmanın ekibi (bkz. src/domain/org.ts). */
+export async function createDept(name: string, parentId: string | null = null) {
   return prisma.department.create({
-    data: { id: uid('dept'), name, short: name.slice(0, 3).toUpperCase(), order: seq },
+    data: { id: uid('dept'), name, short: name.slice(0, 3).toUpperCase(), order: seq, parentId },
   });
 }
 
@@ -62,6 +65,7 @@ export async function createUser(opts: {
       email: `${id}@test.local`,
       name: opts.name,
       role: opts.role ?? Role.USER,
+      baseRole: opts.role ?? Role.USER,
       departmentId: opts.departmentId ?? null,
       active: opts.active ?? true,
     },
@@ -80,6 +84,7 @@ export async function createRecord(opts: {
   title?: string;
   type?: RecordType;
   resolution?: string | null;
+  restricted?: boolean;
 }) {
   const now = new Date();
   return prisma.record.create({
@@ -96,6 +101,7 @@ export async function createRecord(opts: {
       createdById: opts.createdById,
       assigneeId: opts.assigneeId ?? null,
       anonymous: opts.anonymous ?? false,
+      ...(opts.restricted ? { restricted: true } : {}),
       createdAt: now,
       slaDueAt: opts.slaDueAt ?? new Date(now.getTime() + 48 * 3600 * 1000),
     },

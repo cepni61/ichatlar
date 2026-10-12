@@ -10,15 +10,18 @@ import {
   STATUS_FROM_SLUG,
   TYPE_FROM_SLUG,
 } from '../domain/constants.js';
-import { can } from '../domain/permissions.js';
+import { can, departmentsOf, isTeamRole, type Actor } from '../domain/permissions.js';
+import { actorInTree, inDepartmentTree, inTeam, isAssignableUnit, loadOrgTree, withRoots } from '../domain/org.js';
 import { dueDateFor } from '../domain/sla.js';
 import { findSimilar } from '../domain/similarity.js';
-import { logInference, recordOutcome, suggestDepartment } from '../ml/service.js';
+import { logInference, recordOutcome, releaseDrafts, suggestDepartment } from '../ml/service.js';
 import { nextRecordCode } from '../lib/code.js';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { detailInclude, serializeList, serializeRecord } from '../lib/serialize.js';
 import { containsFilter, toJsonText } from '../lib/dialect.js';
 import { BENEFIT_KEYS, composeDescription } from '../domain/suggestion.js';
+import { linkHelpSession, logHelpQuery } from '../lib/help-log.js';
+import { HelpChannel, HelpKind, HelpSource } from '../domain/help.js';
 
 const withDetail = detailInclude;
 
@@ -27,15 +30,25 @@ const withDetail = detailInclude;
  * bellekte filtrelemek hem yavaş hem güvensiz olurdu: kullanıcının
  * görmemesi gereken kayıtlar hiç sorgudan dönmemeli.
  */
-function scopeWhere(
-  scope: string,
-  actor: { id: string; role: string; departmentId: string | null },
-): Prisma.RecordWhereInput {
-  const teamFilter: Prisma.RecordWhereInput = actor.departmentId
-    ? { OR: [{ departmentId: actor.departmentId }, { department2Id: actor.departmentId }] }
-    : { id: '__none__' };
+function scopeWhere(scope: string, actor: Actor): Prisma.RecordWhereInput {
+  // Yetki kuralıyla aynı: ekipteki USER ekibin kısıtlı kayıtlarını görmez.
+  const teamFilter: Prisma.RecordWhereInput =
+    actor.departmentId && isTeamRole(actor.role) ? inTeam(actor.departmentId) : { id: '__none__' };
+
+  // Kendi departmanı ve sorumlu olduğu departmanlar; kısıtlı kayıtlar hariç.
+  const departmentWide: Prisma.RecordWhereInput[] = departmentsOf(actor)
+    .map((root) => ({ AND: [{ restricted: false }, inDepartmentTree(root)] }));
 
   switch (scope) {
+    // Arayüzün tek yüklemesi: kişinin herhangi bir görünümde (Açtıklarım,
+    // Ekibime Gelenler, Üzerimdekiler, Tüm Kayıtlar) görebileceği her kayıt.
+    // Tüm Kayıtlar ekranı bunları kayıttaki inAllRecords ile süzer.
+    case 'visible': {
+      const own: Prisma.RecordWhereInput[] = [{ createdById: actor.id }, { assigneeId: actor.id }, teamFilter];
+      return actor.role === Role.ADMIN
+        ? { OR: [{ restricted: false }, ...own] }
+        : { OR: [...own, ...departmentWide] };
+    }
     case 'mine':
       return { assigneeId: actor.id };
     case 'opened':
@@ -44,20 +57,24 @@ function scopeWhere(
       return teamFilter;
     case 'all':
     default:
-      // ADMIN her şeyi görür. Diğerleri: kendi açtıkları + ekiplerine düşenler
-      // + üzerlerine aldıkları.
-      if (actor.role === Role.ADMIN) return {};
-      return {
-        OR: [{ createdById: actor.id }, { assigneeId: actor.id }, ...(actor.departmentId ? [teamFilter] : [])],
-      };
+      // Tüm Kayıtlar (kullanıcı isteği, 2026-10-09): kişinin departmanındaki
+      // bütün ekiplerin kayıtları (departman sorumlusu: sorumlu olduğu
+      // departmanlar da); sistem yöneticisi bütün departmanları görür.
+      // "Yalnızca ilgili ekip görsün" işaretli kayıtlar burada hiç görünmez —
+      // ilgili ekip onları Ekibime Gelenler'de, açan kişi Açtıklarım'da görür.
+      if (actor.role === Role.ADMIN) return { restricted: false };
+      return departmentWide.length ? { OR: departmentWide } : { id: '__none__' };
   }
 }
 
 const listQuery = z.object({
-  scope: z.enum(['all', 'team', 'mine', 'opened']).default('all'),
+  scope: z.enum(['all', 'visible', 'team', 'mine', 'opened']).default('all'),
   type: z.enum(['bilgi', 'oneri']).optional(),
   status: z.string().optional(),
+  /** Ekip süzgeci. */
   dept: z.string().optional(),
+  /** Departman süzgeci (altındaki bütün ekipler). */
+  root: z.string().optional(),
   q: z.string().max(200).optional(),
   open: z.coerce.boolean().optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -82,12 +99,18 @@ const createBody = z.object({
   department2: z.string().min(1).nullable().optional(),
   priority: z.enum(['normal', 'yuksek', 'kritik']).default('normal'),
   anonymous: z.boolean().default(false),
-  /** Kayıt açılırken gösterilen öneriler — modelin işe yararlılığını ölçmek için. */
-  shownSuggestions: z.array(z.object({ code: z.string(), score: z.number() })).max(5).optional(),
+  /** "Yalnızca ilgili ekip görsün": içerik paylaşılan kanallara (öneriler, arama) çıkmaz. */
+  restricted: z.boolean().default(false),
   /** /api/similar'ın döndürdüğü ML çalıştırma kimliği — sonuç ML veritabanına bağlanır. */
   mlInferenceId: z.string().max(64).nullish(),
+  /** Taslak yazılırken yapılan bütün taramalar (kısıtlı/anonim kayıtta temizlenir). */
+  mlInferenceIds: z.array(z.string().max(64)).max(200).default([]),
   /** Kullanıcı "Bu ekibi seç" ile ML'in ekip önerisini uyguladı mı. */
   deptSuggestionApplied: z.boolean().default(false),
+  /** Yardım oturumu (kayıt önleme günlüğü): kayıt bu oturuma bağlanır. */
+  helpSessionId: z.string().max(64).nullish(),
+  /** Taslağın taramalarının oturumları; uzun aradan sonra açılanlar da kayda toplanır. */
+  helpSessionIds: z.array(z.string().max(64)).max(200).default([]),
 }).superRefine((b, ctx) => {
   const need = (ok: boolean, path: string, message: string) => {
     if (!ok) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
@@ -97,7 +120,7 @@ const createBody = z.object({
   } else {
     need((b.current ?? '').length >= 10, 'current', 'Mevcut durumu en az 10 karakter yazın.');
     need((b.proposal ?? '').length >= 10, 'proposal', 'Önerinizi en az 10 karakter yazın.');
-    need(b.benefits.length > 0, 'benefits', 'En az bir beklenen fayda seçin.');
+    // Beklenen fayda seçimi isteğe bağlı (formdan kaldırıldı, 2026-10-08).
     need(!b.department2, 'department2', 'Öneri tek bir ekibe gönderilir.');
   }
 });
@@ -107,15 +130,16 @@ export default async function recordRoutes(app: FastifyInstance) {
 
   /** Liste. */
   app.get('/api/records', async (req) => {
-    const actor = actorOf(req);
     const parsed = listQuery.safeParse(req.query);
     if (!parsed.success) throw badRequest(parsed.error.issues[0]!.message);
-    const { scope, type, status, dept, q, open, page, pageSize } = parsed.data;
+    const { scope, type, status, dept, root, q, open, page, pageSize } = parsed.data;
+    const actor = actorInTree(actorOf(req), await loadOrgTree(prisma));
 
     const and: Prisma.RecordWhereInput[] = [scopeWhere(scope, actor)];
 
     if (type) and.push({ type: TYPE_FROM_SLUG[type] });
-    if (dept) and.push({ OR: [{ departmentId: dept }, { department2Id: dept }] });
+    if (root) and.push(inDepartmentTree(root));
+    if (dept) and.push(inTeam(dept));
     if (status) {
       const mapped = STATUS_FROM_SLUG[status];
       if (!mapped) throw badRequest('Geçersiz durum.');
@@ -139,8 +163,12 @@ export default async function recordRoutes(app: FastifyInstance) {
     const [rows, total] = await Promise.all([
       prisma.record.findMany({
         where,
-        include: withDetail,
-        orderBy: { updatedAt: 'desc' },
+        // Liste yalnızca son olayı taşır (asistan kartı); tam geçmiş ve ekler
+        // detayda gelir — arayüz listeyi dakikada bir yeniden çekiyor.
+        include: { events: { orderBy: { at: 'desc' }, take: 1, select: { type: true, text: true, at: true, byId: true } } },
+        // Değişmeyen alana göre: sayfalar arasında güncellenen kayıt sayfa
+        // atlayıp listeden düşmez. Arayüz kendisi sıralar.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -157,9 +185,10 @@ export default async function recordRoutes(app: FastifyInstance) {
 
     const rec = await prisma.record.findUnique({ where: { code }, include: withDetail });
     if (!rec) throw notFound();
-    if (!can('view', rec, actor)) throw forbidden('Bu kaydı görme yetkiniz yok.');
+    const tree = await loadOrgTree(prisma);
+    if (!can('view', withRoots(rec, tree), actorInTree(actor, tree))) throw forbidden('Bu kaydı görme yetkiniz yok.');
 
-    return { record: await serializeRecord(rec, actor) };
+    return { record: await serializeRecord(rec, actor, tree) };
   });
 
   /**
@@ -174,6 +203,13 @@ export default async function recordRoutes(app: FastifyInstance) {
         description: z.string().max(5000).default(''),
         department: z.string().max(64).nullish(),
         type: z.enum(['bilgi', 'oneri']).nullish(),
+        /** "Yalnızca ilgili ekip görsün" işaretliyse metin ML veritabanına yazılmaz. */
+        restricted: z.boolean().default(false),
+        /** Yardım oturumu (kayıt önleme günlüğü); boşsa ya da geçersizse yenisi açılır. */
+        helpSessionId: z.string().max(64).nullish(),
+        channel: z.enum([HelpChannel.YENI_KAYIT, HelpChannel.ASISTAN]).default(HelpChannel.YENI_KAYIT),
+        /** Asistan tek sonuç gösterir; günlüğe yalnızca gösterilen yazılsın. */
+        limit: z.number().int().min(1).max(3).default(3),
       })
       .safeParse(req.body);
     if (!body.success) throw badRequest('Geçersiz istek.');
@@ -187,20 +223,22 @@ export default async function recordRoutes(app: FastifyInstance) {
         department: body.data.department ?? null,
         type: body.data.type ?? null,
       },
-      3,
+      body.data.limit,
     );
     // Ekip önerisi: formda ekip seçilmiş olsa bile hesaplanır — seçim ile
     // modelin önerisi farklıysa kullanıcıya gösterilir.
     const suggestion = suggestDepartment(body.data.title, body.data.description);
 
     // ML veritabanına: çalıştırma + her ekip önerisi + her eşleşme ayrı satır.
-    const inferenceId = await logInference(req.log, {
+    // Kısıtlı kayıt taslağı yazılmaz: ML hafızasına girmemeli.
+    const durationMs = performance.now() - t0;
+    const inferenceId = body.data.restricted ? null : await logInference(req.log, {
       userId: actor.id,
       title: body.data.title,
       description: body.data.description,
       type: body.data.type ?? null,
       selectedDepartmentId: body.data.department ?? null,
-      durationMs: performance.now() - t0,
+      durationMs,
       suggestion,
       matches: matches.map((m) => ({
         code: m.code,
@@ -211,8 +249,33 @@ export default async function recordRoutes(app: FastifyInstance) {
       })),
     });
 
+    const asistan = body.data.channel === HelpChannel.ASISTAN;
+    const top = suggestion?.candidates[0];
+    const help = await logHelpQuery(req.log, {
+      userId: actor.id,
+      sessionId: body.data.helpSessionId ?? null,
+      channel: body.data.channel,
+      kind: asistan ? HelpKind.ASISTAN : HelpKind.ML_TARAMA,
+      // Kısıtlı taslağın metni günlüğe de yazılmaz (ML veritabanındaki kuralla aynı).
+      title: body.data.restricted || asistan ? null : body.data.title,
+      text: body.data.restricted ? null : asistan ? body.data.title : body.data.description,
+      recordType: !asistan && body.data.type ? TYPE_FROM_SLUG[body.data.type]! : null,
+      selectedTeamId: body.data.department ?? null,
+      predictedTeamId: top?.departmentId ?? null,
+      confidence: top ? top.probability : null,
+      lowConfidence: suggestion ? suggestion.lowConfidence : null,
+      durationMs,
+      mlInferenceId: inferenceId,
+      hits: matches.map((m) => ({
+        source: m.source === 'kb' ? HelpSource.BILGI_BANKASI : HelpSource.KAYIT,
+        code: m.code,
+        similarity: m.percent,
+      })),
+    });
+
     return {
-      matches,
+      matches: matches.map((m, i) => ({ ...m, resultId: help?.resultIds[i] ?? null })),
+      helpSessionId: help?.sessionId ?? null,
       inferenceId,
       department: suggestion && suggestion.candidates.length
         ? {
@@ -244,7 +307,11 @@ export default async function recordRoutes(app: FastifyInstance) {
       where: { id: { in: deptIds }, active: true },
       select: { id: true, name: true },
     });
-    if (depts.length !== deptIds.length) throw badRequest('Seçilen ekip bulunamadı.');
+    // Kayıt ekibe düşer: ekipleri olan bir departman doğrudan seçilemez.
+    const tree = await loadOrgTree(prisma);
+    if (depts.length !== deptIds.length || !deptIds.every((id) => isAssignableUnit(tree, id))) {
+      throw badRequest('Seçilen ekip bulunamadı.');
+    }
 
     const primaryName = depts.find((d) => d.id === body.department)!.name;
     const secondName = body.department2 ? depts.find((d) => d.id === body.department2)!.name : null;
@@ -280,6 +347,7 @@ export default async function recordRoutes(app: FastifyInstance) {
           department2Id: body.department2 ?? null,
           createdById: actor.id,
           anonymous: body.anonymous,
+          restricted: body.restricted,
           createdAt: now,
           slaDueAt,
           events: {
@@ -288,6 +356,8 @@ export default async function recordRoutes(app: FastifyInstance) {
                 type: 'CREATE',
                 byId: actor.id,
                 at: now,
+                toStatus: RecordStatus.YENI,
+                toTeamId: body.department,
                 text: isOneri
                   ? `Öneri oluşturuldu ve değerlendirilmek üzere ${primaryName} ekibine iletildi.`
                   : `Kayıt oluşturuldu ve ${primaryName} ekibine iletildi.`,
@@ -298,6 +368,7 @@ export default async function recordRoutes(app: FastifyInstance) {
                       type: 'ASSIGN' as const,
                       byId: actor.id,
                       at: now,
+                      toTeamId: body.department2!,
                       text: `Kayıt ayrıca ${secondName} ekibiyle paylaşıldı.`,
                     },
                   ]
@@ -307,24 +378,6 @@ export default async function recordRoutes(app: FastifyInstance) {
         },
         include: withDetail,
       });
-
-      // Gösterilen öneriler kaydedilir: kullanıcı yine de kayıt açtıysa
-      // eşleşme işe yaramamış demektir. accepted=false bunu işaretler.
-      if (body.shownSuggestions?.length) {
-        const matches = await tx.record.findMany({
-          where: { code: { in: body.shownSuggestions.map((s) => s.code) } },
-          select: { id: true, code: true },
-        });
-        const byCode = new Map(matches.map((m) => [m.code, m.id]));
-        await tx.suggestion.createMany({
-          data: body.shownSuggestions.flatMap((s) => {
-            const matchId = byCode.get(s.code);
-            return matchId
-              ? [{ sourceRecordId: rec.id, matchRecordId: matchId, score: s.score, accepted: false }]
-              : [];
-          }),
-        });
-      }
 
       await tx.auditLog.create({
         data: {
@@ -341,9 +394,21 @@ export default async function recordRoutes(app: FastifyInstance) {
     });
 
     app.log.info({ code: created.code, by: actor.id }, 'kayıt oluşturuldu');
+    await linkHelpSession(req.log, {
+      userId: actor.id,
+      sessionId: body.helpSessionId ?? null,
+      draftSessionIds: [...new Set(body.helpSessionIds)],
+      recordId: created.id,
+      anonymous: body.anonymous,
+      restricted: body.restricted,
+    });
 
     // İşlem bittikten SONRA ve ayrı veritabanına: yazılamazsa kayıt yine açılmış olur.
-    if (body.mlInferenceId) {
+    // Kısıtlı kayıt ML hafızasına girmez: taslağın bütün taramaları silinir.
+    const drafts = [...new Set([...body.mlInferenceIds, ...(body.mlInferenceId ? [body.mlInferenceId] : [])])];
+    if (body.restricted) {
+      await releaseDrafts(req.log, actor.id, drafts, 'forget');
+    } else if (body.mlInferenceId) {
       await recordOutcome(req.log, {
         inferenceId: body.mlInferenceId,
         userId: actor.id,
@@ -353,8 +418,9 @@ export default async function recordRoutes(app: FastifyInstance) {
         anonymous: body.anonymous,
       });
     }
+    if (!body.restricted && body.anonymous) await releaseDrafts(req.log, actor.id, drafts, 'anonymize');
 
     reply.code(201);
-    return { record: await serializeRecord(created, actor) };
+    return { record: await serializeRecord(created, actor, tree) };
   });
 }

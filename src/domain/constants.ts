@@ -41,7 +41,8 @@ export const PRIORITY_TO_SLUG: Record<string, string> = {
 
 export const STATUS_LABELS: Record<string, string> = {
   YENI: 'Yeni',
-  UZERIME_ALINDI: 'Üzerime Alındı',
+  // Kaydı açan da görür: "Üzerime" birinci tekil ağzıydı, kime ait olduğu belirsizdi.
+  UZERIME_ALINDI: 'Sahiplenildi',
   INCELENIYOR: 'İnceleniyor',
   CALISILIYOR: 'Çalışılıyor',
   EK_BILGI: 'Ek Bilgi Bekleniyor',
@@ -127,15 +128,6 @@ export const ONERI_WORK_STATUSES: RecordStatus[] = [
 
 /** Öneri değerlendirmesinin sonuçları (son durumlar). */
 export const ONERI_OUTCOMES: RecordStatus[] = [
-  RecordStatus.DEGERLENDIRILDI,
-  RecordStatus.FAYDA_SAGLADI,
-  RecordStatus.UYGUN_BULUNMADI,
-];
-
-/** Sonuçlanmış kayıt: çözülen, kapatılan ya da değerlendirmesi biten. */
-export const DONE_STATUSES: RecordStatus[] = [
-  RecordStatus.COZULDU,
-  RecordStatus.KAPATILDI,
   RecordStatus.DEGERLENDIRILDI,
   RecordStatus.FAYDA_SAGLADI,
   RecordStatus.UYGUN_BULUNMADI,
