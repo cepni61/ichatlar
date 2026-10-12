@@ -106,6 +106,8 @@ export async function serializeRecord(rec: FullRecord, actor: Actor, orgTree?: O
     closedAt: rec.closedAt?.toISOString() ?? null,
 
     slaDueAt: rec.slaDueAt.toISOString(),
+    /** Çözüldü'de açan yanıt vermezse kendiliğinden kapanma anı. */
+    autoCloseAt: rec.autoCloseAt?.toISOString() ?? null,
     sla: { level: sla.level, pct: sla.pct, remainingMs: sla.remainingMs, limitHours: sla.limitHours },
 
     history: (rec.events ?? []).map((e) => ({

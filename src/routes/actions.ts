@@ -16,6 +16,8 @@ import { recordForward, relearn } from '../ml/service.js';
 import { isAssignableUnit, loadOrgTree } from '../domain/org.js';
 import { notifyUsers } from '../lib/notify.js';
 import { statusAfterInfo } from '../domain/info-request.js';
+import { autoCloseDeadline } from '../domain/work-hours.js';
+import { env } from '../env.js';
 
 /** Yorum ve çözümle birlikte gönderilebilecek, önceden yüklenmiş taslak ekler. */
 const attachmentIds = z.array(z.string().min(1).max(64)).max(MAX_FILES).default([]);
@@ -63,6 +65,8 @@ async function mutate(
       restricted: boolean;
       /** Yanıt bekleyen ek bilgi isteği. */
       openInfo: { id: string; statusBefore: string } | null;
+      /** Çözüldü'de açan yanıt vermezse kendiliğinden kapanma anı. */
+      autoCloseAt: Date | null;
     }) => {
       data: Prisma.RecordUpdateInput;
       event: PlanEvent;
@@ -100,6 +104,7 @@ async function mutate(
         // Yetki kuralı (ör. kısıtlı kayıt öneri havuzuna giremez) bu alana bakar.
         restricted: true,
         firstResponseAt: true,
+        autoCloseAt: true,
         infoRequests: { where: { answeredAt: null, cancelledAt: null }, select: { id: true, statusBefore: true }, take: 1 },
       },
     });
@@ -447,6 +452,7 @@ export default async function actionRoutes(app: FastifyInstance) {
           status: RecordStatus.COZULDU,
           resolution,
           resolvedAt: new Date(),
+          autoCloseAt: autoCloseDeadline(new Date(), env.AUTO_CLOSE_HOURS, env.workDay),
           ...stampFirstResponse(r),
           // Kısıtlı kayıt öneri havuzuna giremez: kutu işaretli gelse de yok sayılır.
           ...(learn && !r.restricted ? { renewed: true, renewedAt: new Date(), renewedById: a.id } : {}),
@@ -458,7 +464,8 @@ export default async function actionRoutes(app: FastifyInstance) {
           type: NotificationType.RESOLVED,
           text: r.type === RecordType.ONERI
             ? `${codeParam(req)} önerinizin değerlendirmesi sonuçlandı. Sonucu inceleyip öneriyi kapatın ya da yeniden değerlendirilmesini isteyin.`
-            : `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.`,
+            : `${codeParam(req)} çözüldü. Çözümü inceleyip kaydı kapatın ya da işe yaramadıysa yeniden açın.${
+              env.AUTO_CLOSE_HOURS ? ` Yanıt vermezseniz kayıt ${env.AUTO_CLOSE_HOURS} mesai saati sonra kendiliğinden kapanır.` : ''}`,
         },
       }),
     });
@@ -613,7 +620,7 @@ export default async function actionRoutes(app: FastifyInstance) {
         // çözüm" işareti de düşer: yeni çözüm doğrulanmadan öne çıkmasın.
         data: {
           status: RecordStatus.CALISILIYOR, resolvedAt: null, resolution: null,
-          renewed: false, renewedAt: null, renewedById: null,
+          renewed: false, renewedAt: null, renewedById: null, autoCloseAt: null,
         },
         event: {
           type: EventType.REOPEN,
@@ -644,7 +651,7 @@ export default async function actionRoutes(app: FastifyInstance) {
       ip: req.ip,
       plan: (r) => ({
         nextStatus: RecordStatus.KAPATILDI,
-        data: { status: RecordStatus.KAPATILDI, closedAt: new Date() },
+        data: { status: RecordStatus.KAPATILDI, closedAt: new Date(), autoCloseAt: null },
         event: {
           type: EventType.STATUS,
           text: r.type === RecordType.ONERI ? 'Öneri, sahibi tarafından kapatıldı.' : 'Kayıt, açan kişi tarafından kapatıldı.',
@@ -692,8 +699,12 @@ export default async function actionRoutes(app: FastifyInstance) {
         }
         return {
           // Ekipten gelen ilk yorum da geri dönüş sayılır; kaydı açanın kendi
-          // yorumu sayılmamalı.
-          data: r.createdById === a.id ? {} : stampFirstResponse(r),
+          // yorumu sayılmamalı. Çözülmüş kayıtta açanın yazması kendiliğinden
+          // kapanmayı erteler: yazdığı okunmadan kayıt kapanmasın.
+          data: r.createdById !== a.id ? stampFirstResponse(r)
+            : r.status === RecordStatus.COZULDU && r.autoCloseAt
+              ? { autoCloseAt: autoCloseDeadline(new Date(), env.AUTO_CLOSE_HOURS, env.workDay) }
+              : {},
           event: { type: EventType.COMMENT, text },
           attachmentIds: parsed.data.attachmentIds,
           // Açan yazdıysa sahibine, ekipten biri yazdıysa açana.

@@ -76,7 +76,7 @@ Betik `ichatlar_rapor` kullanıcısını oluşturur ve parolasını bir kez gös
 
 `adim_id`, `kayit_id`, `zaman`, `tur` (Açılış, Üstlenme / paylaşım, Yönlendirme, Durum değişikliği,
 Güncelleme, Ek bilgi isteği/yanıtı…), `onceki_durum`, `sonraki_durum` (+ `_kod`),
-`hedef_ekip_id`, `hedef_kisi_id`, `yapan_id`, `metin`.
+`hedef_ekip_id`, `hedef_kisi_id`, `yapan_id` (sistem adımlarında — hedef süre aşımı, kendiliğinden kapanma — boş), `metin`.
 Durum değiştirmeyen adımlarda önceki/sonraki durum boştur. Bu sürümden önceki
 adımlarda yalnızca eski kayıttan çıkarılabilenler doludur.
 

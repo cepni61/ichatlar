@@ -154,7 +154,7 @@ istekte sunucuda yeniden verilir.
 | Durum güncelle / Çözüldü / Reddet / Değerlendir (öneri) | Kayıt açıkken **sahibi** (ya da sistem yöneticisi) |
 | Ek bilgi iste (soru zorunlu) | Kayıt açıkken **sahibi** (ya da sistem yöneticisi). Açanın sonraki güncellemesi yanıttır; kayıt önceki durumuna döner. Yanıt beklenmeden çözülür ya da yönlendirilirse istek kapanır |
 | Benzer kayıtlarda öner ("Önerilerde", ML hafızası) | Çözülmüş bilgi kaydında sahibi ya da sistem yöneticisi; kısıtlı kayıtta yok |
-| Kaydı kapat / Yeniden aç (gerekçe zorunlu) | Durum "Çözüldü" iken **açan kişi** |
+| Kaydı kapat / Yeniden aç (gerekçe zorunlu) | Durum "Çözüldü" iken **açan kişi**. Açan 4 mesai saati (hafta içi 08:00–17:00, `AUTO_CLOSE_HOURS` / `WORK_HOURS`) yanıt vermezse kayıt kendiliğinden kapanır; açanın yazdığı güncelleme süreyi yeniler. Bu kuraldan önce çözülmüş kayıtlara dokunulmaz |
 | Yorum / ek | Açan, sahip, ilgili ekip, sistem yöneticisi |
 
 Geçerli durum geçişleri ayrı bir tabloda; geçersiz geçiş 409 döner. Yeniden

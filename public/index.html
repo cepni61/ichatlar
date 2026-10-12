@@ -3310,7 +3310,9 @@ function renderDetail(){
       ? '<div class="await-me">'+icon('check')+'<div><b>Önerinizin değerlendirmesi sonuçlandı.</b><br>'
         + 'Sonucu uygun bulduysanız öneriyi kapatın; bulmadıysanız “Yeniden Değerlendirilsin” ile nedenini yazın.</div></div>'
       : '<div class="await-me">'+icon('check')+'<div><b>Bu kayıt çözüldü ve sizin kararınızı bekliyor.</b><br>'
-        + 'Çözüm işinizi gördüyse kaydı kapatın; görmediyse “Çözüm İşe Yaramadı” ile nedenini yazıp ekibe geri gönderin.</div></div>')
+        + 'Çözüm işinizi gördüyse kaydı kapatın; görmediyse “Çözüm İşe Yaramadı” ile nedenini yazıp ekibe geri gönderin.'
+        + (r.autoCloseAt ? '<br>Yanıt vermezseniz kayıt <b>'+esc(fmtDate(r.autoCloseAt))+'</b> itibarıyla kendiliğinden kapanır.' : '')
+        + '</div></div>')
     : '';
   /* Öneri sahibine akışın neresinde olduğu */
   const oneriInfo = isOneri && isCreator && r.status === 'degerlendiriliyor'

@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
 import { envFlag } from './lib/flag.js';
+import { parseWorkHours } from './domain/work-hours.js';
 
 /**
  * .env dosyasını ek bağımlılık olmadan yükler (Node ≥ 20.12 yerleşik
@@ -79,6 +80,13 @@ const schema = z.object({
   CORTEX_TOKEN: z.string().trim().default(''),
   CORTEX_TIMEOUT_MS: z.coerce.number().int().positive().default(2500),
 
+  /** Çözülen kayıt, açan kişi bu kadar mesai saati yanıt vermezse kendiliğinden kapanır; 0 = kapalı. */
+  AUTO_CLOSE_HOURS: z.coerce.number().int().min(0).max(240).default(4),
+  /** Mesai saatleri (hafta içi, İstanbul saati). */
+  WORK_HOURS: z.string().trim().default('08:00-17:00').refine((v) => {
+    try { parseWorkHours(v); return true; } catch { return false; }
+  }, 'SS:DD-SS:DD biçiminde olmalı, başlangıç bitişten önce (ör. 08:00-17:00)'),
+
   STORAGE_DIR: z.string().default('./var/uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(10),
 });
@@ -129,6 +137,7 @@ export const env = {
   /** Geliştirme girişi yalnızca üretim dışında ve kurumsal giriş yokken açılır. */
   devAuth: !isProd && !entraConfigured && !ldapConfigured && raw.DEV_AUTH_BYPASS,
   maxUploadBytes: raw.MAX_UPLOAD_MB * 1024 * 1024,
+  workDay: parseWorkHours(raw.WORK_HOURS),
   sessionTtlMs: raw.SESSION_TTL_HOURS * 60 * 60 * 1000,
 } as const;
 

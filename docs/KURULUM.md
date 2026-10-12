@@ -166,6 +166,8 @@ yeniden başlatın (`Restart-Service IcHatlar`).
 | `LDAP_ADMIN_GROUP`, `LDAP_MANAGER_GROUP` | Sistem yöneticisi ve ekip yöneticisi grupları (ad ya da DN) |
 | `ACCESS_CODE` | **Boş** (yalnızca internete açık geçici test yayını içindir) |
 | `STORAGE_DIR` | Ekler; varsayılan `C:\IcHatlar\var\uploads` |
+| `AUTO_CLOSE_HOURS` | Çözülen kayıt, açan kişi bu kadar mesai saati yanıt vermezse kendiliğinden kapanır; varsayılan 4, `0` kapalı |
+| `WORK_HOURS` | Mesai saatleri, hafta içi İstanbul saati; varsayılan `08:00-17:00`. Resmi tatiller düşülmez |
 | `CORTEX_URL`, `CORTEX_TOKEN` | Kurumsal arama kaynağı; boşsa Kaynak Bul yalnızca Bilgi Bankası ve çözülmüş kayıtlarla çalışır |
 
 Node, ldaps sertifikasını Windows sertifika deposundan doğrular (hizmet

@@ -6,6 +6,7 @@ import { pruneSessions } from '../auth/session.js';
 import { notifySlaBreach } from '../lib/notify.js';
 import { pruneDraftAttachments } from '../routes/attachments.js';
 import { expireGrants } from '../routes/grants.js';
+import { autoCloseResolved } from './autoClose.js';
 
 /**
  * SLA gözcüsü. Hedefi aşmış açık kayıtları işaretler ve akışa bir olay düşer.
@@ -107,6 +108,7 @@ export function startJobs(log: FastifyBaseLogger) {
     checkSlaBreaches(log).catch((err) => log.error({ err }, 'SLA gözcüsü hata verdi'));
     // Süreli yetkiler (vekâlet): süresi dolan kaldırılır, etkin rol düzelir.
     expireGrants(log).catch((err) => log.error({ err }, 'yetki süresi işi hata verdi'));
+    autoCloseResolved(log).catch((err) => log.error({ err }, 'kendiliğinden kapatma işi hata verdi'));
   }, FIVE_MIN);
 
   const pruneTimer = setInterval(() => {
