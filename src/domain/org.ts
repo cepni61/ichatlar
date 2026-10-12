@@ -20,12 +20,14 @@ export interface OrgUnit {
   id: string;
   parentId: string | null;
   active: boolean;
+  /** Departmanın direktörlüğü; ekipte boş. */
+  directorate: string | null;
 }
 
 export type OrgTree = Map<string, OrgUnit>;
 
 export async function loadOrgTree(db: Pick<PrismaClient, 'department'> | Prisma.TransactionClient): Promise<OrgTree> {
-  const rows = await db.department.findMany({ select: { id: true, parentId: true, active: true } });
+  const rows = await db.department.findMany({ select: { id: true, parentId: true, active: true, directorate: true } });
   return new Map(rows.map((r) => [r.id, r]));
 }
 
@@ -59,9 +61,17 @@ export function withRoots<T extends { departmentId: string; department2Id: strin
   return { ...rec, departmentRootId: rootOf(tree, rec.departmentId), department2RootId: rootOf(tree, rec.department2Id) };
 }
 
-/** Aktöre kendi departmanını ekler (ekibinin üstü). */
+/**
+ * Aktöre kendi departmanını (ekibinin üstü) ve aynı direktörlükteki öteki
+ * departmanları ekler: hepsi Tüm Kayıtlar'da okunur (kullanıcı isteği, 2026-10-12).
+ */
 export function actorInTree(actor: Actor, tree: OrgTree): Actor {
-  return { ...actor, departmentRootId: rootOf(tree, actor.departmentId) };
+  const root = rootOf(tree, actor.departmentId);
+  const directorate = root ? tree.get(root)?.directorate ?? null : null;
+  const peerRoots = directorate
+    ? [...tree.values()].filter((u) => u.parentId === null && u.directorate === directorate && u.id !== root).map((u) => u.id)
+    : [];
+  return { ...actor, departmentRootId: root, peerRoots };
 }
 
 /**

@@ -107,6 +107,11 @@ Kodu derler, yalnızca çalışma bağımlılıklarını toplar ve
    { "id": "bt-bilgi-teknolojileri", "name": "Bilgi Teknolojileri", "short": "BT", "group": "IcHatlar-BT", "main": true }
    ```
 
+   Aynı direktörlüğe bağlı departmanlar birbirinin kayıtlarını Tüm Kayıtlar'da
+   görsün isterseniz bu departmanlara aynı `"directorate"` değerini yazın
+   (ör. `"directorate": "Saha Grubu"`). Görme yalnızca okumadır; "Yalnızca
+   ilgili ekip görsün" kayıtları yine ekip dışına çıkmaz.
+
 3. Yönetici PowerShell'inde kurulum betiği:
 
    ```powershell

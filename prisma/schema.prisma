@@ -43,6 +43,10 @@ model Department {
   /// üyeliği bu gruptan türetilir; boşsa atama elle yapılır.
   entraGroupId String? @unique
 
+  /// Direktörlük (yalnızca departmanda): aynı direktörlükteki departmanlar
+  /// birbirinin kayıtlarını Tüm Kayıtlar'da okur (src/domain/org.ts).
+  directorate String?
+
   active Boolean @default(true)
   order  Int     @default(0)
 

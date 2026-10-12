@@ -19,11 +19,13 @@ export interface Actor {
   departmentRootId?: string | null;
   /** Departman sorumlusu olduğu departmanlar: kendi departmanı gibi okur. */
   headOf?: string[];
+  /** Aynı direktörlükteki öteki departmanlar (actorInTree doldurur): kendi departmanı gibi okur. */
+  peerRoots?: string[];
 }
 
-/** Kişinin "Tüm Kayıtlar"da gördüğü departmanlar: kendi departmanı + sorumlu olduklar. */
+/** Kişinin "Tüm Kayıtlar"da gördüğü departmanlar: kendi departmanı, aynı direktörlüktekiler ve sorumlu olduklar. */
 export const departmentsOf = (a: Actor) =>
-  [...new Set([a.departmentRootId, ...(a.headOf ?? [])].filter((x): x is string => Boolean(x)))];
+  [...new Set([a.departmentRootId, ...(a.peerRoots ?? []), ...(a.headOf ?? [])].filter((x): x is string => Boolean(x)))];
 
 /** Veritabanından okunan kayıt. Kolonlar String olduğu için tipler geniş;
   * karşılaştırmalar enums.ts sabitleriyle yapıldığı için güvenli kalır. */

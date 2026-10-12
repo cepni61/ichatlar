@@ -89,6 +89,9 @@ tablosunda; ekibin `parentId`'si departmanıdır. Kayıtlar ve kişiler **ekibe*
 bağlanır; ekibi olmayan departman kendisi ekip gibi kullanılır. Yapı
 `config/kurulus.json`'dan `setup` ile işlenir; şablon ve demo verisinin kaynağı
 `config/kurulus.example.json` (13 departman, 51 ekip).
+Departmana `directorate` yazılırsa aynı direktörlükteki departmanlar birbirinin
+kayıtlarını Tüm Kayıtlar'da okur (örnek: Spesifik Tedaviler, Temel Tedaviler ve
+Tüketici Sağlığı → "Saha Grubu").
 Ekibin `group` alanı, kişinin hangi AD grubundan o ekibe atanacağını söyler.
 
 ## Kim neyi görür
@@ -98,7 +101,7 @@ Ekibin `group` alanı, kişinin hangi AD grubundan o ekibe atanacağını söyle
 | Açtıklarım | Kişinin açtığı kayıtlar |
 | Ekibime Gelenler | Kişinin ekibine (asıl ya da ikincil ekip) düşen kayıtlar — yalnızca ekip rolündekiler (USER değil) |
 | Üzerimdekiler | Kişinin üstlendiği kayıtlar |
-| Tüm Kayıtlar | Kişinin **departmanındaki** bütün ekiplerin kayıtları (+ departman sorumlusu olduğu departmanlar); sistem yöneticisi bütün departmanlar |
+| Tüm Kayıtlar | Kişinin **departmanındaki** bütün ekiplerin kayıtları (+ aynı **direktörlükteki** departmanlar, + departman sorumlusu olduğu departmanlar); sistem yöneticisi bütün departmanlar |
 
 - **"Yalnızca ilgili ekip görsün" (kısıtlı) kayıt:** yalnızca açan kişi, ilgili
   ekip ve üstlenen görür; sistem yöneticisi ve departman sorumlusu dahil kimse

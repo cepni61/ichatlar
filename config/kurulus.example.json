@@ -78,7 +78,7 @@
       ]
     },
     {
-      "id": "spesifik", "name": "Spesifik Tedaviler Grubu", "short": "Spesifik Tedaviler",
+      "id": "spesifik", "name": "Spesifik Tedaviler Grubu", "short": "Spesifik Tedaviler", "directorate": "Saha Grubu",
       "teams": [
         { "id": "spesifik-mss-pazarlama", "name": "Merkezi Sinir Sistemi - Pazarlama", "short": "MSS - Pazarlama" },
         { "id": "spesifik-mss-satis", "name": "Merkezi Sinir Sistemi - Satış", "short": "MSS - Satış" },
@@ -99,7 +99,7 @@
       ]
     },
     {
-      "id": "temel", "name": "Temel Tedaviler ve Kişisel Bakım Grubu", "short": "Temel Tedaviler",
+      "id": "temel", "name": "Temel Tedaviler ve Kişisel Bakım Grubu", "short": "Temel Tedaviler", "directorate": "Saha Grubu",
       "teams": [
         { "id": "temel-kisisel-bakim", "name": "Kişisel Bakım", "short": "Kişisel Bakım" },
         { "id": "temel-pazarlama", "name": "Temel Tedaviler Pazarlama", "short": "Temel Ted. Pazarlama" },
@@ -108,7 +108,7 @@
       ]
     },
     {
-      "id": "tuketici", "name": "Tüketici Sağlığı Grubu", "short": "Tüketici Sağlığı",
+      "id": "tuketici", "name": "Tüketici Sağlığı Grubu", "short": "Tüketici Sağlığı", "directorate": "Saha Grubu",
       "teams": [
         { "id": "tuketici-ticari-pazarlama", "name": "Ticari Pazarlama", "short": "Ticari Pazarlama" },
         { "id": "tuketici-pazarlama", "name": "Tüketici Sağlığı - Pazarlama", "short": "Tüketici - Pazarlama" },

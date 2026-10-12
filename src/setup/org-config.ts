@@ -30,6 +30,11 @@ export const orgConfigSchema = z
     departments: z
       .array(
         unitSchema.extend({
+          /**
+           * Direktörlük adı. Aynı adı taşıyan departmanların kişileri birbirinin
+           * kayıtlarını Tüm Kayıtlar'da okur (yalnızca okuma; kısıtlı kayıtlar hariç).
+           */
+          directorate: z.string().trim().min(1).max(80).optional(),
           teams: z
             .array(
               unitSchema.extend({
@@ -103,20 +108,20 @@ export async function applyOrgConfig(prisma: PrismaClient, input: OrgConfigInput
   const config = orgConfigSchema.parse(input);
   return prisma.$transaction(async (tx) => {
     const before = await tx.department.findMany({
-      select: { id: true, name: true, short: true, entraGroupId: true, order: true, active: true, parentId: true },
+      select: { id: true, name: true, short: true, entraGroupId: true, order: true, active: true, parentId: true, directorate: true },
     });
     const byId = new Map(before.map((d) => [d.id, d]));
     const result: ApplyResult = { created: [], updated: [], notInConfig: [], moved: { records: 0, users: 0, kb: 0 } };
 
-    const upsert = async (u: z.infer<typeof unitSchema>, parentId: string | null, order: number) => {
-      const data = { name: u.name, short: u.short, entraGroupId: u.group || null, order, active: true, parentId };
+    const upsert = async (u: z.infer<typeof unitSchema>, parentId: string | null, order: number, directorate: string | null = null) => {
+      const data = { name: u.name, short: u.short, entraGroupId: u.group || null, order, active: true, parentId, directorate };
       const old = byId.get(u.id);
       if (!old) {
         await tx.department.create({ data: { id: u.id, ...data } });
         result.created.push(u.id);
       } else if (
         old.name !== data.name || old.short !== data.short || old.entraGroupId !== data.entraGroupId ||
-        old.order !== data.order || !old.active || old.parentId !== data.parentId
+        old.order !== data.order || !old.active || old.parentId !== data.parentId || old.directorate !== data.directorate
       ) {
         await tx.department.update({ where: { id: u.id }, data });
         result.updated.push(u.id);
@@ -124,7 +129,7 @@ export async function applyOrgConfig(prisma: PrismaClient, input: OrgConfigInput
     };
 
     // Önce bütün departmanlar (ekiplerin üst kaydı var olmalı), sonra ekipler.
-    for (const [i, d] of config.departments.entries()) await upsert(d, null, i + 1);
+    for (const [i, d] of config.departments.entries()) await upsert(d, null, i + 1, d.directorate ?? null);
     for (const d of config.departments) {
       for (const [j, t] of d.teams.entries()) await upsert(t, d.id, j + 1);
     }
